@@ -29,6 +29,8 @@ define("ASSETS_URL", HOME_URL . 'assets/');
 $includes = [
     'auth',
     'notes',
+    'markdown',
+    'api',
     'render',
     'router',
 ];

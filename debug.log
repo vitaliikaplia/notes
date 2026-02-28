@@ -1,0 +1,24 @@
+[28-Feb-2026 02:27:41 UTC] PHP Fatal error:  Uncaught TypeError: extract_items_text(): Argument #1 ($items) must be of type array, int given, called in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php on line 483 and defined in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php:489
+Stack trace:
+#0 /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php(483): extract_items_text(2)
+#1 /Users/vitaliikaplia/Herd/notes/core/includes/api.php(288): extract_plain_text(Array)
+#2 /Users/vitaliikaplia/Herd/notes/core/includes/api.php(89): api_search_notes()
+#3 /Users/vitaliikaplia/Herd/notes/core/includes/router.php(139): api_dispatch(Array)
+#4 /Users/vitaliikaplia/Herd/notes/core/includes/router.php(584): router(Array)
+#5 /Users/vitaliikaplia/Herd/notes/core/init.php(39): require_once('/Users/vitaliik...')
+#6 /Users/vitaliikaplia/Herd/notes/index.php(19): require_once('/Users/vitaliik...')
+#7 /Applications/Herd.app/Contents/Resources/valet/server.php(167): require('/Users/vitaliik...')
+#8 {main}
+  thrown in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php on line 489
+[28-Feb-2026 02:27:55 UTC] PHP Fatal error:  Uncaught TypeError: extract_items_text(): Argument #1 ($items) must be of type array, int given, called in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php on line 483 and defined in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php:489
+Stack trace:
+#0 /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php(483): extract_items_text(2)
+#1 /Users/vitaliikaplia/Herd/notes/core/includes/api.php(288): extract_plain_text(Array)
+#2 /Users/vitaliikaplia/Herd/notes/core/includes/api.php(89): api_search_notes()
+#3 /Users/vitaliikaplia/Herd/notes/core/includes/router.php(139): api_dispatch(Array)
+#4 /Users/vitaliikaplia/Herd/notes/core/includes/router.php(584): router(Array)
+#5 /Users/vitaliikaplia/Herd/notes/core/init.php(39): require_once('/Users/vitaliik...')
+#6 /Users/vitaliikaplia/Herd/notes/index.php(19): require_once('/Users/vitaliik...')
+#7 /Applications/Herd.app/Contents/Resources/valet/server.php(167): require('/Users/vitaliik...')
+#8 {main}
+  thrown in /Users/vitaliikaplia/Herd/notes/core/includes/markdown.php on line 489

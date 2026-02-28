@@ -1309,9 +1309,9 @@ a.breadcrumb-item:hover {
     /* Inputs & code */
     .ce-code__textarea,
     .cdx-input {
-        background: var(--bg-secondary);
-        color: var(--text);
-        border-color: var(--border);
+        background: var(--bg-secondary) !important;
+        color: var(--text) !important;
+        border-color: var(--border) !important;
     }
 
     /* Buttons */

@@ -133,7 +133,14 @@ function router($url_segments = []): array {
         }
 
     } elseif($url_segments[0] === 'api') {
-        // API endpoints
+
+        // REST API v1 — token auth
+        if (isset($url_segments[1]) && $url_segments[1] === 'v1') {
+            api_dispatch(array_slice($url_segments, 2));
+            exit;
+        }
+
+        // Internal API — session auth
         auth_require();
         header('Content-Type: application/json; charset=UTF-8');
 

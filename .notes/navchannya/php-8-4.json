@@ -1,0 +1,90 @@
+{
+    "meta": {
+        "title": "PHP 8.4",
+        "icon": "🐘",
+        "created_at": "2026-02-28T02:32:15+00:00",
+        "updated_at": "2026-02-28T02:32:15+00:00"
+    },
+    "content": {
+        "time": 1772245935681,
+        "blocks": [
+            {
+                "id": "FI7JOOaOMo",
+                "type": "header",
+                "data": {
+                    "text": "Нові фічі PHP 8.4",
+                    "level": 2
+                }
+            },
+            {
+                "id": "pEQIFloqJy",
+                "type": "header",
+                "data": {
+                    "text": "Property hooks",
+                    "level": 3
+                }
+            },
+            {
+                "id": "sm91Mygc0f",
+                "type": "paragraph",
+                "data": {
+                    "text": "Гетери та сетери прямо в оголошенні властивості."
+                }
+            },
+            {
+                "id": "C3UDU89KzB",
+                "type": "header",
+                "data": {
+                    "text": "Асиметрична видимість",
+                    "level": 3
+                }
+            },
+            {
+                "id": "2ljXVas3Ef",
+                "type": "paragraph",
+                "data": {
+                    "text": "Можна задати різну видимість для читання та запису."
+                }
+            },
+            {
+                "id": "q7NDmHl4cw",
+                "type": "header",
+                "data": {
+                    "text": "Нові функції",
+                    "level": 3
+                }
+            },
+            {
+                "id": "tautFvDekS",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "<code>array_find()<\/code>",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "<code>array_any()<\/code>",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "<code>array_all()<\/code>",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "<code>mb_trim()<\/code>",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

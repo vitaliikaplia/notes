@@ -1,0 +1,54 @@
+{
+    "meta": {
+        "title": "Робочий простір",
+        "icon": "🏠",
+        "created_at": "2026-02-28T02:30:48+00:00",
+        "updated_at": "2026-02-28T02:30:48+00:00"
+    },
+    "content": {
+        "time": 1772245848113,
+        "blocks": [
+            {
+                "id": "vREw23iK9c",
+                "type": "header",
+                "data": {
+                    "text": "Ласкаво просимо",
+                    "level": 2
+                }
+            },
+            {
+                "id": "4eOchydGok",
+                "type": "paragraph",
+                "data": {
+                    "text": "Це ваш особистий робочий простір для організації ідей, проєктів та нотаток."
+                }
+            },
+            {
+                "id": "hdFLesbVMJ",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Створюйте нотатки",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Організовуйте в папки",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Шукайте за вмістом",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

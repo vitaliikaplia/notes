@@ -1,0 +1,117 @@
+{
+    "meta": {
+        "title": "Мобільний додаток",
+        "icon": "📱",
+        "created_at": "2026-02-28T02:31:38+00:00",
+        "updated_at": "2026-02-28T02:31:38+00:00"
+    },
+    "content": {
+        "time": 1772245898729,
+        "blocks": [
+            {
+                "id": "cUQq868Fos",
+                "type": "header",
+                "data": {
+                    "text": "MVP мобільного додатку",
+                    "level": 2
+                }
+            },
+            {
+                "id": "6P0cdzbqyT",
+                "type": "header",
+                "data": {
+                    "text": "Функціонал v1",
+                    "level": 3
+                }
+            },
+            {
+                "id": "YhUIMLUPtn",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Авторизація через Google\/Apple",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Список задач",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Push-сповіщення",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Офлайн режим",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "d28aDRZb9Q",
+                "type": "header",
+                "data": {
+                    "text": "Технології",
+                    "level": 3
+                }
+            },
+            {
+                "id": "MpVyFlyV1f",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "React Native",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Expo",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Firebase",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "fW9ojJWi9R",
+                "type": "checklist",
+                "data": {
+                    "items": [
+                        {
+                            "text": "Прототип у Figma",
+                            "checked": true
+                        },
+                        {
+                            "text": "Архітектура бази даних",
+                            "checked": true
+                        },
+                        {
+                            "text": "Розробка API",
+                            "checked": false
+                        },
+                        {
+                            "text": "UI компоненти",
+                            "checked": false
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

@@ -1,0 +1,95 @@
+{
+    "meta": {
+        "title": "API інтеграції",
+        "icon": "🔌",
+        "created_at": "2026-02-28T02:31:38+00:00",
+        "updated_at": "2026-02-28T02:31:38+00:00"
+    },
+    "content": {
+        "time": 1772245898757,
+        "blocks": [
+            {
+                "id": "pGMC8KFrP7",
+                "type": "header",
+                "data": {
+                    "text": "Інтеграція зовнішніх сервісів",
+                    "level": 2
+                }
+            },
+            {
+                "id": "59flH3S8jb",
+                "type": "header",
+                "data": {
+                    "text": "Підключені",
+                    "level": 3
+                }
+            },
+            {
+                "id": "fez2RDtH6f",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Stripe — платежі",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "SendGrid — email розсилки",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Cloudflare — CDN та захист",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "BQqffNO47I",
+                "type": "header",
+                "data": {
+                    "text": "В планах",
+                    "level": 3
+                }
+            },
+            {
+                "id": "DxNVWnB0Jb",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Telegram Bot API",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Google Calendar API",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "OpenAI API",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "zkBDmiR3Tk",
+                "type": "code",
+                "data": {
+                    "code": "Authorization: Bearer <token>\nContent-Type: application\/json"
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

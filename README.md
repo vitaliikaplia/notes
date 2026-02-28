@@ -18,8 +18,10 @@
 - Хлібні крихти для навігації
 - Перегляд плиткою та списком на головній
 - Темна та світла тема (автоматично за системною)
+- Мобільна адаптивна верстка з бургер-меню
 - Авторизація за логіном та паролем
 - Cloudflare Turnstile CAPTCHA (опціонально)
+- REST API v1 з токен-авторизацією
 
 ## Стек
 
@@ -53,4 +55,65 @@ AUTH_PASS=yourpassword
 # Cloudflare Turnstile (залишити порожнім для вимкнення)
 CAPTCHA_SITE_KEY=
 CAPTCHA_SECRET_KEY=
+
+# REST API (залишити порожнім для вимкнення)
+API_TOKEN=your-secret-token
 ```
+
+## REST API
+
+Токен-авторизація через заголовок `Authorization: Bearer <API_TOKEN>`. Обмін даними у форматі Markdown з автоматичною конвертацією в Editor.js блоки.
+
+### Ендпоінти
+
+| Метод | URL | Опис |
+|-------|-----|------|
+| `GET` | `/api/v1/notes/` | Список усіх нотаток |
+| `GET` | `/api/v1/notes/{path}` | Одна нотатка (markdown + JSON) |
+| `POST` | `/api/v1/notes/` | Створити нотатку |
+| `PUT` | `/api/v1/notes/{path}` | Оновити нотатку |
+| `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
+| `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
+
+### Приклади
+
+**Список нотаток:**
+```bash
+curl -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/
+```
+
+**Створити нотатку:**
+```bash
+curl -X POST -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Назва","markdown":"## Заголовок\n\nТекст","icon":"📝","folder":"parent-slug"}' \
+  https://domain/api/v1/notes/
+```
+
+**Оновити нотатку:**
+```bash
+curl -X PUT -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Нова назва","markdown":"Новий текст"}' \
+  https://domain/api/v1/notes/slug
+```
+
+**Видалити нотатку:**
+```bash
+curl -X DELETE -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/slug
+```
+
+**Пошук:**
+```bash
+curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=запит"
+```
+
+### Формат відповідей
+
+Список: `{"notes": [{"path", "title", "icon", "created_at", "updated_at"}]}`
+
+Одна нотатка: `{"path", "title", "icon", "created_at", "updated_at", "markdown", "content"}`
+
+Пошук: `{"results": [{"path", "title", "icon", "snippet"}]}`
+
+Помилки: `{"error": {"code": 400, "message": "..."}}`

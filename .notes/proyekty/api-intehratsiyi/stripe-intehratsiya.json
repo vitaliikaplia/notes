@@ -1,0 +1,85 @@
+{
+    "meta": {
+        "title": "Stripe інтеграція",
+        "icon": "💳",
+        "created_at": "2026-02-28T02:32:33+00:00",
+        "updated_at": "2026-02-28T02:32:33+00:00"
+    },
+    "content": {
+        "time": 1772245953469,
+        "blocks": [
+            {
+                "id": "0YQCZcjlUv",
+                "type": "header",
+                "data": {
+                    "text": "Підключення Stripe",
+                    "level": 2
+                }
+            },
+            {
+                "id": "v4NAtOwQEA",
+                "type": "header",
+                "data": {
+                    "text": "Крок 1: Встановити SDK",
+                    "level": 3
+                }
+            },
+            {
+                "id": "Tv8lbZ4vFe",
+                "type": "code",
+                "data": {
+                    "code": "composer require stripe\/stripe-php"
+                }
+            },
+            {
+                "id": "GM9xBdUH5Z",
+                "type": "header",
+                "data": {
+                    "text": "Крок 2: Налаштувати ключі",
+                    "level": 3
+                }
+            },
+            {
+                "id": "6xANIPMh2t",
+                "type": "code",
+                "data": {
+                    "code": "STRIPE_KEY=pk_test_...\nSTRIPE_SECRET=sk_test_..."
+                }
+            },
+            {
+                "id": "cyhVWKZzvz",
+                "type": "header",
+                "data": {
+                    "text": "Крок 3: Створити Checkout Session",
+                    "level": 3
+                }
+            },
+            {
+                "id": "owmYmNm3CA",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Додати товари",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Вказати success\/cancel URL",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Обробити webhook",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

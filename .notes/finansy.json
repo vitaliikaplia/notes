@@ -1,0 +1,90 @@
+{
+    "meta": {
+        "title": "Фінанси",
+        "icon": "💰",
+        "created_at": "2026-02-28T02:32:33+00:00",
+        "updated_at": "2026-02-28T02:32:33+00:00"
+    },
+    "content": {
+        "time": 1772245953496,
+        "blocks": [
+            {
+                "id": "JRWyanShrO",
+                "type": "header",
+                "data": {
+                    "text": "Бюджет на березень 2026",
+                    "level": 2
+                }
+            },
+            {
+                "id": "Jxc8n7L0uz",
+                "type": "table",
+                "data": {
+                    "withHeadings": true,
+                    "stretched": false,
+                    "content": [
+                        [
+                            "Категорія",
+                            "Бюджет",
+                            "Факт"
+                        ],
+                        [
+                            "Сервери",
+                            "$50",
+                            "$42"
+                        ],
+                        [
+                            "Домени",
+                            "$15",
+                            "$15"
+                        ],
+                        [
+                            "Підписки",
+                            "$30",
+                            "$27"
+                        ],
+                        [
+                            "Реклама",
+                            "$100",
+                            "-"
+                        ]
+                    ]
+                }
+            },
+            {
+                "id": "MpRmXdF12D",
+                "type": "header",
+                "data": {
+                    "text": "Підсумок",
+                    "level": 3
+                }
+            },
+            {
+                "id": "lobmd13StE",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Загальний бюджет: $195",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Витрачено: $84",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Залишок: $111",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}
