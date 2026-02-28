@@ -10,8 +10,13 @@ ini_set('error_log', ABSPATH . DIRECTORY_SEPARATOR . 'debug.log');
 error_reporting(E_ALL);
 
 /** session */
+$remember_active = !empty($_COOKIE['remember_token']);
+$session_lifetime = $remember_active ? 30 * 86400 : 0;
+
+ini_set('session.gc_maxlifetime', $remember_active ? 30 * 86400 : 86400);
+
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => $session_lifetime,
     'path'     => '/',
     'secure'   => true,
     'httponly'  => true,
