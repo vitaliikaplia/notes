@@ -127,7 +127,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 4px 0 4px 8px;
     border-radius: var(--radius);
     cursor: pointer;
     font-size: 14px;
