@@ -199,6 +199,13 @@ a:hover {
     color: var(--text-secondary);
 }
 
+.sidebar-note-icon img,
+.sidebar-note-icon__icon img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}
+
 .sidebar-note-icon.has-toggle {
     cursor: pointer;
     position: relative;
@@ -1327,23 +1334,26 @@ a:hover {
 }
 
 .note-icon-reset {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     width: 100%;
     margin-top: 8px;
-    padding: 6px;
+    padding: 8px 6px;
     border: none;
     background: none;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #e57373;
     cursor: pointer;
     text-align: center;
     border-top: 1px solid var(--border);
-    padding-top: 8px;
     font-family: var(--font);
 }
 
 .note-icon-reset:hover {
-    color: var(--text);
+    color: #ef5350;
+    background: rgba(229, 115, 115, 0.1);
 }
 
 .save-status {

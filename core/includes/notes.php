@@ -170,6 +170,14 @@ function get_note($relative_path): ?array {
     // extract title
     $data['_title'] = get_note_title($data);
 
+    // Convert legacy raw SVG icons to base64 data URI
+    if(!empty($data['meta']['icon']) && str_starts_with($data['meta']['icon'], '<svg')) {
+        $data['meta']['icon'] = 'data:image/svg+xml;base64,' . base64_encode($data['meta']['icon']);
+        // Persist conversion (save only clean data without runtime _ fields)
+        $save_data = array_filter($data, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
+        file_put_contents($file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
     cache_set($cache_key, $data);
 
     return $data;
@@ -489,6 +497,38 @@ function update_note_visibility(string $relative_path, string $visibility): bool
     }
 
     return $result;
+}
+
+function minify_svg(string $svg): ?string {
+    // Strip XML declaration
+    $svg = preg_replace('/<\?xml[^?]*\?>\s*/i', '', $svg);
+    // Strip DOCTYPE
+    $svg = preg_replace('/<!DOCTYPE[^>]*>\s*/i', '', $svg);
+    // Strip comments
+    $svg = preg_replace('/<!--.*?-->/s', '', $svg);
+
+    // Extract <svg>...</svg>
+    if(!preg_match('/<svg[\s\S]*<\/svg>/i', $svg, $m)) {
+        return null;
+    }
+    $svg = $m[0];
+
+    // Remove unnecessary attributes from <svg> tag
+    $svg = preg_replace_callback('/<svg([^>]*)>/', function($match) {
+        $attrs = $match[1];
+        // Remove class, version, xmlns:xlink, xml:space, style
+        $attrs = preg_replace('/\s*(class|version|xmlns:xlink|xml:space|style)\s*=\s*"[^"]*"/i', '', $attrs);
+        // Remove "px" from width/height
+        $attrs = preg_replace('/(width|height)\s*=\s*"([\d.]+)px"/i', '$1="$2"', $attrs);
+        return '<svg' . $attrs . '>';
+    }, $svg, 1);
+
+    // Collapse whitespace between tags
+    $svg = preg_replace('/>\s+</', '><', $svg);
+    // Trim whitespace inside tags
+    $svg = preg_replace('/\s{2,}/', ' ', $svg);
+
+    return trim($svg);
 }
 
 function get_note_excerpt(array $note, int $max_length = 160): string {

@@ -752,6 +752,25 @@ function router($url_segments = []): array {
             ], JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'process-svg' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $raw_svg = $input['svg'] ?? '';
+
+            if(empty($raw_svg)) {
+                echo json_encode(['success' => false, 'error' => 'No SVG provided']);
+                exit;
+            }
+
+            $minified = minify_svg($raw_svg);
+            if(!$minified) {
+                echo json_encode(['success' => false, 'error' => 'Invalid SVG']);
+                exit;
+            }
+
+            $data_uri = 'data:image/svg+xml;base64,' . base64_encode($minified);
+            echo json_encode(['success' => true, 'data_uri' => $data_uri]);
+            exit;
+
         } else {
             echo json_encode(['error' => 'Unknown action']);
             exit;

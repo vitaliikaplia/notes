@@ -19,7 +19,13 @@
             <a href="{{ home_url }}note/{{ note._url }}/" class="note-card">
                 {% set card_icon = note.meta.icon|default('') %}
                 {% if card_icon %}
-                    <span class="note-card-icon">{{ card_icon }}</span>
+                    <span class="note-card-icon">
+                        {%- if card_icon starts with 'data:' -%}
+                            <img src="{{ card_icon }}" width="28" height="28" alt="">
+                        {%- else -%}
+                            {{ card_icon }}
+                        {%- endif -%}
+                    </span>
                 {% endif %}
                 <span class="note-card-title">{{ note._title }}</span>
                 <span class="note-card-date">{{ date_format_uk(note.meta.updated_at) }}</span>
