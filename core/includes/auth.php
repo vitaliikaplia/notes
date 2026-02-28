@@ -57,3 +57,23 @@ function auth_require(): void {
         exit;
     }
 }
+
+function verify_turnstile(string $secret, string $token): bool {
+    $response = file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'content' => http_build_query([
+                'secret' => $secret,
+                'response' => $token,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            ]),
+            'timeout' => 5,
+        ]
+    ]));
+
+    if(!$response) return false;
+
+    $result = json_decode($response, true);
+    return !empty($result['success']);
+}

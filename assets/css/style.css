@@ -1368,6 +1368,24 @@ a.breadcrumb-item:hover {
         background-color: var(--danger) !important;
         color: #fff !important;
     }
+
+    /* Table dark mode */
+    .tc-cell[heading="true"] {
+        background: var(--bg-hover);
+    }
+
+    .tc-cell--selected {
+        background: var(--bg-hover) !important;
+    }
+
+    .tc-popover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Toggle block dark mode */
+    .toggle-block__input {
+        color: var(--text);
+    }
 }
 
 /* Page block (Editor.js custom tool) */
@@ -1526,6 +1544,173 @@ a.breadcrumb-item:hover {
 
 .link-tool__progress .link-tool__progress-bar {
     background: var(--primary) !important;
+}
+
+/* Table tool — override plugin CSS variables */
+.tc-wrap {
+    --color-border: var(--border) !important;
+    --color-background: var(--bg) !important;
+    --color-text-secondary: var(--text-secondary) !important;
+}
+
+.tc-cell {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.tc-cell[heading="true"] {
+    font-weight: 600;
+    background: var(--bg-secondary);
+}
+
+.tc-add-column,
+.tc-add-row {
+    color: var(--text-secondary) !important;
+    background: var(--bg) !important;
+    border-color: var(--border) !important;
+}
+
+.tc-add-column:hover,
+.tc-add-row:hover {
+    color: var(--text) !important;
+    background: var(--bg-hover) !important;
+}
+
+.tc-popover {
+    --color-border: var(--border) !important;
+    --color-background: var(--bg) !important;
+    --color-background-hover: var(--bg-hover) !important;
+    background: var(--bg) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 4px 16px var(--card-shadow) !important;
+    border-radius: var(--radius) !important;
+}
+
+.tc-popover__item {
+    color: var(--text) !important;
+}
+
+.tc-popover__item:hover {
+    background: var(--bg-hover) !important;
+}
+
+.tc-popover__item-icon {
+    color: var(--text-secondary) !important;
+    background: var(--bg-hover) !important;
+}
+
+.tc-popover__item-icon svg {
+    stroke: var(--text-secondary) !important;
+}
+
+.tc-toolbox {
+    --toggler-dots-color: var(--text-secondary) !important;
+    --toggler-dots-color-hovered: var(--text) !important;
+}
+
+/* Alert tool — override plugin hardcoded colors */
+.cdx-alert {
+    padding: 12px 16px !important;
+    border-radius: var(--radius) !important;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.cdx-alert-primary {
+    background-color: rgba(66, 153, 225, 0.12) !important;
+    border-color: #4299e1 !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-secondary {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-info {
+    background-color: rgba(84, 192, 235, 0.12) !important;
+    border-color: #54c0eb !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-success {
+    background-color: rgba(104, 211, 145, 0.12) !important;
+    border-color: #68d391 !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-warning {
+    background-color: rgba(237, 137, 54, 0.12) !important;
+    border-color: #ed8936 !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-danger {
+    background-color: rgba(252, 129, 129, 0.12) !important;
+    border-color: #fc8181 !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-light {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert-dark {
+    background-color: var(--bg-hover) !important;
+    border-color: var(--text-secondary) !important;
+    color: var(--text) !important;
+}
+
+.cdx-alert [contenteditable] {
+    outline: none;
+}
+
+.cdx-alert__message {
+    outline: none;
+}
+
+/* Toggle block */
+.toggle-block__selector {
+    border: none !important;
+    background: none !important;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-block__selector:hover {
+    color: var(--text);
+}
+
+.toggle-block__input {
+    outline: none;
+    border: none;
+    background: none;
+    font-family: var(--font);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 0;
+    width: 100%;
+}
+
+.toggle-block__input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.toggle-block__item {
+    border-left: 2px solid var(--border);
+    padding-left: 16px;
+    margin-left: 8px;
+    margin-top: 4px;
 }
 
 /* Responsive */

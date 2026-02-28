@@ -188,6 +188,28 @@ function initEditor(config) {
             delimiter: Delimiter,
             inlineCode: InlineCode,
             marker: Marker,
+            underline: Underline,
+            strikethrough: Strikethrough,
+            table: {
+                class: Table,
+                inlineToolbar: true,
+                config: {
+                    rows: 2,
+                    cols: 3
+                }
+            },
+            alert: {
+                class: Alert,
+                inlineToolbar: true,
+                config: {
+                    defaultType: 'info',
+                    messagePlaceholder: 'Введіть повідомлення'
+                }
+            },
+            toggle: {
+                class: ToggleBlock,
+                inlineToolbar: true
+            },
             page: {
                 class: PageTool,
                 config: {
@@ -211,6 +233,10 @@ function initEditor(config) {
                     }
                 }
             }
+        },
+        onReady: () => {
+            new DragDrop(editor);
+            new Undo({ editor });
         },
         onChange: () => {
             scheduleSave();
@@ -242,7 +268,12 @@ function initEditor(config) {
                     'Marker': 'Маркер',
                     'Link': 'Посилання',
                     'Link Tool': 'Посилання',
-                    'Сторінка': 'Сторінка'
+                    'Сторінка': 'Сторінка',
+                    'Table': 'Таблиця',
+                    'Underline': 'Підкреслений',
+                    'Strikethrough': 'Закреслений',
+                    'Alert': 'Сповіщення',
+                    'Toggle': 'Розгортуваний блок'
                 },
                 blockTunes: {
                     delete: { 'Delete': 'Видалити', 'Click to delete': 'Натисніть для видалення' },

@@ -3,16 +3,40 @@
         "title": "Кінчики",
         "icon": "🎬",
         "created_at": "2026-02-27T23:38:16+00:00",
-        "updated_at": "2026-02-28T01:03:53+00:00"
+        "updated_at": "2026-02-28T01:31:55+00:00"
     },
     "content": {
-        "time": 1772240633150,
+        "time": 1772242315540,
         "blocks": [
             {
-                "id": "wrnW7MBX60",
-                "type": "paragraph",
+                "id": "GM4v6fiTd5",
+                "type": "table",
                 "data": {
-                    "text": "Люді"
+                    "withHeadings": false,
+                    "stretched": false,
+                    "content": [
+                        [
+                            "sd",
+                            "df",
+                            "11",
+                            "22",
+                            ""
+                        ],
+                        [
+                            "fsf",
+                            "dfdf",
+                            "22",
+                            "",
+                            "33"
+                        ],
+                        [
+                            "фіів",
+                            "фівіва",
+                            "віа",
+                            "",
+                            "44"
+                        ]
+                    ]
                 }
             }
         ],

@@ -20,8 +20,16 @@
             <div class="form-group">
                 <input type="password" id="pass" name="pass" placeholder="Пароль" required>
             </div>
+            {% if captcha_site_key %}
+                <div class="form-group captcha-group">
+                    <div class="cf-turnstile" data-sitekey="{{ captcha_site_key }}" data-theme="auto"></div>
+                </div>
+            {% endif %}
             <button type="submit" class="btn btn-primary btn-full">Увійти</button>
         </form>
     </div>
 </div>
+{% if captcha_site_key %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 {% endblock %}

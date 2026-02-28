@@ -39,15 +39,33 @@ function router($url_segments = []): array {
             exit;
         }
 
+        $env = get_env();
+        $captcha_site_key = $env['CAPTCHA_SITE_KEY'] ?? '';
+        $captcha_secret_key = $env['CAPTCHA_SECRET_KEY'] ?? '';
+        $context['captcha_site_key'] = $captcha_site_key;
         $context['error'] = '';
+
         if($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $_POST['user'] ?? '';
             $pass = $_POST['pass'] ?? '';
-            if(auth_login($user, $pass)) {
-                header('Location: ' . HOME_URL);
-                exit;
-            } else {
-                $context['error'] = 'Невірний логін або пароль';
+            $captcha_ok = true;
+
+            // Verify Cloudflare Turnstile CAPTCHA if configured
+            if($captcha_site_key && $captcha_secret_key) {
+                $cf_token = $_POST['cf-turnstile-response'] ?? '';
+                $captcha_ok = $cf_token && verify_turnstile($captcha_secret_key, $cf_token);
+                if(!$captcha_ok) {
+                    $context['error'] = 'Перевірка CAPTCHA не пройдена';
+                }
+            }
+
+            if($captcha_ok) {
+                if(auth_login($user, $pass)) {
+                    header('Location: ' . HOME_URL);
+                    exit;
+                } else {
+                    $context['error'] = 'Невірний логін або пароль';
+                }
             }
         }
 
