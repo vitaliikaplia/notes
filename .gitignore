@@ -1,6 +1,7 @@
 .env
 .idea
 .DS_Store
+debug.log
 .notes/*.json
 .notes/**/*.json
 .notes/.sort-order.json
