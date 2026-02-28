@@ -7,4 +7,5 @@ debug.log
 .notes/.sort-order.json
 .remember_tokens/
 .twig-cache/
-uploads/
+uploads/*
+!uploads/.htaccess

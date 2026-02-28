@@ -171,9 +171,25 @@ function get_note($relative_path): ?array {
     $data['_title'] = get_note_title($data);
 
     // Convert legacy raw SVG icons to base64 data URI
+    $need_save = false;
     if(!empty($data['meta']['icon']) && str_starts_with($data['meta']['icon'], '<svg')) {
         $data['meta']['icon'] = 'data:image/svg+xml;base64,' . base64_encode($data['meta']['icon']);
-        // Persist conversion (save only clean data without runtime _ fields)
+        $need_save = true;
+    }
+
+    // Migrate legacy /uploads/ URLs to /file/
+    if(!empty($data['content']['blocks'])) {
+        $uploads_prefix = HOME_URL . 'uploads/';
+        foreach($data['content']['blocks'] as &$block) {
+            if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url']) && str_starts_with($block['data']['file']['url'], $uploads_prefix)) {
+                $block['data']['file']['url'] = HOME_URL . 'file/' . substr($block['data']['file']['url'], strlen($uploads_prefix));
+                $need_save = true;
+            }
+        }
+        unset($block);
+    }
+
+    if($need_save) {
         $save_data = array_filter($data, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
         file_put_contents($file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
@@ -514,7 +530,7 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
     if($mime === 'image/svg+xml') {
         $filepath = $target_dir . DS . $filename . '.svg';
         copy($source_path, $filepath);
-        return HOME_URL . 'uploads/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.svg';
+        return HOME_URL . 'file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.svg';
     }
 
     // Raster images — convert to WebP via Imagick
@@ -546,7 +562,7 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
         return null;
     }
 
-    return HOME_URL . 'uploads/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
+    return HOME_URL . 'file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
 }
 
 function minify_svg(string $svg): ?string {
@@ -592,12 +608,16 @@ function extract_image_urls(array $blocks): array {
 }
 
 function delete_upload_by_url(string $url): bool {
+    $file_prefix = HOME_URL . 'file/';
     $uploads_prefix = HOME_URL . 'uploads/';
-    if(!str_starts_with($url, $uploads_prefix)) {
+
+    if(str_starts_with($url, $file_prefix)) {
+        $relative = substr($url, strlen($file_prefix));
+    } elseif(str_starts_with($url, $uploads_prefix)) {
+        $relative = substr($url, strlen($uploads_prefix));
+    } else {
         return false;
     }
-
-    $relative = substr($url, strlen($uploads_prefix));
     if(str_contains($relative, '..')) {
         return false;
     }

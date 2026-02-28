@@ -877,27 +877,39 @@ function router($url_segments = []): array {
             exit;
         }
 
-    } elseif($url_segments[0] === 'uploads') {
+    } elseif($url_segments[0] === 'file') {
         // Serve uploaded images with auth check
         $relative = implode('/', array_slice($url_segments, 1));
+        $serve = false;
+        $is_public = false;
 
-        if(empty($relative) || str_contains($relative, '..')) {
-            header('HTTP/1.1 403 Forbidden');
-            exit;
-        }
-
-        $filepath = ABSPATH . DS . 'uploads' . DS . str_replace('/', DS, $relative);
-        if(!file_exists($filepath) || !is_file($filepath)) {
-            header('HTTP/1.1 404 Not Found');
-            exit;
-        }
-
-        if(!auth_check()) {
-            $filename = basename($relative);
-            if(!is_upload_referenced_in_public_note($filename)) {
-                header('HTTP/1.1 403 Forbidden');
-                exit;
+        if(!empty($relative) && !str_contains($relative, '..')) {
+            $filepath = ABSPATH . DS . 'uploads' . DS . str_replace('/', DS, $relative);
+            if(file_exists($filepath) && is_file($filepath)) {
+                if(auth_check()) {
+                    $serve = true;
+                } else {
+                    $filename = basename($relative);
+                    if(is_upload_referenced_in_public_note($filename)) {
+                        $serve = true;
+                        $is_public = true;
+                    }
+                }
             }
+        }
+
+        if(!$serve) {
+            // Always 404 — never reveal whether file exists
+            header("HTTP/1.1 404 Not Found");
+            $template = '404.twig';
+            $context['page']['title'] = '404';
+            $context['authenticated'] = false;
+            $context['robots'] = 'noindex, nofollow';
+            $body_classes[] = 'page-404';
+            $context['body_classes'] = implode(' ', $body_classes);
+            $context['html_title'] = '404 — ' . SITE_NAME;
+            echo get_template($template, $context);
+            exit;
         }
 
         $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
@@ -911,7 +923,10 @@ function router($url_segments = []): array {
         ];
         header('Content-Type: ' . ($mime_map[$ext] ?? 'application/octet-stream'));
         header('Content-Length: ' . filesize($filepath));
-        header('Cache-Control: public, max-age=31536000, immutable');
+        header($is_public
+            ? 'Cache-Control: public, max-age=31536000, immutable'
+            : 'Cache-Control: private, max-age=31536000, immutable'
+        );
         readfile($filepath);
         exit;
 
@@ -940,7 +955,7 @@ if ($url_segments = get_url_segments()) {
     if(
         !empty($url_segments[0])
         && $url_segments[0] !== 'api'
-        && $url_segments[0] !== 'uploads'
+        && $url_segments[0] !== 'file'
         && $url_segments[0] !== 'manifest.json'
         && empty($_GET)
         && substr($_SERVER['REQUEST_URI'], -1) !== '/'
