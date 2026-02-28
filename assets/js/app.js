@@ -522,37 +522,6 @@ function initEditor(config) {
 document.addEventListener('DOMContentLoaded', () => {
     const homeUrl = document.body.dataset.homeUrl || '/';
 
-    // Mobile sidebar toggle
-    const menuBtn = document.getElementById('mobile-menu-btn');
-    const sidebar = document.querySelector('.sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-    if (menuBtn && sidebar) {
-        menuBtn.addEventListener('click', () => {
-            const open = sidebar.classList.toggle('open');
-            sidebarOverlay?.classList.toggle('active', open);
-            document.body.style.overflow = open ? 'hidden' : '';
-        });
-    }
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            sidebarOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        });
-    }
-
-    // Close sidebar on note link click (mobile)
-    if (sidebar) {
-        sidebar.addEventListener('click', (e) => {
-            if (e.target.closest('.sidebar-note, .sidebar-note-parent, .sidebar-add-note')) {
-                sidebar.classList.remove('open');
-                sidebarOverlay?.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        });
-    }
-
     // Folder toggle with persistent state
     const collapsedKey = 'sidebar-collapsed';
     let collapsed = JSON.parse(localStorage.getItem(collapsedKey) || '[]');

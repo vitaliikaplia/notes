@@ -231,6 +231,40 @@
 </script>
 {% endif %}
 
+{% if authenticated %}
+<script>
+(function() {
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var sidebar = document.querySelector('.sidebar');
+    var overlay = document.getElementById('sidebar-overlay');
+
+    if (menuBtn && sidebar) {
+        menuBtn.addEventListener('click', function() {
+            var open = sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('active', open);
+            document.body.style.overflow = open ? 'hidden' : '';
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+    }
+    if (sidebar) {
+        sidebar.addEventListener('click', function(e) {
+            if (e.target.closest('.sidebar-note, .sidebar-note-parent, .sidebar-add-note')) {
+                sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+})();
+</script>
+{% endif %}
+
 {% block scripts %}{% endblock %}
 
 </body>
