@@ -44,7 +44,8 @@ function blocks_to_markdown(array $blocks): string {
                 break;
 
             case 'code':
-                $lines[] = '```';
+                $lang = $data['language'] ?? '';
+                $lines[] = '```' . $lang;
                 $lines[] = $data['code'] ?? '';
                 $lines[] = '```';
                 $lines[] = '';
@@ -210,7 +211,8 @@ function markdown_to_blocks(string $markdown): array {
         }
 
         // Fenced code block
-        if (preg_match('/^```/', $line)) {
+        if (preg_match('/^```(.*)$/', $line, $code_match)) {
+            $lang = trim($code_match[1]);
             $code_lines = [];
             $i++;
             while ($i < $total && !preg_match('/^```/', $lines[$i])) {
@@ -218,9 +220,11 @@ function markdown_to_blocks(string $markdown): array {
                 $i++;
             }
             $i++;
-            $blocks[] = make_block('code', [
-                'code' => implode("\n", $code_lines),
-            ]);
+            $block_data = ['code' => implode("\n", $code_lines)];
+            if ($lang) {
+                $block_data['language'] = $lang;
+            }
+            $blocks[] = make_block('code', $block_data);
             continue;
         }
 

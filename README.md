@@ -5,6 +5,7 @@
 ## Можливості
 
 - Блоковий редактор (заголовки, списки, чеклисти, код, цитати, таблиці, роздільники, посилання)
+- Блоки коду з підсвіткою синтаксису (One Dark тема, 18 мов, пошук по мовах)
 - Inline-інструменти: жирний, курсив, підкреслення, закреслення, маркер, код
 - Кольорові блоки-сповіщення (info, success, warning, danger)
 - Розгортувані блоки (toggle)
@@ -36,7 +37,7 @@
 ## Стек
 
 - **Backend:** PHP, Twig 3
-- **Редактор:** Editor.js (CDN) + плагіни (table, underline, strikethrough, alert, toggle, drag-drop, undo)
+- **Редактор:** Editor.js (CDN) + плагіни (codecup, table, underline, strikethrough, alert, toggle, drag-drop, undo)
 - **Сховище:** JSON-файли (без бази даних)
 - **Стилі:** CSS з кастомними змінними
 - **JS:** Vanilla JavaScript

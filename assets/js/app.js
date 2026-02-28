@@ -171,7 +171,32 @@ function initEditor(config) {
                 class: Checklist,
                 inlineToolbar: true
             },
-            code: CodeTool,
+            code: {
+                class: editorJsCodeCup,
+                config: {
+                    showlinenumbers: true,
+                    languages: {
+                        none: 'Plain Text',
+                        javascript: 'JavaScript',
+                        typescript: 'TypeScript',
+                        php: 'PHP',
+                        python: 'Python',
+                        html: 'HTML',
+                        css: 'CSS',
+                        json: 'JSON',
+                        sql: 'SQL',
+                        bash: 'Bash',
+                        go: 'Go',
+                        rust: 'Rust',
+                        java: 'Java',
+                        csharp: 'C#',
+                        cpp: 'C++',
+                        ruby: 'Ruby',
+                        swift: 'Swift',
+                        kotlin: 'Kotlin'
+                    }
+                }
+            },
             quote: {
                 class: Quote,
                 config: {
@@ -542,6 +567,43 @@ function initEditor(config) {
     }
 
 }
+
+// Language dropdown search
+(function() {
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                const dropdown = node.classList?.contains('editorjs-codeCup_languageDropdown')
+                    ? node
+                    : node.querySelector?.('.editorjs-codeCup_languageDropdown');
+                if (dropdown && !dropdown.querySelector('.lang-search')) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'lang-search';
+                    input.placeholder = 'Пошук...';
+                    dropdown.prepend(input);
+                    setTimeout(() => input.focus(), 0);
+
+                    const options = dropdown.querySelectorAll('.editorjs-codeCup_languageOption');
+                    input.addEventListener('input', () => {
+                        const q = input.value.toLowerCase();
+                        options.forEach(opt => {
+                            opt.style.display = opt.textContent.toLowerCase().includes(q) ? '' : 'none';
+                        });
+                    });
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            const visible = [...options].find(o => o.style.display !== 'none');
+                            if (visible) visible.click();
+                        }
+                    });
+                }
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
 
 // Sidebar
 document.addEventListener('DOMContentLoaded', () => {
