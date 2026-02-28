@@ -68,7 +68,7 @@ function initEditor(config) {
                 }
             });
 
-            const title = titleEl.value.trim() || 'Без назви';
+            const title = titleEl.textContent.trim() || 'Без назви';
             const folder = noteFolder || '';
 
             const response = await fetch(homeUrl + 'api/save/', {
@@ -103,7 +103,7 @@ function initEditor(config) {
                 }
 
                 // Update sidebar title and icon
-                const noteTitle = titleEl.value.trim() || 'Без назви';
+                const noteTitle = titleEl.textContent.trim() || 'Без назви';
                 const noteUrl = homeUrl + result.url + '/';
                 const sidebarLink = document.querySelector('.sidebar-note[href="' + noteUrl + '"], .sidebar-note-parent[href="' + noteUrl + '"]');
                 if (sidebarLink) {
@@ -473,6 +473,13 @@ function initEditor(config) {
         }
     });
 
+    // Paste only plain text in title
+    titleEl.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain').replace(/\n/g, ' ');
+        document.execCommand('insertText', false, text);
+    });
+
     // Auto-focus title for new notes (after Editor.js ready)
     if (isNew) {
         editor.isReady.then(() => titleEl.focus());
@@ -675,7 +682,7 @@ function initEditor(config) {
     if (exportBtn) {
         exportBtn.addEventListener('click', async () => {
             const data = await editor.save();
-            const title = titleEl.value.trim() || 'untitled';
+            const title = titleEl.textContent.trim() || 'untitled';
 
             const resp = await fetch(homeUrl + 'api/export-md/', {
                 method: 'POST',
