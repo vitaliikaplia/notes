@@ -1553,6 +1553,13 @@ a:hover {
     align-items: center;
     gap: 6px;
     min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.editor-breadcrumbs::-webkit-scrollbar {
+    display: none;
 }
 
 .breadcrumb-home {
