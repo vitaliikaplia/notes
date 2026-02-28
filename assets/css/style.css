@@ -1900,6 +1900,13 @@ a.breadcrumb-item:hover {
         font-size: 24px;
     }
 
+    .page-editor .ce-paragraph,
+    .page-editor .cdx-input,
+    .page-editor .ce-code__textarea,
+    .page-editor [contenteditable] {
+        font-size: 16px;
+    }
+
     .editor-footer {
         padding: 0 12px;
     }
