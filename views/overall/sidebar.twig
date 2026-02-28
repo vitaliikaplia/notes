@@ -26,6 +26,7 @@
                         <span class="sidebar-note-icon__toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </span>
                     <a href="{{ base_url }}note/{{ note._url }}/" class="sidebar-note-parent">{{ note._title }}</a>
+                    <a href="{{ base_url }}new/{{ note._file|replace({'.json': ''}) }}/" class="sidebar-note-add" title="Нова дочірня нотатка">+</a>
                     <button class="sidebar-note-delete" data-path="{{ note._file }}" title="Видалити">
                         <svg class="icon-trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -41,6 +42,7 @@
                     <span class="sidebar-note-icon">{% if note_icon %}{{ note_icon }}{% else %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>{% endif %}</span>
                     {{ note._title }}
                 </a>
+                <a href="{{ base_url }}new/{{ note._file|replace({'.json': ''}) }}/" class="sidebar-note-add" title="Нова дочірня нотатка">+</a>
                 <button class="sidebar-note-delete" data-path="{{ note._file }}" title="Видалити">
                     <svg class="icon-trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

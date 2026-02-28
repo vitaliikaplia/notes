@@ -335,6 +335,28 @@ a:hover {
     text-decoration: none;
 }
 
+.sidebar-note-add {
+    display: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    text-decoration: none;
+    line-height: 1;
+    flex-shrink: 0;
+    padding: 0 2px;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+
+.sidebar-note-item:hover .sidebar-note-add,
+.sidebar-folder-header:hover .sidebar-note-add {
+    display: block;
+}
+
+.sidebar-note-add:hover {
+    opacity: 1;
+    text-decoration: none;
+}
+
 .sidebar-note-delete {
     display: none;
     background: none;
@@ -724,14 +746,16 @@ a:hover {
 }
 
 .form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 13px;
     font-weight: 500;
     margin-bottom: 4px;
     color: var(--text-secondary);
 }
 
-.form-group input {
+.form-group input:not([type="checkbox"]) {
     width: 100%;
     padding: 11px 14px;
     border: 1px solid var(--border);
@@ -752,6 +776,61 @@ a:hover {
 .form-group input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(84, 192, 235, 0.15);
+}
+
+.form-remember {
+    margin-bottom: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    user-select: none;
+    margin-bottom: 0;
+    line-height: 20px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    min-width: 36px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    background: var(--border);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    box-shadow: none;
+}
+
+.checkbox-label input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+    background: var(--primary);
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+    transform: translateX(16px);
 }
 
 .login-box .btn-full {

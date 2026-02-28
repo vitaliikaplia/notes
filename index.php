@@ -10,6 +10,13 @@ ini_set('error_log', ABSPATH . DIRECTORY_SEPARATOR . 'debug.log');
 error_reporting(E_ALL);
 
 /** session */
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => true,
+    'httponly'  => true,
+    'samesite' => 'Lax',
+]);
 session_start();
 
 /** composer */

@@ -60,7 +60,8 @@ function router($url_segments = []): array {
             }
 
             if($captcha_ok) {
-                if(auth_login($user, $pass)) {
+                $remember = !empty($_POST['remember']);
+                if(auth_login($user, $pass, $remember)) {
                     header('Location: ' . HOME_URL);
                     exit;
                 } else {
