@@ -881,7 +881,6 @@ function router($url_segments = []): array {
         // Serve uploaded images with auth check
         $relative = implode('/', array_slice($url_segments, 1));
         $serve = false;
-        $is_public = false;
 
         if(!empty($relative) && !str_contains($relative, '..')) {
             $filepath = ABSPATH . DS . 'uploads' . DS . str_replace('/', DS, $relative);
@@ -892,7 +891,6 @@ function router($url_segments = []): array {
                     $filename = basename($relative);
                     if(is_upload_referenced_in_public_note($filename)) {
                         $serve = true;
-                        $is_public = true;
                     }
                 }
             }
@@ -923,10 +921,7 @@ function router($url_segments = []): array {
         ];
         header('Content-Type: ' . ($mime_map[$ext] ?? 'application/octet-stream'));
         header('Content-Length: ' . filesize($filepath));
-        header($is_public
-            ? 'Cache-Control: public, max-age=31536000, immutable'
-            : 'Cache-Control: private, max-age=31536000, immutable'
-        );
+        header('Cache-Control: private, max-age=31536000, immutable');
         readfile($filepath);
         exit;
 
