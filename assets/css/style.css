@@ -1713,16 +1713,80 @@ a.breadcrumb-item:hover {
     margin-top: 4px;
 }
 
+/* Mobile header — hidden on desktop */
+.mobile-header {
+    display: none;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .app {
         grid-template-columns: 1fr;
     }
 
+    /* Mobile header */
+    .mobile-header {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        z-index: 99;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+    }
+
+    .mobile-header-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .mobile-menu-btn,
+    .mobile-search-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: none;
+        color: var(--text);
+        cursor: pointer;
+        border-radius: var(--radius);
+        padding: 0;
+    }
+
+    .mobile-menu-btn:hover,
+    .mobile-search-btn:hover {
+        background: var(--bg-hover);
+    }
+
+    /* Sidebar overlay */
+    .sidebar-overlay.active {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+    }
+
+    /* Sidebar */
     .sidebar {
         position: fixed;
+        top: 0;
         left: -100%;
         width: 80%;
+        max-width: 300px;
+        height: 100vh;
         z-index: 100;
         transition: left 0.2s;
     }
@@ -1731,8 +1795,57 @@ a.breadcrumb-item:hover {
         left: 0;
     }
 
+    /* Content — offset for fixed header */
     .content {
-        padding: 20px;
+        padding: 20px 16px;
+        padding-top: 64px;
+    }
+
+    /* Editor */
+    .page-editor .content {
+        padding-top: 48px;
+    }
+
+    .page-editor .editor-title-row {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 12px;
+    }
+
+    .page-editor .ce-block__content {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .page-editor .ce-toolbar__content {
+        margin-left: 16px;
+        margin-right: 16px;
+    }
+
+    .editor-title {
+        font-size: 24px;
+    }
+
+    .editor-footer {
+        padding: 0 12px;
+    }
+
+    /* Index */
+    .index-header {
+        padding: 16px 16px 12px;
+    }
+
+    .index-title {
+        font-size: 24px;
+    }
+
+    .notes-grid {
+        padding: 8px 16px;
+        gap: 8px;
+    }
+
+    .notes-list .note-card {
+        padding: 10px 16px;
     }
 }
 
