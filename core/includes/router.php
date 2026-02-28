@@ -770,6 +770,21 @@ function router($url_segments = []): array {
             echo json_encode(['success' => $ok ? 1 : 0]);
             exit;
 
+        } elseif($action === 'graph' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            // Reset all saved node positions
+            $all_notes = collect_all_notes();
+            $count = 0;
+            foreach($all_notes as $note) {
+                if(isset($note['meta']['graph_x']) || isset($note['meta']['graph_y'])) {
+                    unset($note['meta']['graph_x'], $note['meta']['graph_y']);
+                    $save_data = array_filter($note, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
+                    save_note($note['_file'], $save_data);
+                    $count++;
+                }
+            }
+            echo json_encode(['success' => 1, 'reset' => $count]);
+            exit;
+
         } elseif($action === 'fetch-url' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $url = $_GET['url'] ?? '';
 

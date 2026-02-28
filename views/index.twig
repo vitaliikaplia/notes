@@ -63,6 +63,11 @@
     </div>
 
     <div id="tab-graph" class="tab-content">
+        <button class="graph-reset-btn" id="graph-reset-btn" title="Скинути позиції нод">
+            <svg class="icon-reset" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="graph-reset-label">Скинути</span>
+        </button>
         <div id="mindmap" class="mindmap-container mindmap-fullscreen"></div>
     </div>
 {% else %}
@@ -142,11 +147,14 @@
     const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
     let graphInited = false;
 
+    const indexHeader = document.querySelector('.index-header');
+
     function setTab(name) {
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
         tabNotes.classList.toggle('active', name === 'notes');
         tabGraph.classList.toggle('active', name === 'graph');
         indexControls.style.display = name === 'notes' ? '' : 'none';
+        indexHeader.classList.toggle('graph-active', name === 'graph');
         localStorage.setItem('dashboard-tab', name);
 
         if (name === 'graph' && !graphInited) {
@@ -156,6 +164,21 @@
     }
 
     setTab(savedTab);
+
+    // --- Graph reset button (two-click confirm like sidebar delete) ---
+    var resetBtn = document.getElementById('graph-reset-btn');
+    var resetTimer = null;
+    resetBtn.addEventListener('click', async () => {
+        if (!resetBtn.classList.contains('confirm')) {
+            resetBtn.classList.add('confirm');
+            if (resetTimer) clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => resetBtn.classList.remove('confirm'), 3000);
+            return;
+        }
+        resetBtn.classList.remove('confirm');
+        await fetch('{{ home_url }}api/graph/', { method: 'DELETE' });
+        location.reload();
+    });
     tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
 
     // --- Mindmap (lazy init) ---
@@ -288,20 +311,21 @@
                 graph.d3Force('link')
                     .distance(link => link.type === 'child' ? 40 : 45)
                     .strength(link => link.type === 'child' ? 0.9 : 0.2);
-                graph.d3Force('center').strength(0.05);
+                graph.d3Force('center', null);
 
-                // Match graph shape to canvas aspect ratio
+                // Gravity: full for parents, mild for children (link force keeps them near parent)
                 var aspectRatio = width / height;
-                var aspectNodes;
-                function forceAspect(alpha) {
+                var gravityNodes;
+                function forceGravity(alpha) {
                     var k = alpha * 0.06;
-                    aspectNodes.forEach(function(n) {
-                        n.vx -= n.x * k * (1 / aspectRatio);
-                        n.vy -= n.y * k * aspectRatio;
+                    gravityNodes.forEach(function(n) {
+                        var s = n.id.indexOf('/') !== -1 ? 0.1 : 1;
+                        n.vx -= n.x * k * s * (1 / aspectRatio);
+                        n.vy -= n.y * k * s * aspectRatio;
                     });
                 }
-                forceAspect.initialize = function(nodes) { aspectNodes = nodes; };
-                graph.d3Force('aspect', forceAspect);
+                forceGravity.initialize = function(nodes) { gravityNodes = nodes; };
+                graph.d3Force('gravity', forceGravity);
 
                 window.addEventListener('resize', () => {
                     graph.width(container.clientWidth).height(container.clientHeight);
