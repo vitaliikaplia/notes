@@ -1921,6 +1921,28 @@ a.breadcrumb-item:hover {
         padding: 10px 16px;
     }
 
+    /* Login */
+    .app-public {
+        padding: 0 16px 60px;
+    }
+
+    .login-container {
+        max-width: none;
+    }
+
+    .login-box {
+        padding: 24px 20px 28px;
+        border-radius: 12px;
+    }
+
+    .login-logo img {
+        width: 72px;
+        height: 72px;
+    }
+
+    .login-box h1 {
+        font-size: 20px;
+    }
 }
 
 /* Search overlay */
