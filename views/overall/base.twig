@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ html_title }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ assets_url }}favicon.svg{{ asset_ver('favicon.svg') }}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#202020">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/assets/icon-192.png">
     <link rel="stylesheet" href="{{ assets_url }}css/style.css{{ asset_ver('css/style.css') }}">
     <script>
         (function(){
@@ -33,6 +38,7 @@
             }
         })();
     </script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </head>
 <body class="{{ body_classes }}" data-home-url="{{ home_url }}">
 
