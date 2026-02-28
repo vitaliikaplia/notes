@@ -237,8 +237,8 @@ function initEditor(config) {
                     },
                     field: 'image',
                     types: 'image/jpeg,image/png,image/gif,image/webp',
-                    captionPlaceholder: 'Підпис до зображення',
-                    buttonContent: 'Вибрати зображення'
+                    buttonContent: 'Вибрати зображення',
+                    captionPlaceholder: ''
                 }
             },
             delimiter: Delimiter,

@@ -1214,6 +1214,10 @@ a:hover {
     border-radius: var(--radius);
 }
 
+.image-tool__caption {
+    display: none !important;
+}
+
 /* Image resize handle */
 .image-resize-handle {
     position: absolute;
