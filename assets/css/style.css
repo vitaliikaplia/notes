@@ -650,9 +650,68 @@ a:hover {
     line-height: 1.2;
 }
 
-.view-toggle {
+/* Dashboard tabs */
+.index-tabs {
     display: flex;
-    gap: 4px;
+    gap: 24px;
+}
+
+.index-tab {
+    padding: 8px 0;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    border-radius: 0;
+}
+
+.index-tab:hover {
+    color: var(--text);
+}
+
+.index-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent, #54c0eb);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.mindmap-fullscreen {
+    width: 100%;
+    height: calc(100vh - 120px);
+}
+
+.index-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.index-select {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.index-select:focus {
+    border-color: var(--primary);
 }
 
 .view-toggle-btn {
@@ -741,13 +800,13 @@ a:hover {
 .notes-list {
     display: flex;
     flex-direction: column;
-    padding-top: 4px;
+    padding: 4px 70px 0;
 }
 
 .notes-list .note-card {
     display: flex;
     align-items: center;
-    padding: 10px 70px;
+    padding: 10px 0;
     text-decoration: none;
     color: var(--text);
     border-bottom: 1px solid var(--border);
@@ -791,9 +850,24 @@ a:hover {
 .page-index .content {
     padding: 0;
     max-width: 100%;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+/* Mind map */
+.mindmap-container {
+    width: 100%;
+    position: relative;
+}
+
+.mindmap-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-size: 14px;
 }
 
 /* Empty state */
@@ -2104,6 +2178,8 @@ a.breadcrumb-item:hover {
     padding: 8px 12px;
     border: 1px dashed var(--border);
     border-radius: var(--radius);
+    position: relative;
+    flex-wrap: wrap;
 }
 
 .cdx-page-input__icon {
@@ -2146,6 +2222,81 @@ a.breadcrumb-item:hover {
 .cdx-page-input__btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* Page dropdown (search results) */
+.cdx-page-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--bg-secondary, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.cdx-page-dropdown.visible {
+    display: block;
+}
+
+.cdx-page-dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.cdx-page-dropdown__item:hover,
+.cdx-page-dropdown__item.highlighted {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.cdx-page-dropdown__icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
+.cdx-page-dropdown__icon svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+}
+
+.cdx-page-dropdown__icon img {
+    width: 16px;
+    height: 16px;
+}
+
+.cdx-page-dropdown__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cdx-page-dropdown__title {
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cdx-page-dropdown__path {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Link Tool */
@@ -2511,10 +2662,23 @@ a.breadcrumb-item:hover {
     /* Index */
     .index-header {
         padding: 16px 16px 12px;
+        flex-wrap: wrap;
+        gap: 12px;
     }
 
     .index-title {
         font-size: 24px;
+    }
+
+    .index-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .index-select {
+        font-size: 12px;
+        flex: 1;
+        min-width: 0;
     }
 
     .notes-grid {
@@ -2523,8 +2687,21 @@ a.breadcrumb-item:hover {
         grid-template-columns: repeat(2, 1fr) !important;
     }
 
+    .notes-list {
+        padding: 4px 16px 0;
+    }
+
     .notes-list .note-card {
-        padding: 10px 16px;
+        padding: 10px 0;
+    }
+
+    .index-tab {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+
+    .mindmap-fullscreen {
+        height: calc(100vh - 100px);
     }
 
     /* Login */

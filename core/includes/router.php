@@ -30,7 +30,26 @@ function router($url_segments = []): array {
         $template = 'index.twig';
         $context['page']['title'] = 'Нотатки';
         $context['html_title'] = SITE_NAME;
-        $context['recent_notes'] = get_recent_notes();
+        $context['recent_notes'] = get_recent_notes(80);
+
+        // Збір унікальних батьківських груп для фільтра
+        $parent_groups = [];
+        foreach($context['recent_notes'] as $note) {
+            $dir = dirname($note['_file']);
+            if($dir !== '.') {
+                $parent_file = $dir . '.json';
+                if(!isset($parent_groups[$parent_file])) {
+                    $parent_note = get_note($parent_file);
+                    $parent_groups[$parent_file] = [
+                        'file' => $parent_file,
+                        'title' => $parent_note ? $parent_note['_title'] : $dir,
+                    ];
+                }
+            }
+        }
+        usort($parent_groups, fn($a, $b) => strcasecmp($a['title'], $b['title']));
+        $context['parent_groups'] = $parent_groups;
+
         $body_classes[] = 'page-index';
 
     } elseif($url_segments[0] === 'login') {
@@ -643,6 +662,7 @@ function router($url_segments = []): array {
                         'title' => $title,
                         'icon' => $icon,
                         'url' => HOME_URL . 'note/' . $note['_url'] . '/',
+                        'file' => $note['_file'],
                         'snippet' => $snippet,
                         'path' => $path_label,
                     ];
@@ -652,6 +672,100 @@ function router($url_segments = []): array {
             }
 
             echo json_encode($results, JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'graph' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $all_notes = collect_all_notes();
+            $nodes = [];
+            $edges = [];
+
+            foreach($all_notes as $note) {
+                $id = $note['_file'];
+                $node = [
+                    'id'    => $id,
+                    'title' => $note['_title'],
+                    'icon'  => $note['meta']['icon'] ?? '',
+                    'url'   => HOME_URL . 'note/' . $note['_url'] . '/',
+                ];
+                if(isset($note['meta']['graph_x']) && isset($note['meta']['graph_y'])) {
+                    $node['fx'] = (float) $note['meta']['graph_x'];
+                    $node['fy'] = (float) $note['meta']['graph_y'];
+                }
+                $nodes[] = $node;
+
+                // Parent-child edge (filesystem hierarchy)
+                $dir = dirname($note['_file']);
+                if($dir !== '.') {
+                    $edges[] = [
+                        'source' => $dir . '.json',
+                        'target' => $id,
+                        'type'   => 'child',
+                    ];
+                }
+
+                // Page-block edges (inline links to other notes)
+                if(!empty($note['content']['blocks'])) {
+                    foreach($note['content']['blocks'] as $block) {
+                        if(($block['type'] ?? '') === 'page' && !empty($block['data']['pagePath'])) {
+                            $edges[] = [
+                                'source' => $id,
+                                'target' => $block['data']['pagePath'],
+                                'type'   => 'page-link',
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate edges
+            $seen = [];
+            $unique_edges = [];
+            foreach($edges as $edge) {
+                $key = $edge['source'] . '>' . $edge['target'];
+                if(!isset($seen[$key])) {
+                    $seen[$key] = true;
+                    $unique_edges[] = $edge;
+                }
+            }
+
+            // Filter edges where both nodes exist
+            $node_ids = array_flip(array_column($nodes, 'id'));
+            $valid_edges = array_values(array_filter($unique_edges, function($e) use ($node_ids) {
+                return isset($node_ids[$e['source']]) && isset($node_ids[$e['target']]);
+            }));
+
+            echo json_encode(['nodes' => $nodes, 'edges' => $valid_edges], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'graph' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Save node position: { id: "file.json", x: 123.4, y: 567.8 }
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = $input['id'] ?? '';
+            $x = $input['x'] ?? null;
+            $y = $input['y'] ?? null;
+
+            if(empty($id) || $x === null || $y === null) {
+                http_response_code(400);
+                echo json_encode(['success' => 0, 'error' => 'Missing id, x or y']);
+                exit;
+            }
+
+            $note = get_note($id);
+            if(!$note) {
+                http_response_code(404);
+                echo json_encode(['success' => 0, 'error' => 'Note not found']);
+                exit;
+            }
+
+            // Update meta with graph coordinates
+            $note['meta']['graph_x'] = round((float)$x, 2);
+            $note['meta']['graph_y'] = round((float)$y, 2);
+
+            // Save only original data (strip internal _* keys)
+            $save_data = array_filter($note, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
+            $ok = save_note($id, $save_data);
+
+            echo json_encode(['success' => $ok ? 1 : 0]);
             exit;
 
         } elseif($action === 'fetch-url' && $_SERVER['REQUEST_METHOD'] === 'GET') {

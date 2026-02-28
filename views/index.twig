@@ -3,8 +3,23 @@
 {% block content %}
 {% if recent_notes is not empty %}
     <div class="index-header">
-        <h2 class="index-title">Останні нотатки</h2>
-        <div class="view-toggle">
+        <div class="index-tabs">
+            <button class="index-tab active" data-tab="notes">Нотатки</button>
+            <button class="index-tab" data-tab="graph">Граф</button>
+        </div>
+        <div class="index-controls" id="index-controls">
+            <select class="index-select" id="sort-select">
+                <option value="recent">Останні</option>
+                <option value="oldest">Найстаріші</option>
+                <option value="az">А — Я</option>
+                <option value="za">Я — А</option>
+            </select>
+            <select class="index-select" id="filter-select">
+                <option value="">Усі нотатки</option>
+                {% for group in parent_groups %}
+                    <option value="{{ group.file }}">{{ group.title }}</option>
+                {% endfor %}
+            </select>
             <button class="view-toggle-btn active" data-view="grid" title="Плитки">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </button>
@@ -14,32 +29,41 @@
         </div>
     </div>
 
-    <div class="notes-grid" id="notes-view">
-        {% for note in recent_notes %}
-            <a href="{{ home_url }}note/{{ note._url }}/" class="note-card">
-                {% set card_icon = note.meta.icon|default('') %}
-                {% if card_icon %}
-                    <span class="note-card-icon">
-                        {%- if card_icon starts with 'data:' -%}
-                            <img src="{{ card_icon }}" width="28" height="28" alt="">
-                        {%- else -%}
-                            {{ card_icon }}
-                        {%- endif -%}
-                    </span>
-                {% endif %}
-                <span class="note-card-title">{{ note._title }}</span>
-                <span class="note-card-date">{{ date_format_uk(note.meta.updated_at) }}</span>
-                {% if note.content.blocks is not empty %}
-                    <span class="note-card-preview">
-                        {% for block in note.content.blocks|slice(0, 2) %}
-                            {% if block.type == 'paragraph' %}
-                                {{ block.data.text|striptags|slice(0, 100) }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                {% endif %}
-            </a>
-        {% endfor %}
+    <div id="tab-notes" class="tab-content active">
+        <div class="notes-grid" id="notes-view">
+            {% for note in recent_notes %}
+                <a href="{{ home_url }}note/{{ note._url }}/" class="note-card"
+                   data-date="{{ note.meta.updated_at }}"
+                   data-title="{{ note._title|lower }}"
+                   data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}">
+                    {% set card_icon = note.meta.icon|default('') %}
+                    {% if card_icon %}
+                        <span class="note-card-icon">
+                            {%- if card_icon starts with 'data:' -%}
+                                <img src="{{ card_icon }}" width="28" height="28" alt="">
+                            {%- else -%}
+                                {{ card_icon }}
+                            {%- endif -%}
+                        </span>
+                    {% endif %}
+                    <span class="note-card-title">{{ note._title }}</span>
+                    <span class="note-card-date">{{ date_format_uk(note.meta.updated_at) }}</span>
+                    {% if note.content.blocks is not empty %}
+                        <span class="note-card-preview">
+                            {% for block in note.content.blocks|slice(0, 2) %}
+                                {% if block.type == 'paragraph' %}
+                                    {{ block.data.text|striptags|slice(0, 100) }}
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="tab-graph" class="tab-content">
+        <div id="mindmap" class="mindmap-container mindmap-fullscreen"></div>
     </div>
 {% else %}
     <div class="empty-state">
@@ -49,21 +73,243 @@
     </div>
 {% endif %}
 
+<script src="https://cdn.jsdelivr.net/npm/force-graph@1.49.5/dist/force-graph.min.js"></script>
 <script>
 (function() {
+    // --- Grid/List toggle ---
     const view = document.getElementById('notes-view');
     if (!view) return;
-    const btns = document.querySelectorAll('.view-toggle-btn');
-    const saved = localStorage.getItem('notes-view') || 'grid';
+    const viewBtns = document.querySelectorAll('.view-toggle-btn');
+    const savedView = localStorage.getItem('notes-view') || 'grid';
 
     function setView(mode) {
         view.className = mode === 'list' ? 'notes-list' : 'notes-grid';
-        btns.forEach(b => b.classList.toggle('active', b.dataset.view === mode));
+        viewBtns.forEach(b => b.classList.toggle('active', b.dataset.view === mode));
         localStorage.setItem('notes-view', mode);
     }
 
-    setView(saved);
-    btns.forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    setView(savedView);
+    viewBtns.forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+
+    // --- Sort & Filter ---
+    const sortSelect = document.getElementById('sort-select');
+    const filterSelect = document.getElementById('filter-select');
+
+    sortSelect.value = localStorage.getItem('notes-sort') || 'recent';
+    filterSelect.value = localStorage.getItem('notes-filter') || '';
+
+    function applySort() {
+        const cards = [...view.querySelectorAll('.note-card')];
+        const sort = sortSelect.value;
+        cards.sort((a, b) => {
+            if (sort === 'recent') return (b.dataset.date || '').localeCompare(a.dataset.date || '');
+            if (sort === 'oldest') return (a.dataset.date || '').localeCompare(b.dataset.date || '');
+            if (sort === 'az') return (a.dataset.title || '').localeCompare(b.dataset.title || '', 'uk');
+            if (sort === 'za') return (b.dataset.title || '').localeCompare(a.dataset.title || '', 'uk');
+            return 0;
+        });
+        cards.forEach(c => view.appendChild(c));
+    }
+
+    function applyFilter() {
+        const filter = filterSelect.value;
+        view.querySelectorAll('.note-card').forEach(card => {
+            card.style.display = (!filter || card.dataset.parent === filter) ? '' : 'none';
+        });
+    }
+
+    function applyAll() {
+        applySort();
+        applyFilter();
+    }
+
+    sortSelect.addEventListener('change', () => {
+        localStorage.setItem('notes-sort', sortSelect.value);
+        applyAll();
+    });
+    filterSelect.addEventListener('change', () => {
+        localStorage.setItem('notes-filter', filterSelect.value);
+        applyAll();
+    });
+
+    applyAll();
+
+    // --- Tab switching ---
+    const tabs = document.querySelectorAll('.index-tab');
+    const tabNotes = document.getElementById('tab-notes');
+    const tabGraph = document.getElementById('tab-graph');
+    const indexControls = document.getElementById('index-controls');
+    const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
+    let graphInited = false;
+
+    function setTab(name) {
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        tabNotes.classList.toggle('active', name === 'notes');
+        tabGraph.classList.toggle('active', name === 'graph');
+        indexControls.style.display = name === 'notes' ? '' : 'none';
+        localStorage.setItem('dashboard-tab', name);
+
+        if (name === 'graph' && !graphInited) {
+            graphInited = true;
+            initMindmap();
+        }
+    }
+
+    setTab(savedTab);
+    tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
+
+    // --- Mindmap (lazy init) ---
+    function initMindmap() {
+        const container = document.getElementById('mindmap');
+        if (!container) return;
+
+        const homeUrl = '{{ home_url }}';
+        const cs = getComputedStyle(document.documentElement);
+        const textColor = cs.getPropertyValue('--text').trim() || '#e0e0e0';
+        const bgColor = cs.getPropertyValue('--bg').trim() || '#191919';
+        const borderColor = cs.getPropertyValue('--border').trim() || '#363636';
+        const accentColor = '#54c0eb';
+
+        fetch(homeUrl + 'api/graph/')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.nodes || !data.nodes.length) {
+                    container.innerHTML = '<div class="mindmap-empty">Недостатньо нотаток для карти</div>';
+                    return;
+                }
+
+                const nodeIds = new Set(data.nodes.map(n => n.id));
+
+                const degree = {};
+                data.nodes.forEach(n => { degree[n.id] = 0; });
+                data.edges.forEach(e => {
+                    if (nodeIds.has(e.source) && nodeIds.has(e.target)) {
+                        degree[e.source] = (degree[e.source] || 0) + 1;
+                        degree[e.target] = (degree[e.target] || 0) + 1;
+                    }
+                });
+
+                const nodes = data.nodes.map(n => {
+                    let label = n.title;
+                    const isEmoji = n.icon && !n.icon.startsWith('data:') && !n.icon.startsWith('<');
+                    if (isEmoji) label = n.icon + ' ' + label;
+                    const node = {
+                        id: n.id,
+                        label: label,
+                        url: n.url,
+                        deg: degree[n.id] || 0,
+                        icon: n.icon || '',
+                    };
+                    // Restore saved position (pin the node)
+                    if (n.fx !== undefined && n.fy !== undefined) {
+                        node.fx = n.fx;
+                        node.fy = n.fy;
+                    }
+                    return node;
+                });
+
+                const links = data.edges
+                    .filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
+                    .map(e => ({
+                        source: e.source,
+                        target: e.target,
+                        type: e.type,
+                    }));
+
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                const graph = ForceGraph()(container)
+                    .width(width)
+                    .height(height)
+                    .backgroundColor(bgColor)
+                    .graphData({ nodes, links })
+                    .nodeCanvasObject((node, ctx, globalScale) => {
+                        const r = Math.max(2, Math.min(8, 2 + node.deg * 1.5));
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+                        ctx.fillStyle = node === graph.hoverNode ? '#ffffff' : accentColor;
+                        ctx.globalAlpha = 0.85;
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+
+                        const fontSize = Math.max(3, 10 / globalScale);
+                        ctx.font = fontSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
+                        ctx.fillStyle = textColor;
+                        ctx.globalAlpha = 0.8;
+                        const label = node.label.length > 20 ? node.label.slice(0, 18) + '...' : node.label;
+                        ctx.fillText(label, node.x + r + 3, node.y + fontSize * 0.35);
+                        ctx.globalAlpha = 1;
+
+                        node.__radius = r;
+                    })
+                    .nodePointerAreaPaint((node, color, ctx) => {
+                        const r = node.__radius || 4;
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                    })
+                    .linkColor(() => borderColor)
+                    .linkWidth(0.5)
+                    .linkDirectionalParticles(0)
+                    .linkLineDash(link => link.type === 'page-link' ? [4, 4] : null)
+                    .linkCanvasObjectMode(() => undefined)
+                    .onNodeClick(node => {
+                        if (node.url) window.location.href = node.url;
+                    })
+                    .onNodeHover(node => {
+                        container.style.cursor = node ? 'pointer' : 'default';
+                        graph.hoverNode = node || null;
+                    })
+                    .d3AlphaDecay(0.02)
+                    .d3VelocityDecay(0.3)
+                    .cooldownTicks(2000)
+                    .warmupTicks(100)
+                    .onEngineStop(() => graph.zoomToFit(400, 50))
+                    .enableZoomInteraction(true)
+                    .enablePanInteraction(true)
+                    .enableNodeDrag(true)
+                    .onNodeDragEnd(node => {
+                        // Pin the node at its new position
+                        node.fx = node.x;
+                        node.fy = node.y;
+                        // Save position to server
+                        fetch(homeUrl + 'api/graph/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: node.id, x: node.x, y: node.y })
+                        }).catch(err => console.error('Save position error:', err));
+                    });
+
+                graph.d3Force('charge').strength(-140);
+                graph.d3Force('link')
+                    .distance(link => link.type === 'child' ? 40 : 45)
+                    .strength(link => link.type === 'child' ? 0.9 : 0.2);
+                graph.d3Force('center').strength(1);
+
+                // Match graph shape to canvas aspect ratio
+                var aspectRatio = width / height;
+                var aspectNodes;
+                function forceAspect(alpha) {
+                    var k = alpha * 0.06;
+                    aspectNodes.forEach(function(n) {
+                        n.vx -= n.x * k * (1 / aspectRatio);
+                        n.vy -= n.y * k * aspectRatio;
+                    });
+                }
+                forceAspect.initialize = function(nodes) { aspectNodes = nodes; };
+                graph.d3Force('aspect', forceAspect);
+
+                window.addEventListener('resize', () => {
+                    graph.width(container.clientWidth).height(container.clientHeight);
+                });
+            })
+            .catch(err => {
+                console.error('Mindmap error:', err);
+                container.innerHTML = '<div class="mindmap-empty">Помилка завантаження карти</div>';
+            });
+    }
 })();
 </script>
 {% endblock %}

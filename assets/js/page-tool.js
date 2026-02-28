@@ -12,6 +12,8 @@ class PageTool {
         this.api = api;
         this.config = config || {};
         this.wrapper = null;
+        this._searchTimer = null;
+        this._dropdownIndex = -1;
     }
 
     render() {
@@ -35,10 +37,14 @@ class PageTool {
         const icon = document.createElement('span');
         icon.classList.add('cdx-page-link__icon');
         const noteIcon = this.data.icon || '';
-        if (noteIcon && !noteIcon.startsWith('<svg')) {
+        if (noteIcon && !noteIcon.startsWith('<svg') && !noteIcon.startsWith('data:')) {
             icon.textContent = noteIcon;
-        } else if (noteIcon && noteIcon.startsWith('<svg')) {
-            icon.innerHTML = noteIcon;
+        } else if (noteIcon && (noteIcon.startsWith('<svg') || noteIcon.startsWith('data:'))) {
+            if (noteIcon.startsWith('data:')) {
+                icon.innerHTML = '<img src="' + noteIcon + '" width="16" height="16" alt="">';
+            } else {
+                icon.innerHTML = noteIcon;
+            }
         } else {
             icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
         }
@@ -65,17 +71,68 @@ class PageTool {
 
         const icon = document.createElement('span');
         icon.classList.add('cdx-page-input__icon');
-        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
 
         const input = document.createElement('input');
         input.classList.add('cdx-page-input__field');
         input.type = 'text';
-        input.placeholder = 'Назва сторінки...';
+        input.placeholder = 'Знайти або створити сторінку...';
 
         const btn = document.createElement('button');
         btn.classList.add('cdx-page-input__btn');
         btn.textContent = 'Створити';
         btn.type = 'button';
+
+        // Dropdown for search results
+        const dropdown = document.createElement('div');
+        dropdown.classList.add('cdx-page-dropdown');
+
+        // Search on input
+        input.addEventListener('input', () => {
+            clearTimeout(this._searchTimer);
+            const q = input.value.trim();
+            if (q.length < 2) {
+                dropdown.innerHTML = '';
+                dropdown.classList.remove('visible');
+                this._dropdownIndex = -1;
+                return;
+            }
+            this._searchTimer = setTimeout(() => this._search(q, dropdown, input), 200);
+        });
+
+        // Keyboard navigation in dropdown
+        input.addEventListener('keydown', (e) => {
+            const items = dropdown.querySelectorAll('.cdx-page-dropdown__item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this._dropdownIndex = Math.min(this._dropdownIndex + 1, items.length - 1);
+                this._highlightDropdown(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this._dropdownIndex = Math.max(this._dropdownIndex - 1, -1);
+                this._highlightDropdown(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this._dropdownIndex >= 0 && items[this._dropdownIndex]) {
+                    items[this._dropdownIndex].click();
+                } else {
+                    createPage();
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.innerHTML = '';
+                dropdown.classList.remove('visible');
+                this._dropdownIndex = -1;
+            }
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            if (!inputWrap.contains(e.target)) {
+                dropdown.innerHTML = '';
+                dropdown.classList.remove('visible');
+                this._dropdownIndex = -1;
+            }
+        }, true);
 
         const createPage = async () => {
             const title = input.value.trim();
@@ -137,19 +194,98 @@ class PageTool {
         };
 
         btn.addEventListener('click', createPage);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                createPage();
-            }
-        });
 
         inputWrap.appendChild(icon);
         inputWrap.appendChild(input);
         inputWrap.appendChild(btn);
+        inputWrap.appendChild(dropdown);
         this.wrapper.appendChild(inputWrap);
 
         setTimeout(() => input.focus(), 50);
+    }
+
+    async _search(query, dropdown, input) {
+        try {
+            const resp = await fetch(this.config.homeUrl + 'api/search/?q=' + encodeURIComponent(query));
+            const results = await resp.json();
+
+            dropdown.innerHTML = '';
+            this._dropdownIndex = -1;
+
+            if (!results.length) {
+                dropdown.classList.remove('visible');
+                return;
+            }
+
+            // Filter out the current note
+            const currentPath = this.config.getCurrentPath ? this.config.getCurrentPath() : null;
+            const filtered = results.filter(r => r.file !== currentPath);
+
+            if (!filtered.length) {
+                dropdown.classList.remove('visible');
+                return;
+            }
+
+            filtered.forEach(result => {
+                const item = document.createElement('div');
+                item.classList.add('cdx-page-dropdown__item');
+
+                const iconEl = document.createElement('span');
+                iconEl.classList.add('cdx-page-dropdown__icon');
+                if (result.icon && !result.icon.startsWith('<svg') && !result.icon.startsWith('data:')) {
+                    iconEl.textContent = result.icon;
+                } else if (result.icon && result.icon.startsWith('data:')) {
+                    iconEl.innerHTML = '<img src="' + result.icon + '" width="16" height="16" alt="">';
+                } else {
+                    iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+                }
+
+                const textWrap = document.createElement('div');
+                textWrap.classList.add('cdx-page-dropdown__text');
+
+                const titleEl = document.createElement('span');
+                titleEl.classList.add('cdx-page-dropdown__title');
+                titleEl.textContent = result.title;
+
+                textWrap.appendChild(titleEl);
+
+                if (result.path) {
+                    const pathEl = document.createElement('span');
+                    pathEl.classList.add('cdx-page-dropdown__path');
+                    pathEl.textContent = result.path;
+                    textWrap.appendChild(pathEl);
+                }
+
+                item.appendChild(iconEl);
+                item.appendChild(textWrap);
+
+                item.addEventListener('click', () => {
+                    // Link to existing note
+                    const pageUrl = result.url.replace(this.config.homeUrl, '').replace(/\/$/, '');
+                    this.data = {
+                        title: result.title,
+                        icon: result.icon || '',
+                        pageUrl: pageUrl,
+                        pagePath: result.file
+                    };
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('visible');
+                    this._renderLink();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            dropdown.classList.add('visible');
+        } catch (e) {
+            console.error('Page search error:', e);
+        }
+    }
+
+    _highlightDropdown(items) {
+        items.forEach((el, i) => {
+            el.classList.toggle('highlighted', i === this._dropdownIndex);
+        });
     }
 
     _addToSidebar(title, url, path) {
