@@ -271,15 +271,17 @@
                     .enablePanInteraction(true)
                     .enableNodeDrag(true)
                     .onNodeDragEnd(node => {
-                        // Pin the node at its new position
-                        node.fx = node.x;
-                        node.fy = node.y;
-                        // Save position to server
-                        fetch(homeUrl + 'api/graph/', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: node.id, x: node.x, y: node.y })
-                        }).catch(err => console.error('Save position error:', err));
+                        // Only save/pin position for parent notes (no "/" in id)
+                        const isParent = node.id.indexOf('/') === -1;
+                        if (isParent) {
+                            node.fx = node.x;
+                            node.fy = node.y;
+                            fetch(homeUrl + 'api/graph/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: node.id, x: node.x, y: node.y })
+                            }).catch(err => console.error('Save position error:', err));
+                        }
                     });
 
                 graph.d3Force('charge').strength(-140);

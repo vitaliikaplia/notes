@@ -687,7 +687,9 @@ function router($url_segments = []): array {
                     'icon'  => $note['meta']['icon'] ?? '',
                     'url'   => HOME_URL . 'note/' . $note['_url'] . '/',
                 ];
-                if(isset($note['meta']['graph_x']) && isset($note['meta']['graph_y'])) {
+                // Only restore saved position for parent notes (no "/" in path)
+                $is_parent = strpos($note['_file'], '/') === false;
+                if($is_parent && isset($note['meta']['graph_x']) && isset($note['meta']['graph_y'])) {
                     $node['fx'] = (float) $note['meta']['graph_x'];
                     $node['fy'] = (float) $note['meta']['graph_y'];
                 }
