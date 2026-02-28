@@ -348,7 +348,8 @@ a:hover {
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
 }
 
 .sidebar-note:hover {
@@ -363,7 +364,8 @@ a:hover {
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
 }
 
 .sidebar-note-parent:hover {
