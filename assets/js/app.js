@@ -241,6 +241,15 @@ function initEditor(config) {
                     captionPlaceholder: ''
                 }
             },
+            embed: {
+                class: Embed,
+                config: {
+                    services: {
+                        youtube: true,
+                        vimeo: true
+                    }
+                }
+            },
             delimiter: Delimiter,
             inlineCode: InlineCode,
             marker: Marker,

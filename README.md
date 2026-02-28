@@ -13,6 +13,7 @@
 - Автоконвертація зображень у WebP (Imagick, якість 82, макс. 2000px)
 - Зміна розміру зображень у редакторі (drag-resize)
 - Автовидалення файлів зображень при видаленні блоку або нотатки
+- Вбудовування YouTube та Vimeo відео (автоматично при вставці посилання)
 - Drag-and-drop перетягування блоків у редакторі
 - Undo/Redo (Ctrl+Z / Ctrl+Y)
 - Вкладені сторінки (батьківські/дочірні нотатки)
@@ -43,7 +44,7 @@
 ## Стек
 
 - **Backend:** PHP, Twig 3
-- **Редактор:** Editor.js (CDN) + плагіни (image, codecup, table, underline, strikethrough, alert, toggle, drag-drop, undo)
+- **Редактор:** Editor.js (CDN) + плагіни (image, embed, codecup, table, underline, strikethrough, alert, toggle, drag-drop, undo)
 - **Сховище:** JSON-файли (без бази даних)
 - **Стилі:** CSS з кастомними змінними
 - **JS:** Vanilla JavaScript

@@ -791,6 +791,13 @@ function render_blocks_to_html($blocks): string {
                 }
                 break;
 
+            case 'embed':
+                $src = htmlspecialchars($data['embed'] ?? '', ENT_QUOTES, 'UTF-8');
+                if($src) {
+                    $html .= "<div class=\"embed-block\" style=\"max-width:640px;aspect-ratio:16/9\"><iframe src=\"{$src}\" frameborder=\"0\" allowfullscreen style=\"width:100%;height:100%;border-radius:var(--radius)\"></iframe></div>\n";
+                }
+                break;
+
             case 'delimiter':
                 $html .= "<hr>\n";
                 break;
