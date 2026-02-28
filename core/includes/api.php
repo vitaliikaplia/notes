@@ -59,6 +59,10 @@ function api_json(array $data, int $status = 200): never {
     exit;
 }
 
+function api_note_url(string $path): string {
+    return HOME_URL . 'note/' . $path . '/';
+}
+
 // ============================================================
 // Dispatcher
 // ============================================================
@@ -126,14 +130,20 @@ function api_list_notes(): void {
 
     $notes = [];
     foreach ($all as $note) {
-        $notes[] = [
-            'path'       => preg_replace('/\.json$/', '', $note['_file']),
+        $path = preg_replace('/\.json$/', '', $note['_file']);
+        $vis = $note['meta']['visibility'] ?? 'private';
+        $item = [
+            'path'       => $path,
             'title'      => $note['_title'],
             'icon'       => $note['meta']['icon'] ?? '',
-            'visibility' => $note['meta']['visibility'] ?? 'private',
+            'visibility' => $vis,
             'created_at' => $note['meta']['created_at'] ?? null,
             'updated_at' => $note['meta']['updated_at'] ?? null,
         ];
+        if ($vis !== 'private') {
+            $item['url'] = api_note_url($path);
+        }
+        $notes[] = $item;
     }
 
     api_json(['notes' => $notes]);
@@ -149,16 +159,21 @@ function api_get_note(string $path): void {
 
     $blocks = $note['content']['blocks'] ?? [];
 
-    api_json([
+    $vis = $note['meta']['visibility'] ?? 'private';
+    $response = [
         'path'       => $path,
         'title'      => $note['_title'],
         'icon'       => $note['meta']['icon'] ?? '',
-        'visibility' => $note['meta']['visibility'] ?? 'private',
+        'visibility' => $vis,
         'created_at' => $note['meta']['created_at'] ?? null,
         'updated_at' => $note['meta']['updated_at'] ?? null,
         'markdown'   => blocks_to_markdown($blocks),
         'content'    => $note['content'],
-    ]);
+    ];
+    if ($vis !== 'private') {
+        $response['url'] = api_note_url($path);
+    }
+    api_json($response);
 }
 
 function api_create_note(): void {
@@ -219,14 +234,18 @@ function api_create_note(): void {
 
     $path = preg_replace('/\.json$/', '', $relative);
 
-    api_json([
+    $response = [
         'path'       => $path,
         'title'      => $title,
         'icon'       => $icon,
         'visibility' => $visibility,
         'created_at' => $now,
         'updated_at' => $now,
-    ], 201);
+    ];
+    if ($visibility !== 'private') {
+        $response['url'] = api_note_url($path);
+    }
+    api_json($response, 201);
 }
 
 function api_update_note(string $path): void {
@@ -275,7 +294,7 @@ function api_update_note(string $path): void {
         api_error(500, 'Failed to update note');
     }
 
-    api_json([
+    $response = [
         'path'       => $path,
         'title'      => $title,
         'icon'       => $icon,
@@ -284,7 +303,11 @@ function api_update_note(string $path): void {
         'updated_at' => $now,
         'markdown'   => blocks_to_markdown($blocks),
         'content'    => $note_data['content'],
-    ]);
+    ];
+    if ($visibility !== 'private') {
+        $response['url'] = api_note_url($path);
+    }
+    api_json($response);
 }
 
 function api_patch_note(string $path): void {
@@ -314,14 +337,19 @@ function api_patch_note(string $path): void {
     // Re-read note after changes
     $note = get_note($relative);
 
-    api_json([
+    $vis = $note['meta']['visibility'] ?? 'private';
+    $response = [
         'path'       => $path,
         'title'      => $note['_title'],
         'icon'       => $note['meta']['icon'] ?? '',
-        'visibility' => $note['meta']['visibility'] ?? 'private',
+        'visibility' => $vis,
         'created_at' => $note['meta']['created_at'] ?? null,
         'updated_at' => $note['meta']['updated_at'] ?? null,
-    ]);
+    ];
+    if ($vis !== 'private') {
+        $response['url'] = api_note_url($path);
+    }
+    api_json($response);
 }
 
 function api_delete_note(string $path): void {
@@ -370,12 +398,18 @@ function api_search_notes(): void {
         }
 
         if ($found_in_title || $found_in_content) {
-            $results[] = [
-                'path'    => preg_replace('/\.json$/', '', $note['_file']),
+            $p = preg_replace('/\.json$/', '', $note['_file']);
+            $vis = $note['meta']['visibility'] ?? 'private';
+            $item = [
+                'path'    => $p,
                 'title'   => $title,
                 'icon'    => $icon,
                 'snippet' => $snippet,
             ];
+            if ($vis !== 'private') {
+                $item['url'] = api_note_url($p);
+            }
+            $results[] = $item;
         }
 
         if (count($results) >= 20) break;
