@@ -483,6 +483,60 @@ function router($url_segments = []): array {
             echo json_encode(['success' => $success], JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'move' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if(empty($input) || empty($input['source_path'])) {
+                echo json_encode(['success' => false, 'error' => 'Missing source_path']);
+                exit;
+            }
+
+            $source_path = $input['source_path'];
+            $target_folder = trim($input['target_folder'] ?? '', '/ ');
+            $position = $input['position'] ?? null;
+
+            // Validate path safety
+            if(str_contains($source_path, '..') || str_starts_with($source_path, '/')) {
+                echo json_encode(['success' => false, 'error' => 'Invalid path']);
+                exit;
+            }
+
+            $result = move_note($source_path, $target_folder);
+
+            // After successful move, insert into sort order at the right position
+            if($result['success'] && $position !== null) {
+                $base = get_notes_path();
+                $target_dir = $target_folder ? $base . DS . str_replace('/', DS, $target_folder) : $base;
+                $order = get_sort_order($target_dir);
+                $new_slug = $result['new_slug'];
+
+                // Remove if already present (safety)
+                $order = array_values(array_filter($order, fn($s) => $s !== $new_slug));
+
+                if(!empty($position['after_slug'])) {
+                    $idx = array_search($position['after_slug'], $order);
+                    if($idx !== false) {
+                        array_splice($order, $idx + 1, 0, [$new_slug]);
+                    } else {
+                        $order[] = $new_slug;
+                    }
+                } elseif(!empty($position['before_slug'])) {
+                    $idx = array_search($position['before_slug'], $order);
+                    if($idx !== false) {
+                        array_splice($order, $idx, 0, [$new_slug]);
+                    } else {
+                        array_unshift($order, $new_slug);
+                    }
+                } else {
+                    $order[] = $new_slug;
+                }
+
+                save_sort_order($target_dir, $order);
+            }
+
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+            exit;
+
         } elseif($action === 'search' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $q = mb_strtolower(trim($_GET['q'] ?? ''), 'UTF-8');
 

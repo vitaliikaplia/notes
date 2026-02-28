@@ -162,38 +162,97 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Drag-and-drop reordering
+    // Drag-and-drop reordering (cross-level)
     let dragEl = null;
     let dragContainer = null;
+    let dragPath = null;
+    let autoExpandTimer = null;
+    let autoExpandTarget = null;
+
+    const sidebarNav = document.querySelector('.sidebar-nav');
 
     function getDraggableChildren(container) {
         return Array.from(container.children).filter(el => el.hasAttribute('draggable'));
     }
 
     function clearDragIndicators() {
-        document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
-            el.classList.remove('drag-over-top', 'drag-over-bottom');
+        document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-over-inside').forEach(el => {
+            el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
         });
     }
 
-    function getInsertInfo(container, y) {
-        const children = getDraggableChildren(container).filter(el => el !== dragEl);
-        let closest = null;
-        let position = 'after'; // 'before' or 'after'
-        let minDist = Infinity;
+    function clearAutoExpand() {
+        if (autoExpandTimer) {
+            clearTimeout(autoExpandTimer);
+            autoExpandTimer = null;
+        }
+        autoExpandTarget = null;
+    }
 
-        for (const child of children) {
-            const rect = child.getBoundingClientRect();
-            const midY = rect.top + rect.height / 2;
-            const dist = Math.abs(y - midY);
-            if (dist < minDist) {
-                minDist = dist;
-                closest = child;
-                position = y < midY ? 'before' : 'after';
-            }
+    function startAutoExpand(folder) {
+        if (autoExpandTarget === folder) return;
+        clearAutoExpand();
+        autoExpandTarget = folder;
+        autoExpandTimer = setTimeout(() => {
+            folder.classList.remove('collapsed');
+            saveCollapsedState();
+            updateCollapseAllBtn();
+            autoExpandTarget = null;
+        }, 600);
+    }
+
+    function getDropInfo(e) {
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+        if (!elUnder) return { mode: null };
+
+        const item = elUnder.closest('.sidebar-note-item[draggable="true"], .sidebar-folder[draggable="true"]');
+        if (!item || item === dragEl || dragEl.contains(item)) return { mode: null };
+
+        const rect = item.getBoundingClientRect();
+        const relativeY = e.clientY - rect.top;
+        const threshold = rect.height * 0.25;
+        const container = item.closest('[data-sortable]');
+
+        if (relativeY < threshold) {
+            return { mode: 'reorder', item, container, position: 'before' };
+        } else if (relativeY > rect.height - threshold) {
+            return { mode: 'reorder', item, container, position: 'after' };
+        } else {
+            return { mode: 'nest', item, container };
+        }
+    }
+
+    function performMove(sourcePath, targetFolder, position) {
+        // Prevent circular: cannot move into self or own descendants
+        const sourceFolder = sourcePath.replace(/\.json$/, '');
+        if (targetFolder === sourceFolder || targetFolder.startsWith(sourceFolder + '/')) {
+            return;
         }
 
-        return { closest, position };
+        fetch(homeUrl + 'api/move/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source_path: sourcePath,
+                target_folder: targetFolder,
+                position: position
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // If viewing the moved note, redirect to new URL
+                const oldUrl = 'note/' + sourcePath.replace(/\.json$/, '');
+                if (window.location.pathname.includes(oldUrl)) {
+                    window.location.href = homeUrl + 'note/' + data.new_path.replace(/\.json$/, '') + '/';
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                console.error('Move failed:', data.error);
+            }
+        })
+        .catch(err => console.error('Move error:', err));
     }
 
     // Prevent native link/button drag inside sortable items
@@ -201,51 +260,68 @@ document.addEventListener('DOMContentLoaded', () => {
         el.setAttribute('draggable', 'false');
     });
 
+    // Per-container: dragstart only
     document.querySelectorAll('[data-sortable]').forEach(container => {
         container.addEventListener('dragstart', (e) => {
             const item = e.target.closest('.sidebar-note-item[draggable="true"], .sidebar-folder[draggable="true"]');
             if (!item || item.closest('[data-sortable]') !== container) return;
             dragEl = item;
             dragContainer = container;
+            dragPath = item.dataset.path || null;
             item.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', '');
         });
+    });
 
-        container.addEventListener('dragover', (e) => {
-            if (!dragEl || dragContainer !== container) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
+    // Document-level: dragover
+    document.addEventListener('dragover', (e) => {
+        if (!dragEl || !sidebarNav || !sidebarNav.contains(e.target)) return;
 
-            clearDragIndicators();
-            const { closest, position } = getInsertInfo(container, e.clientY);
-            if (closest) {
-                closest.classList.add(position === 'before' ? 'drag-over-top' : 'drag-over-bottom');
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        clearDragIndicators();
+
+        const info = getDropInfo(e);
+
+        if (info.mode === 'reorder') {
+            clearAutoExpand();
+            info.item.classList.add(info.position === 'before' ? 'drag-over-top' : 'drag-over-bottom');
+        } else if (info.mode === 'nest') {
+            info.item.classList.add('drag-over-inside');
+            // Auto-expand collapsed folders on hover
+            const folder = info.item.closest('.sidebar-folder');
+            if (folder && folder.classList.contains('collapsed') && folder !== dragEl) {
+                startAutoExpand(folder);
+            } else {
+                clearAutoExpand();
             }
-        });
+        } else {
+            clearAutoExpand();
+        }
+    });
 
-        container.addEventListener('dragleave', (e) => {
-            if (!container.contains(e.relatedTarget)) {
-                clearDragIndicators();
+    // Document-level: drop
+    document.addEventListener('drop', (e) => {
+        if (!dragEl || !sidebarNav || !sidebarNav.contains(e.target)) return;
+
+        e.preventDefault();
+        clearDragIndicators();
+        clearAutoExpand();
+
+        const info = getDropInfo(e);
+        if (!info.mode) return;
+
+        if (info.mode === 'reorder' && info.container === dragContainer) {
+            // Same container reorder — DOM update, no reload
+            const container = info.container;
+            if (info.position === 'before') {
+                container.insertBefore(dragEl, info.item);
+            } else {
+                container.insertBefore(dragEl, info.item.nextSibling);
             }
-        });
 
-        container.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if (!dragEl || dragContainer !== container) return;
-
-            clearDragIndicators();
-
-            const { closest, position } = getInsertInfo(container, e.clientY);
-            if (closest) {
-                if (position === 'before') {
-                    container.insertBefore(dragEl, closest);
-                } else {
-                    container.insertBefore(dragEl, closest.nextSibling);
-                }
-            }
-
-            // Collect new order and save
             const slugs = getDraggableChildren(container).map(el => el.dataset.slug).filter(Boolean);
             const folder = container.dataset.sortable;
 
@@ -254,15 +330,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ folder: folder, order: slugs })
             });
-        });
 
-        container.addEventListener('dragend', () => {
-            if (dragEl) {
-                dragEl.classList.remove('dragging');
-            }
+        } else if (info.mode === 'reorder' && info.container !== dragContainer && dragPath) {
+            // Cross-container reorder — move to different level at specific position
+            const targetFolder = info.container.dataset.sortable;
+            const position = info.position === 'before'
+                ? { before_slug: info.item.dataset.slug }
+                : { after_slug: info.item.dataset.slug };
+
+            performMove(dragPath, targetFolder, position);
+
+        } else if (info.mode === 'nest' && dragPath) {
+            // Nest inside target note
+            const targetPath = info.item.dataset.path;
+            if (!targetPath) return;
+            const targetFolder = targetPath.replace(/\.json$/, '');
+
+            performMove(dragPath, targetFolder, null);
+        }
+    });
+
+    // Document-level: dragleave
+    document.addEventListener('dragleave', (e) => {
+        if (sidebarNav && !sidebarNav.contains(e.relatedTarget)) {
             clearDragIndicators();
-            dragEl = null;
-            dragContainer = null;
-        });
+            clearAutoExpand();
+        }
+    });
+
+    // Document-level: dragend
+    document.addEventListener('dragend', () => {
+        if (dragEl) {
+            dragEl.classList.remove('dragging');
+        }
+        clearDragIndicators();
+        clearAutoExpand();
+        dragEl = null;
+        dragContainer = null;
+        dragPath = null;
     });
 });

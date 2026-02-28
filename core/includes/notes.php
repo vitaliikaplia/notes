@@ -307,6 +307,98 @@ function delete_note($relative_path): bool {
     return $result;
 }
 
+function move_note(string $source_path, string $target_folder): array {
+    $base = get_notes_path();
+    $source_path = str_replace('/', DS, $source_path);
+    $source_file = $base . DS . $source_path;
+
+    // 1. Validate source exists
+    if(!file_exists($source_file)) {
+        return ['success' => false, 'error' => 'Source not found'];
+    }
+
+    // 2. Determine source folder
+    $source_dir = dirname($source_path);
+    if($source_dir === '.') $source_dir = '';
+
+    $target_folder = trim(str_replace('/', DS, $target_folder), DS . ' ');
+
+    // 3. Not moving to same folder
+    if($source_dir === $target_folder) {
+        return ['success' => false, 'error' => 'Already in target folder'];
+    }
+
+    // 4. Prevent circular nesting
+    $slug = basename($source_path, '.json');
+    $source_slug_path = $source_dir ? $source_dir . DS . $slug : $slug;
+    if($target_folder === $source_slug_path || str_starts_with($target_folder, $source_slug_path . DS)) {
+        return ['success' => false, 'error' => 'Cannot move note into itself'];
+    }
+
+    // 5. Create target directory if needed
+    $target_dir = $target_folder ? $base . DS . $target_folder : $base;
+    if(!is_dir($target_dir)) {
+        mkdir($target_dir, 0755, true);
+    }
+
+    // 6. Resolve slug conflict in target
+    $final_slug = $slug;
+    $dest_file = $target_dir . DS . $final_slug . '.json';
+    $counter = 1;
+    while(file_exists($dest_file)) {
+        $final_slug = $slug . '-' . $counter;
+        $dest_file = $target_dir . DS . $final_slug . '.json';
+        $counter++;
+    }
+
+    // 7. Move JSON file
+    if(!rename($source_file, $dest_file)) {
+        return ['success' => false, 'error' => 'Failed to move file'];
+    }
+
+    // 8. Move children folder if exists
+    $source_children_dir = dirname($source_file) . DS . $slug;
+    if(is_dir($source_children_dir)) {
+        $dest_children_dir = $target_dir . DS . $final_slug;
+        rename($source_children_dir, $dest_children_dir);
+    }
+
+    // 9. Remove slug from source sort order
+    $source_abs_dir = dirname($source_file);
+    $sort_file = $source_abs_dir . DS . '.sort-order.json';
+    if(file_exists($sort_file)) {
+        $order = json_decode(file_get_contents($sort_file), true);
+        if(is_array($order)) {
+            $order = array_values(array_filter($order, fn($s) => $s !== $slug));
+            if(empty($order)) {
+                unlink($sort_file);
+            } else {
+                file_put_contents($sort_file, json_encode($order, JSON_UNESCAPED_UNICODE));
+            }
+        }
+    }
+
+    // 10. Clean up empty source folder (if not root)
+    if($source_abs_dir !== $base) {
+        $remaining = array_diff(scandir($source_abs_dir), ['.', '..', '.sort-order.json']);
+        if(empty($remaining)) {
+            $leftover_sort = $source_abs_dir . DS . '.sort-order.json';
+            if(file_exists($leftover_sort)) unlink($leftover_sort);
+            if(is_dir($source_abs_dir)) rmdir($source_abs_dir);
+        }
+    }
+
+    // 11. Clear caches
+    $new_relative = $target_folder ? $target_folder . DS . $final_slug . '.json' : $final_slug . '.json';
+    cache_delete('note:' . $source_path);
+    cache_delete('note:' . $new_relative);
+    cache_delete('tree');
+
+    // Return with forward slashes for consistency
+    $new_path = str_replace(DS, '/', $new_relative);
+    return ['success' => true, 'new_path' => $new_path, 'new_slug' => $final_slug];
+}
+
 function delete_directory($dir): bool {
     if(!is_dir($dir)) return false;
 

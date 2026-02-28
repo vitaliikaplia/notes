@@ -329,6 +329,13 @@ a:hover {
     bottom: -1px;
 }
 
+.drag-over-inside {
+    background: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+    border-radius: var(--radius);
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+}
+
 .sidebar-note {
     display: flex;
     align-items: center;
