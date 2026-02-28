@@ -4,8 +4,8 @@
     <meta charset="{{ site.charset }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ html_title }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ assets_url }}favicon.svg">
-    <link rel="stylesheet" href="{{ assets_url }}css/style.css">
+    <link rel="icon" type="image/svg+xml" href="{{ assets_url }}favicon.svg{{ asset_ver('favicon.svg') }}">
+    <link rel="stylesheet" href="{{ assets_url }}css/style.css{{ asset_ver('css/style.css') }}">
     <script>
         (function(){
             var s = JSON.parse(localStorage.getItem('sidebar-collapsed') || '[]');

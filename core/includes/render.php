@@ -48,6 +48,12 @@ function get_twig(): \Twig\Environment {
         return "{$d} {$m} {$y}, {$time}";
     }));
 
+    // asset versioning (cache bust)
+    $twig->addFunction(new \Twig\TwigFunction('asset_ver', function(string $path): string {
+        $file = ABSPATH . DS . 'assets' . DS . str_replace('/', DS, $path);
+        return file_exists($file) ? '?v=' . filemtime($file) : '';
+    }));
+
     // filters
     $twig->addFilter(new \Twig\TwigFilter('json_decode', function($str) {
         return json_decode($str, true);

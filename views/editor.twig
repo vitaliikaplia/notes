@@ -48,8 +48,8 @@
 <script src="https://cdn.jsdelivr.net/npm/editorjs-toggle-block@0.3.16/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-drag-drop@1.1.16/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-undo@2.0.28/dist/bundle.js"></script>
-<script src="{{ assets_url }}js/page-tool.js"></script>
-<script src="{{ assets_url }}js/app.js"></script>
+<script src="{{ assets_url }}js/page-tool.js{{ asset_ver('js/page-tool.js') }}"></script>
+<script src="{{ assets_url }}js/app.js{{ asset_ver('js/app.js') }}"></script>
 <script>
     initEditor({
         noteData: {{ note ? note.content|json_encode|raw : '{}' }},
