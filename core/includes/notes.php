@@ -44,12 +44,35 @@ function get_sort_order($dir): array {
 
 function save_sort_order($dir, array $slugs): bool {
     $file = $dir . DS . '.sort-order.json';
-    return file_put_contents($file, json_encode($slugs, JSON_UNESCAPED_UNICODE)) !== false;
+    $result = file_put_contents($file, json_encode($slugs, JSON_UNESCAPED_UNICODE)) !== false;
+    if($result) {
+        cache_delete('tree');
+    }
+    return $result;
 }
 
 function scan_notes($dir = null): array {
     $base = get_notes_path();
+    $is_root = ($dir === null);
     $dir = $dir ?? $base;
+
+    // Cache only the root tree
+    if($is_root) {
+        $cached = cache_get('tree');
+        if($cached !== null) return $cached;
+    }
+
+    $tree = _scan_notes_uncached($dir);
+
+    if($is_root) {
+        cache_set('tree', $tree);
+    }
+
+    return $tree;
+}
+
+function _scan_notes_uncached($dir): array {
+    $base = get_notes_path();
     $tree = ['folders' => [], 'notes' => []];
 
     if(!is_dir($dir)) return $tree;
@@ -86,7 +109,7 @@ function scan_notes($dir = null): array {
             $tree['folders'][] = [
                 'name' => $item,
                 'path' => $relative,
-                'children' => scan_notes($path),
+                'children' => _scan_notes_uncached($path),
             ];
         } elseif(str_ends_with($item, '.json')) {
             $note = get_note($relative);
@@ -94,7 +117,7 @@ function scan_notes($dir = null): array {
                 // Attach child pages if a matching folder exists
                 $slug = basename($item, '.json');
                 if(in_array($slug, $child_folders)) {
-                    $note['_children'] = scan_notes($dir . DS . $slug);
+                    $note['_children'] = _scan_notes_uncached($dir . DS . $slug);
                 }
                 $tree['notes'][] = $note;
             }
@@ -125,6 +148,10 @@ function scan_notes($dir = null): array {
 }
 
 function get_note($relative_path): ?array {
+    $cache_key = 'note:' . $relative_path;
+    $cached = cache_get($cache_key);
+    if($cached !== null) return $cached;
+
     $file = get_notes_path() . DS . $relative_path;
     if(!file_exists($file)) return null;
 
@@ -142,6 +169,8 @@ function get_note($relative_path): ?array {
 
     // extract title
     $data['_title'] = get_note_title($data);
+
+    cache_set($cache_key, $data);
 
     return $data;
 }
@@ -208,7 +237,14 @@ function save_note($relative_path, $data): bool {
     }
 
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    return file_put_contents($file, $json) !== false;
+    $result = file_put_contents($file, $json) !== false;
+
+    if($result) {
+        cache_delete('note:' . $relative_path);
+        cache_delete('tree');
+    }
+
+    return $result;
 }
 
 function delete_note($relative_path): bool {
@@ -232,6 +268,11 @@ function delete_note($relative_path): bool {
         if(empty($items)) {
             rmdir($parent_dir);
         }
+    }
+
+    if($result) {
+        cache_delete('note:' . $relative_path);
+        cache_delete('tree');
     }
 
     return $result;
@@ -319,7 +360,14 @@ function update_note_visibility(string $relative_path, string $visibility): bool
 
     $data['meta']['visibility'] = $visibility;
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    return file_put_contents($file, $json) !== false;
+    $result = file_put_contents($file, $json) !== false;
+
+    if($result) {
+        cache_delete('note:' . $relative_path);
+        cache_delete('tree');
+    }
+
+    return $result;
 }
 
 function render_blocks_to_html($blocks): string {

@@ -31,7 +31,18 @@ function get_context(): array {
 
 function get_twig(): \Twig\Environment {
     $loader = new \Twig\Loader\FilesystemLoader(ABSPATH . DS . TWIG_VIEWS_DIRNAME);
-    $twig = new \Twig\Environment($loader);
+    // Cache: Redis if available, otherwise disk
+    $redis = get_redis();
+    if($redis) {
+        $cache = new RedisTwigCache($redis);
+    } else {
+        $cache = ABSPATH . DS . '.twig-cache';
+    }
+
+    $twig = new \Twig\Environment($loader, [
+        'cache' => $cache,
+        'auto_reload' => true,
+    ]);
 
     // custom functions
     $twig->addFunction(new \Twig\TwigFunction('render_blocks', 'render_blocks_to_html', ['is_safe' => ['html']]));

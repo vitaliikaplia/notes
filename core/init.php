@@ -28,6 +28,7 @@ define("ASSETS_URL", HOME_URL . 'assets/');
 /** including core */
 $includes = [
     'auth',
+    'cache',
     'notes',
     'markdown',
     'api',

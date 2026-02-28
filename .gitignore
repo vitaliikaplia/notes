@@ -6,3 +6,4 @@ debug.log
 .notes/**/*.json
 .notes/.sort-order.json
 .remember_tokens/
+.twig-cache/
