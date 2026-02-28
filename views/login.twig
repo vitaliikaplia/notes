@@ -1,0 +1,27 @@
+{% extends 'overall/base.twig' %}
+
+{% block public %}
+<div class="login-container">
+    <div class="login-logo">
+        <img src="{{ assets_url }}favicon.svg" alt="" width="96" height="96">
+    </div>
+    <div class="login-box">
+        <h1>Нотатки</h1>
+        <p class="login-subtitle">Записуйте, структуруйте, знаходьте</p>
+
+        {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ home_url }}login/">
+            <div class="form-group">
+                <input type="text" id="user" name="user" placeholder="Логін" required autofocus>
+            </div>
+            <div class="form-group">
+                <input type="password" id="pass" name="pass" placeholder="Пароль" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Увійти</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

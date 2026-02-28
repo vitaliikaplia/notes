@@ -1,0 +1,228 @@
+{
+    "meta": {
+        "title": "Топчик!",
+        "icon": "🤖",
+        "created_at": "",
+        "updated_at": "2026-02-28T00:52:17+00:00"
+    },
+    "content": {
+        "time": 1772239937780,
+        "blocks": [
+            {
+                "id": "AAV2_t_7MV",
+                "type": "linkTool",
+                "data": {
+                    "link": "https:\/\/github.com\/editor-js\/awesome-editorjs",
+                    "meta": {
+                        "title": "GitHub - editor-js\/awesome-editorjs: 🤩 A curated list of awesome Editor.js tools, libraries and resources.",
+                        "description": "🤩 A curated list of awesome Editor.js tools, libraries and resources. - editor-js\/awesome-editorjs",
+                        "image": {
+                            "url": "https:\/\/repository-images.githubusercontent.com\/271224625\/b3f8e400-b414-11ea-9b1e-04bd0221f27e"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "_8nOgzYBuI",
+                "type": "linkTool",
+                "data": {
+                    "link": "https:\/\/vitaliikaplia.com\/",
+                    "meta": {
+                        "title": "WordPress розробка сайтів — Віталій Капля",
+                        "description": "Індивідуальні сайти на WordPress — від лендінгів до порталів. Чистий код, автоматизація, підтримка та розвиток вашого бізнесу онлайн.",
+                        "image": {
+                            "url": "https:\/\/vitaliikaplia.com\/wp-content\/uploads\/2025\/12\/main_cover.jpg"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "TVjDh6U10h",
+                "type": "paragraph",
+                "data": {
+                    "text": "<a href=\"https:\/\/github.com\/editor-js\/awesome-editorjs\">https:\/\/github.com\/editor-js\/awesome-editorjs<\/a>"
+                }
+            },
+            {
+                "id": "l1-Yoff7gm",
+                "type": "paragraph",
+                "data": {
+                    "text": "<a href=\"https:\/\/editorjs.io\/\">https:\/\/editorjs.io\/<\/a>"
+                }
+            },
+            {
+                "id": "u4pwkK9lUh",
+                "type": "paragraph",
+                "data": {
+                    "text": "<a href=\"https:\/\/www.svgrepo.com\/vectors\/page\/multicolor\/\">https:\/\/www.svgrepo.com\/vectors\/page\/multicolor\/<\/a>"
+                }
+            },
+            {
+                "id": "uFUNF0sg1C",
+                "type": "paragraph",
+                "data": {
+                    "text": "<a href=\"https:\/\/www.svgrepo.com\/vectors\/page\/multicolor\/\">іфвфівіф<\/a>"
+                }
+            },
+            {
+                "id": "1itzCKfI_-",
+                "type": "paragraph",
+                "data": {
+                    "text": "<b>фівіфв<\/b>"
+                }
+            },
+            {
+                "id": "oAQmYVBTuB",
+                "type": "paragraph",
+                "data": {
+                    "text": "<a href=\"https:\/\/editorjs.io\/\">https:\/\/editorjs.io\/<\/a>"
+                }
+            },
+            {
+                "id": "hmju11b7MR",
+                "type": "paragraph",
+                "data": {
+                    "text": "іфввіфв іф ф віф. sada s"
+                }
+            },
+            {
+                "id": "7I8LmNR2kc",
+                "type": "header",
+                "data": {
+                    "text": "Core https:\/\/github.com\/editor-js\/awesome-editorjs",
+                    "level": 3
+                }
+            },
+            {
+                "id": "n3waYoi3vJ",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Real-time Communication: Instant message delivery using WebSockets with synchronization across multiple user tabs.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Spy Typing (Real-time Preview): Admins can see what users are typing in real-time before they hit send, allowing for faster responses.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Origin\/CORS Control: Restrict widget usage to specific domains with wildcard support (e.g.,&nbsp;<code>https:\/\/*.example.com<\/code>). Empty list allows all origins.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Anonymous Users Support: Separate domain list for anonymous (unauthenticated) visitors. On anonymous domains, WebSocket connects only when the chat widget is opened and disconnects when closed. No tab\/page tracking events are sent for anonymous users.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "GeoIP Detection: Automatic server-side geolocation using MaxMind databases (city.mmdb, country.mmdb). Detects country, region, city, and IP address for anonymous users. Also parses User-Agent to determine platform (Windows, Mac, Linux, Android, iOS) and browser (Chrome, Firefox, Safari, Edge, Opera).",
+                            "meta": [],
+                            "items": []
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "I3RDKyb4EO",
+                "type": "header",
+                "data": {
+                    "text": "Admin Panel (React + Vite)",
+                    "level": 3
+                }
+            },
+            {
+                "id": "st6EflKuMJ",
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "meta": [],
+                    "items": [
+                        {
+                            "content": "Modern UI: Rebuilt with React and Vite for better performance and user experience.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Mobile Responsive: Full mobile support with burger menu and swipe gestures for sidebar navigation.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Multi-language Support: Admin panel available in Ukrainian, English, and Russian. Language can be changed in Settings.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "User Online\/Offline Status: Real-time indicators showing which users are online (green) or offline (gray\/semi-transparent). Online users are sorted to the top of the list.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Tab Activity Indicator: Eye icon shows if user's browser tab is active (green eye) or in background (gray crossed eye).",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Notes Indicator: Amber document icon appears next to user name when admin notes are saved for that contact. Hovering shows the note text as a tooltip.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Edit User Modal: Pencil button in the sidebar opens a modal to edit user name and admin notes (with validation: name 2-60 chars, notes up to 300 chars). Fully localized in all 3 languages.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Admin Typing Indicator: Animated dots shown in the widget when admin is typing a reply.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Flashing Tab Title: When a new message arrives and the admin panel tab is in the background, the browser tab title flashes with \"💬 Нове повідомлення!\" to attract attention. Stops automatically when the tab becomes active.",
+                            "meta": [],
+                            "items": []
+                        },
+                        {
+                            "content": "Activity Log (System Messages): Comprehensive logging of user activity saved to database:🟢 User connected (opened page with widget)🔴 User disconnected (closed page)👁 Tab became active \/ 👁‍🗨 Tab went to background💬 Chat opened \/ ✖️ Chat closed🔗 Page navigation with URL tracking",
+                            "meta": [],
+                            "items": [
+                                {
+                                    "content": "🟢 User connected (opened page with widget)",
+                                    "meta": [],
+                                    "items": []
+                                },
+                                {
+                                    "content": "🔴 User disconnected (closed page)",
+                                    "meta": [],
+                                    "items": []
+                                },
+                                {
+                                    "content": "👁 Tab became active \/ 👁‍🗨 Tab went to background",
+                                    "meta": [],
+                                    "items": []
+                                },
+                                {
+                                    "content": "💬 Chat opened \/ ✖️ Chat closed",
+                                    "meta": [],
+                                    "items": []
+                                },
+                                {
+                                    "content": "🔗 Page navigation with URL tracking",
+                                    "meta": [],
+                                    "items": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

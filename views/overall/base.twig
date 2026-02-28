@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="{{ site.html_loc }}">
+<head>
+    <meta charset="{{ site.charset }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ html_title }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ assets_url }}favicon.svg">
+    <link rel="stylesheet" href="{{ assets_url }}css/style.css">
+    <script>
+        (function(){
+            var s = JSON.parse(localStorage.getItem('sidebar-collapsed') || '[]');
+            if (s.length) {
+                // Exclude ancestors of current page from collapsing
+                var path = location.pathname.replace(/^\//, '').replace(/\/$/, '');
+                if (path.indexOf('note/') === 0) {
+                    var parts = path.substring(5).split('/');
+                    // Each parent slug in the path should not be collapsed
+                    for (var i = 0; i < parts.length - 1; i++) {
+                        var idx = s.indexOf(parts[i]);
+                        if (idx !== -1) s.splice(idx, 1);
+                    }
+                    localStorage.setItem('sidebar-collapsed', JSON.stringify(s));
+                }
+                if (s.length) {
+                    var css = s.map(function(slug) {
+                        return '.sidebar-folder[data-slug="' + slug + '"] > .sidebar-folder-children';
+                    }).join(',') + '{display:none}';
+                    var el = document.createElement('style');
+                    el.id = 'collapsed-init';
+                    el.textContent = css;
+                    document.head.appendChild(el);
+                }
+            }
+        })();
+    </script>
+</head>
+<body class="{{ body_classes }}" data-home-url="{{ home_url }}">
+
+{% if authenticated %}
+<div class="app">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            {% if notes_tree.notes is not empty or notes_tree.folders is not empty %}
+                {% include 'overall/sidebar.twig' with { tree: notes_tree, base_url: home_url, sortable_folder: '' } %}
+                <a href="{{ home_url }}new/" class="sidebar-add-note" title="Нова нотатка">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Нова нотатка</span>
+                </a>
+            {% else %}
+                <div class="sidebar-empty">
+                    <a href="{{ home_url }}new/" class="sidebar-add-note-lg" title="Нова нотатка">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Нова нотатка</span>
+                    </a>
+                </div>
+            {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ home_url }}logout/" class="btn-footer-action" title="Вийти">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
+            <button type="button" class="btn-footer-action search-trigger" title="Пошук (Ctrl+K)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+        </div>
+    </aside>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% else %}
+<div class="app app-public">
+    {% block public %}{% endblock %}
+</div>
+{% endif %}
+
+{% if authenticated %}
+<div class="search-overlay" id="searchOverlay">
+    <div class="search-overlay-inner">
+        <div class="search-header">
+            <svg class="search-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="search-input" id="searchInput" placeholder="Пошук нотаток..." autocomplete="off" />
+            <button class="search-close" id="searchClose" type="button" aria-label="Закрити">&times;</button>
+        </div>
+        <div class="search-results" id="searchResults">
+            <div class="search-hint">Почніть вводити назву або текст нотатки</div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var overlay = document.getElementById('searchOverlay');
+    var input = document.getElementById('searchInput');
+    var results = document.getElementById('searchResults');
+    var closeBtn = document.getElementById('searchClose');
+    var homeUrl = document.body.dataset.homeUrl || '/';
+    var debounceTimer = null;
+    var selectedIndex = -1;
+
+    function openSearch() {
+        if (!overlay) return;
+        overlay.classList.add('is-active');
+        document.body.style.overflow = 'hidden';
+        setTimeout(function() { input.focus(); }, 100);
+    }
+
+    function closeSearch() {
+        if (!overlay) return;
+        overlay.classList.remove('is-active');
+        document.body.style.overflow = '';
+        input.value = '';
+        results.innerHTML = '<div class="search-hint">Почніть вводити назву або текст нотатки</div>';
+        selectedIndex = -1;
+    }
+
+    // Open on trigger click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.search-trigger')) {
+            e.preventDefault();
+            openSearch();
+        }
+    });
+
+    // Close
+    if (closeBtn) closeBtn.addEventListener('click', closeSearch);
+
+    // Close on overlay bg click
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeSearch();
+        });
+    }
+
+    // Keyboard: Escape to close, Ctrl+K / Cmd+K to open, arrows to navigate
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay && overlay.classList.contains('is-active')) {
+            closeSearch();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (overlay.classList.contains('is-active')) {
+                closeSearch();
+            } else {
+                openSearch();
+            }
+        }
+        if (overlay && overlay.classList.contains('is-active')) {
+            var items = results.querySelectorAll('.search-result-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelected(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelected(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0 && items[selectedIndex]) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            }
+        }
+    });
+
+    function updateSelected(items) {
+        items.forEach(function(el, i) {
+            el.classList.toggle('is-selected', i === selectedIndex);
+        });
+        if (selectedIndex >= 0 && items[selectedIndex]) {
+            items[selectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    // Debounced search
+    if (input) {
+        input.addEventListener('input', function() {
+            var q = input.value.trim();
+            selectedIndex = -1;
+
+            if (debounceTimer) clearTimeout(debounceTimer);
+
+            if (q.length < 2) {
+                results.innerHTML = '<div class="search-hint">Почніть вводити назву або текст нотатки</div>';
+                return;
+            }
+
+            results.innerHTML = '<div class="search-hint">Шукаємо...</div>';
+
+            debounceTimer = setTimeout(function() {
+                fetch(homeUrl + 'api/search/?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.length) {
+                            results.innerHTML = '<div class="search-no-results">Нічого не знайдено</div>';
+                            return;
+                        }
+                        var html = '';
+                        data.forEach(function(item) {
+                            html += '<a href="' + item.url + '" class="search-result-item">';
+                            html += '<span class="search-result-icon">' + (item.icon || '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>') + '</span>';
+                            html += '<div class="search-result-body">';
+                            html += '<span class="search-result-title">' + item.title + '</span>';
+                            if (item.snippet) {
+                                html += '<span class="search-result-snippet">' + item.snippet + '</span>';
+                            }
+                            if (item.path) {
+                                html += '<span class="search-result-meta">' + item.path + '</span>';
+                            }
+                            html += '</div>';
+                            html += '</a>';
+                        });
+                        results.innerHTML = html;
+                    })
+                    .catch(function() {
+                        results.innerHTML = '<div class="search-no-results">Помилка пошуку</div>';
+                    });
+            }, 300);
+        });
+    }
+})();
+</script>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

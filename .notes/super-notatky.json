@@ -1,0 +1,54 @@
+{
+    "meta": {
+        "title": "Супер нотатки",
+        "icon": "😎",
+        "created_at": "",
+        "updated_at": "2026-02-28T00:59:28+00:00"
+    },
+    "content": {
+        "time": 1772240368877,
+        "blocks": [
+            {
+                "id": "dXUxhkc5jd",
+                "type": "page",
+                "data": {
+                    "title": "Кінчики",
+                    "pageUrl": "note\/super-notatky\/kinchyky",
+                    "pagePath": "super-notatky\/kinchyky.json",
+                    "icon": "🎬"
+                }
+            },
+            {
+                "id": "_X8K6QaTdp",
+                "type": "page",
+                "data": {
+                    "title": "Місяць",
+                    "pageUrl": "note\/super-notatky\/misyats",
+                    "pagePath": "super-notatky\/misyats.json",
+                    "icon": "🌙"
+                }
+            },
+            {
+                "id": "MUHDiLf6JD",
+                "type": "page",
+                "data": {
+                    "title": "Ключік золотий!",
+                    "pageUrl": "note\/super-notatky\/klyuchik-zolotyy",
+                    "pagePath": "super-notatky\/klyuchik-zolotyy.json",
+                    "icon": "🔑"
+                }
+            },
+            {
+                "id": "pJL0YBeva5",
+                "type": "page",
+                "data": {
+                    "title": "Брілік",
+                    "pageUrl": "note\/super-notatky\/brilik",
+                    "pagePath": "super-notatky\/brilik.json",
+                    "icon": "💎"
+                }
+            }
+        ],
+        "version": "2.31.0-rc.7"
+    }
+}

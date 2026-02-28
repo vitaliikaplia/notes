@@ -1,0 +1,57 @@
+{% extends 'overall/base.twig' %}
+
+{% block content %}
+<div class="editor-page">
+    <div class="editor-title-row">
+        <button type="button" class="note-icon-btn" id="note-icon-btn" title="Змінити іконку">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </button>
+        <input type="text" id="note-title" class="editor-title" placeholder="Без назви" value="{{ note ? note.meta.title : '' }}" autocomplete="off">
+    </div>
+    <div id="editorjs"></div>
+    <div class="editor-footer">
+        <div class="editor-breadcrumbs">
+            <a href="{{ home_url }}" class="breadcrumb-item breadcrumb-home" title="Notes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
+            {% for crumb in breadcrumbs %}
+                <span class="breadcrumb-sep"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+                {% if crumb.url %}
+                    <a href="{{ home_url }}{{ crumb.url }}/" class="breadcrumb-item">{{ crumb.title }}</a>
+                {% else %}
+                    <span class="breadcrumb-item">{{ crumb.title }}</span>
+                {% endif %}
+            {% endfor %}
+            {% if note %}
+                <span class="breadcrumb-sep"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="breadcrumb-current">{{ note._title }}</span>
+            {% endif %}
+        </div>
+        <span id="save-status" class="save-status"></span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.8/dist/editorjs.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.8/dist/header.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.8/dist/editorjs-list.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0/dist/checklist.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3/dist/code.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.6/dist/quote.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.1/dist/inline-code.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0/dist/marker.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/link@2.6.2/dist/link.umd.js"></script>
+<script src="{{ assets_url }}js/page-tool.js"></script>
+<script src="{{ assets_url }}js/app.js"></script>
+<script>
+    initEditor({
+        noteData: {{ note ? note.content|json_encode|raw : '{}' }},
+        oldPath: '{{ note ? note._file : '' }}',
+        createdAt: '{{ note ? note.meta.created_at : '' }}',
+        homeUrl: '{{ home_url }}',
+        isNew: {{ note ? 'false' : 'true' }},
+        noteFolder: '{{ note_folder }}',
+        noteIcon: {{ note and note.meta.icon is defined ? note.meta.icon|json_encode|raw : '""' }}
+    });
+</script>
+{% endblock %}

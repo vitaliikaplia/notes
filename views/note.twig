@@ -1,0 +1,18 @@
+{% extends 'overall/base.twig' %}
+
+{% block content %}
+<div class="note-view">
+    <div class="note-header">
+        <div class="note-meta">
+            <span class="note-date">{{ date_format_uk(note.meta.updated_at) }}</span>
+        </div>
+        <div class="note-actions">
+            <a href="{{ home_url }}edit/{{ note._url }}/" class="btn btn-edit">Редагувати</a>
+        </div>
+    </div>
+
+    <article class="note-content">
+        {{ render_blocks(note.content.blocks) }}
+    </article>
+</div>
+{% endblock %}

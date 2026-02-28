@@ -1,0 +1,13 @@
+{
+    "name": "vitaliikaplia/notes",
+    "type": "application",
+    "require": {
+        "twig/twig": "^3.0"
+    },
+    "config": {
+        "vendor-dir": "vendor",
+        "platform": {
+            "php": "8.3"
+        }
+    }
+}
