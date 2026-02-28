@@ -271,6 +271,80 @@
 </script>
 {% endif %}
 
+{% if authenticated %}
+<div class="drop-overlay" id="dropOverlay">
+    <div class="drop-overlay-inner">
+        <svg class="drop-overlay-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+        Імпортувати .md файл
+    </div>
+</div>
+<script>
+(function() {
+    var homeUrl = document.body.dataset.homeUrl || '/';
+    var dropOverlay = document.getElementById('dropOverlay');
+    var dragCount = 0;
+
+    document.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        dragCount++;
+        if (e.dataTransfer.types.indexOf('Files') !== -1) {
+            dropOverlay.classList.add('active');
+        }
+    });
+
+    document.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dragCount--;
+        if (dragCount <= 0) {
+            dragCount = 0;
+            dropOverlay.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragCount = 0;
+        dropOverlay.classList.remove('active');
+
+        var files = e.dataTransfer.files;
+        if (!files.length) return;
+
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (!file.name.endsWith('.md') && !file.name.endsWith('.markdown')) continue;
+
+            (function(f) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var md = ev.target.result;
+                    var title = f.name.replace(/\.(md|markdown)$/, '');
+
+                    fetch(homeUrl + 'api/import-md/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: title, markdown: md })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success && data.url) {
+                            window.location.href = homeUrl + data.url + '/';
+                        } else {
+                            window.location.reload();
+                        }
+                    });
+                };
+                reader.readAsText(f);
+            })(file);
+        }
+    });
+})();
+</script>
+{% endif %}
+
 {% block scripts %}{% endblock %}
 
 </body>

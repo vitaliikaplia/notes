@@ -547,6 +547,64 @@ function router($url_segments = []): array {
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
 
+        } elseif($action === 'export-md' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $blocks = $input['blocks'] ?? [];
+            $title = strip_tags(trim($input['title'] ?? ''));
+            $md = '';
+            if ($title) {
+                $md .= '# ' . $title . "\n\n";
+            }
+            $md .= blocks_to_markdown($blocks);
+            echo json_encode(['markdown' => $md], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'import-md' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $title = strip_tags(trim($input['title'] ?? ''));
+            $markdown = $input['markdown'] ?? '';
+
+            if (empty($title)) {
+                $title = 'Імпортована нотатка';
+            }
+
+            $slug = generate_slug($title);
+            $relative = $slug . '.json';
+
+            $base_slug = $slug;
+            $counter = 1;
+            while (file_exists(get_notes_path() . DS . $relative)) {
+                $slug = $base_slug . '-' . $counter;
+                $relative = $slug . '.json';
+                $counter++;
+            }
+
+            $now = date('c');
+            $blocks = !empty($markdown) ? markdown_to_blocks($markdown) : [];
+
+            $note_data = [
+                'meta' => [
+                    'title'      => $title,
+                    'icon'       => '',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ],
+                'content' => [
+                    'time'    => round(microtime(true) * 1000),
+                    'blocks'  => $blocks,
+                    'version' => '2.31.0-rc.7',
+                ],
+            ];
+
+            $success = save_note($relative, $note_data);
+            $path = preg_replace('/\.json$/', '', $relative);
+            echo json_encode([
+                'success' => $success,
+                'url'     => 'note/' . $path,
+                'path'    => $path,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
         } else {
             echo json_encode(['error' => 'Unknown action']);
             exit;

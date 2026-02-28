@@ -516,6 +516,31 @@ function initEditor(config) {
         });
     }
 
+    // Export as Markdown
+    const exportBtn = document.getElementById('export-md');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            const data = await editor.save();
+            const title = titleEl.value.trim() || 'untitled';
+
+            const resp = await fetch(homeUrl + 'api/export-md/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, blocks: data.blocks })
+            });
+            const result = await resp.json();
+            if (!result.markdown) return;
+
+            const blob = new Blob([result.markdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = title.replace(/[\/\\:*?"<>|]/g, '-') + '.md';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
 }
 
 // Sidebar
