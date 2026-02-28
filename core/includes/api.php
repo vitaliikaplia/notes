@@ -66,7 +66,7 @@ function api_json(array $data, int $status = 200): never {
 function api_dispatch(array $segments): void {
     header('Content-Type: application/json; charset=UTF-8');
     header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Authorization, Content-Type');
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -98,6 +98,7 @@ function api_dispatch(array $segments): void {
             match ($method) {
                 'GET'    => api_get_note($path),
                 'PUT'    => api_update_note($path),
+                'PATCH'  => api_patch_note($path),
                 'DELETE' => api_delete_note($path),
                 default  => api_error(405, 'Method not allowed'),
             };
@@ -129,6 +130,7 @@ function api_list_notes(): void {
             'path'       => preg_replace('/\.json$/', '', $note['_file']),
             'title'      => $note['_title'],
             'icon'       => $note['meta']['icon'] ?? '',
+            'visibility' => $note['meta']['visibility'] ?? 'private',
             'created_at' => $note['meta']['created_at'] ?? null,
             'updated_at' => $note['meta']['updated_at'] ?? null,
         ];
@@ -151,6 +153,7 @@ function api_get_note(string $path): void {
         'path'       => $path,
         'title'      => $note['_title'],
         'icon'       => $note['meta']['icon'] ?? '',
+        'visibility' => $note['meta']['visibility'] ?? 'private',
         'created_at' => $note['meta']['created_at'] ?? null,
         'updated_at' => $note['meta']['updated_at'] ?? null,
         'markdown'   => blocks_to_markdown($blocks),
@@ -170,9 +173,14 @@ function api_create_note(): void {
         api_error(400, 'Title is required');
     }
 
-    $markdown = $input['markdown'] ?? '';
-    $folder   = trim($input['folder'] ?? '', '/ ');
-    $icon     = $input['icon'] ?? '';
+    $markdown   = $input['markdown'] ?? '';
+    $folder     = trim($input['folder'] ?? '', '/ ');
+    $icon       = $input['icon'] ?? '';
+    $visibility = $input['visibility'] ?? 'private';
+
+    if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
+        api_error(400, 'Invalid visibility. Must be: private, unlisted, public');
+    }
 
     $slug = generate_slug($title);
     $dir_prefix = $folder ? $folder . '/' : '';
@@ -194,6 +202,7 @@ function api_create_note(): void {
         'meta' => [
             'title'      => $title,
             'icon'       => $icon,
+            'visibility' => $visibility,
             'created_at' => $now,
             'updated_at' => $now,
         ],
@@ -214,6 +223,7 @@ function api_create_note(): void {
         'path'       => $path,
         'title'      => $title,
         'icon'       => $icon,
+        'visibility' => $visibility,
         'created_at' => $now,
         'updated_at' => $now,
     ], 201);
@@ -232,9 +242,14 @@ function api_update_note(string $path): void {
         api_error(400, 'Invalid JSON body');
     }
 
-    $title    = isset($input['title']) ? strip_tags(trim($input['title'])) : $existing['_title'];
-    $markdown = $input['markdown'] ?? null;
-    $icon     = $input['icon'] ?? ($existing['meta']['icon'] ?? '');
+    $title      = isset($input['title']) ? strip_tags(trim($input['title'])) : $existing['_title'];
+    $markdown   = $input['markdown'] ?? null;
+    $icon       = $input['icon'] ?? ($existing['meta']['icon'] ?? '');
+    $visibility = $input['visibility'] ?? ($existing['meta']['visibility'] ?? 'private');
+
+    if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
+        api_error(400, 'Invalid visibility. Must be: private, unlisted, public');
+    }
 
     $now = date('c');
     $blocks = $markdown !== null
@@ -245,6 +260,7 @@ function api_update_note(string $path): void {
         'meta' => [
             'title'      => $title,
             'icon'       => $icon,
+            'visibility' => $visibility,
             'created_at' => $existing['meta']['created_at'] ?? '',
             'updated_at' => $now,
         ],
@@ -263,10 +279,48 @@ function api_update_note(string $path): void {
         'path'       => $path,
         'title'      => $title,
         'icon'       => $icon,
+        'visibility' => $visibility,
         'created_at' => $note_data['meta']['created_at'],
         'updated_at' => $now,
         'markdown'   => blocks_to_markdown($blocks),
         'content'    => $note_data['content'],
+    ]);
+}
+
+function api_patch_note(string $path): void {
+    $relative = str_replace('/', DS, $path) . '.json';
+    $note = get_note($relative);
+
+    if (!$note) {
+        api_error(404, 'Note not found');
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (empty($input)) {
+        api_error(400, 'Invalid JSON body');
+    }
+
+    $visibility = $input['visibility'] ?? null;
+
+    if ($visibility !== null) {
+        if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
+            api_error(400, 'Invalid visibility. Must be: private, unlisted, public');
+        }
+        if (!update_note_visibility($relative, $visibility)) {
+            api_error(500, 'Failed to update visibility');
+        }
+    }
+
+    // Re-read note after changes
+    $note = get_note($relative);
+
+    api_json([
+        'path'       => $path,
+        'title'      => $note['_title'],
+        'icon'       => $note['meta']['icon'] ?? '',
+        'visibility' => $note['meta']['visibility'] ?? 'private',
+        'created_at' => $note['meta']['created_at'] ?? null,
+        'updated_at' => $note['meta']['updated_at'] ?? null,
     ]);
 }
 

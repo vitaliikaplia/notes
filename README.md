@@ -84,6 +84,7 @@ API_TOKEN=your-secret-token
 | `GET` | `/api/v1/notes/{path}` | Одна нотатка (markdown + JSON) |
 | `POST` | `/api/v1/notes/` | Створити нотатку |
 | `PUT` | `/api/v1/notes/{path}` | Оновити нотатку |
+| `PATCH` | `/api/v1/notes/{path}` | Змінити видимість нотатки |
 | `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
 | `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
 
@@ -98,7 +99,7 @@ curl -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/
 ```bash
 curl -X POST -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Назва","markdown":"## Заголовок\n\nТекст","icon":"📝","folder":"parent-slug"}' \
+  -d '{"title":"Назва","markdown":"## Заголовок\n\nТекст","icon":"📝","folder":"parent-slug","visibility":"private"}' \
   https://domain/api/v1/notes/
 ```
 
@@ -106,7 +107,15 @@ curl -X POST -H "Authorization: Bearer TOKEN" \
 ```bash
 curl -X PUT -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Нова назва","markdown":"Новий текст"}' \
+  -d '{"title":"Нова назва","markdown":"Новий текст","visibility":"public"}' \
+  https://domain/api/v1/notes/slug
+```
+
+**Змінити видимість:**
+```bash
+curl -X PATCH -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"visibility":"unlisted"}' \
   https://domain/api/v1/notes/slug
 ```
 
@@ -122,13 +131,25 @@ curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=запи�
 
 ### Формат відповідей
 
-Список: `{"notes": [{"path", "title", "icon", "created_at", "updated_at"}]}`
+Список: `{"notes": [{"path", "title", "icon", "visibility", "created_at", "updated_at"}]}`
 
-Одна нотатка: `{"path", "title", "icon", "created_at", "updated_at", "markdown", "content"}`
+Одна нотатка: `{"path", "title", "icon", "visibility", "created_at", "updated_at", "markdown", "content"}`
 
 Пошук: `{"results": [{"path", "title", "icon", "snippet"}]}`
 
 Помилки: `{"error": {"code": 400, "message": "..."}}`
+
+### Видимість
+
+Кожна нотатка має поле `visibility` з одним із значень:
+
+| Значення | Опис |
+|----------|------|
+| `private` | За замовчуванням. Доступна лише авторизованому користувачу |
+| `unlisted` | Доступна за прямим посиланням, не індексується (noindex, nofollow) |
+| `public` | Повністю публічна, індексується пошуковими системами |
+
+Встановлюється при створенні (`POST`), оновленні (`PUT`) або окремим запитом (`PATCH`).
 
 ### ШІ-агент
 
