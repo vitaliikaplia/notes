@@ -83,10 +83,11 @@ a:hover {
 
 .app-public {
     display: flex;
-    grid-template-columns: none;
     align-items: center;
     justify-content: center;
-    padding-bottom: 100px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 16px;
 }
 
 /* Sidebar */
@@ -1922,10 +1923,6 @@ a.breadcrumb-item:hover {
     }
 
     /* Login */
-    .app-public {
-        padding: 0 16px 60px;
-    }
-
     .login-container {
         max-width: none;
     }

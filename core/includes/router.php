@@ -132,6 +132,44 @@ function router($url_segments = []): array {
             $body_classes[] = 'page-404';
         }
 
+    } elseif($url_segments[0] === 'manifest.json' && $_SERVER['REQUEST_URI'] === '/manifest.json') {
+        header('Content-Type: application/manifest+json; charset=UTF-8');
+
+        $icons_dir = ABSPATH . DS . 'assets' . DS . 'img';
+        $icon_files = [
+            ['file' => 'icon-48.png',          'sizes' => '48x48',   'purpose' => 'any'],
+            ['file' => 'icon-72.png',          'sizes' => '72x72',   'purpose' => 'any'],
+            ['file' => 'icon-96.png',          'sizes' => '96x96',   'purpose' => 'any'],
+            ['file' => 'icon-144.png',         'sizes' => '144x144', 'purpose' => 'any'],
+            ['file' => 'icon-192.png',         'sizes' => '192x192', 'purpose' => 'any'],
+            ['file' => 'icon-512.png',         'sizes' => '512x512', 'purpose' => 'any'],
+            ['file' => 'icon-maskable-192.png','sizes' => '192x192', 'purpose' => 'maskable'],
+            ['file' => 'icon-maskable-512.png','sizes' => '512x512', 'purpose' => 'maskable'],
+        ];
+
+        $icons = [];
+        foreach ($icon_files as $icon) {
+            $path = $icons_dir . DS . $icon['file'];
+            $ver = file_exists($path) ? '?v=' . filemtime($path) : '';
+            $icons[] = [
+                'src'     => '/assets/img/' . $icon['file'] . $ver,
+                'sizes'   => $icon['sizes'],
+                'type'    => 'image/png',
+                'purpose' => $icon['purpose'],
+            ];
+        }
+
+        echo json_encode([
+            'name'             => 'Нотатки',
+            'short_name'       => 'Нотатки',
+            'start_url'        => '/',
+            'display'          => 'standalone',
+            'background_color' => '#191919',
+            'theme_color'      => '#202020',
+            'icons'            => $icons,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        exit;
+
     } elseif($url_segments[0] === 'api') {
 
         // REST API v1 — token auth
@@ -632,6 +670,7 @@ if ($url_segments = get_url_segments()) {
     if(
         !empty($url_segments[0])
         && $url_segments[0] !== 'api'
+        && $url_segments[0] !== 'manifest.json'
         && empty($_GET)
         && substr($_SERVER['REQUEST_URI'], -1) !== '/'
     ){
