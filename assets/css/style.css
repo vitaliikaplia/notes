@@ -2725,6 +2725,10 @@ a.breadcrumb-item:hover {
     }
 
     /* Index */
+    .page-index .content {
+        padding-top: 46px;
+    }
+
     .index-header {
         padding: 16px 16px 12px;
         flex-wrap: wrap;
@@ -2763,6 +2767,18 @@ a.breadcrumb-item:hover {
     .index-tab {
         font-size: 12px;
         padding: 5px 14px;
+    }
+
+    .index-header.graph-active {
+        top: 62px;
+        left: 0;
+        right: 0;
+        padding: 0 16px;
+    }
+
+    .graph-reset-btn {
+        top: 62px;
+        right: 16px;
     }
 
     #tab-graph .mindmap-fullscreen {
