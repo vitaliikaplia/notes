@@ -2520,6 +2520,7 @@ a.breadcrumb-item:hover {
     .notes-grid {
         padding: 8px 16px;
         gap: 8px;
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 
     .notes-list .note-card {
