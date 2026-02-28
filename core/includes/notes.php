@@ -261,12 +261,41 @@ function delete_note($relative_path): bool {
 
     $result = unlink($file);
 
+    // Remove slug from .sort-order.json in current directory
+    if($result) {
+        $dir = dirname($file);
+        $sort_file = $dir . DS . '.sort-order.json';
+        if(file_exists($sort_file)) {
+            $order = json_decode(file_get_contents($sort_file), true);
+            if(is_array($order)) {
+                $order = array_values(array_filter($order, fn($s) => $s !== $slug));
+                if(empty($order)) {
+                    unlink($sort_file);
+                } else {
+                    file_put_contents($sort_file, json_encode($order, JSON_UNESCAPED_UNICODE));
+                }
+            }
+        }
+    }
+
     // Clean up empty parent folder (if it's not the notes root)
     $parent_dir = dirname($file);
     if($result && $parent_dir !== $base) {
-        $items = array_diff(scandir($parent_dir), ['.', '..']);
+        $items = array_diff(scandir($parent_dir), ['.', '..', '.sort-order.json']);
         if(empty($items)) {
+            // Remove leftover .sort-order.json before rmdir
+            $sort_file = $parent_dir . DS . '.sort-order.json';
+            if(file_exists($sort_file)) unlink($sort_file);
             rmdir($parent_dir);
+        }
+    }
+
+    // Clean up root .sort-order.json if notes root is empty
+    if($result) {
+        $root_items = array_diff(scandir($base), ['.', '..', '.htaccess', '.sort-order.json']);
+        if(empty($root_items)) {
+            $root_sort = $base . DS . '.sort-order.json';
+            if(file_exists($root_sort)) unlink($root_sort);
         }
     }
 

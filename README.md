@@ -88,6 +88,82 @@ API_TOKEN=your-secret-token
 | `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
 | `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
 
+### Параметри запитів
+
+**POST (створити нотатку):**
+
+| Поле | Тип | Обов'язкове | Опис |
+|------|-----|-------------|------|
+| `title` | string | ✅ | Назва нотатки |
+| `markdown` | string | — | Контент у форматі Markdown |
+| `icon` | string | — | Емоджі-іконка (напр. `📝`) |
+| `folder` | string | — | Slug батьківської нотатки для створення дочірньої (напр. `retsepty`) |
+| `visibility` | string | — | `private` (за замовч.), `unlisted` або `public` |
+
+**PUT (оновити нотатку):**
+
+| Поле | Тип | Обов'язкове | Опис |
+|------|-----|-------------|------|
+| `title` | string | — | Нова назва (залишається попередня, якщо не вказано) |
+| `markdown` | string | — | Новий контент (залишається попередній, якщо не вказано) |
+| `icon` | string | — | Нова іконка |
+| `visibility` | string | — | `private`, `unlisted` або `public` |
+
+**PATCH (змінити видимість):**
+
+| Поле | Тип | Обов'язкове | Опис |
+|------|-----|-------------|------|
+| `visibility` | string | ✅ | `private`, `unlisted` або `public` |
+
+### Формат відповідей
+
+**Список нотаток** `GET /notes/`:
+```json
+{
+    "notes": [
+        {
+            "path": "retsepty",
+            "title": "Рецепти",
+            "icon": "🍽️",
+            "visibility": "private",
+            "created_at": "2026-01-15T10:00:00+00:00",
+            "updated_at": "2026-01-20T14:30:00+00:00"
+        }
+    ]
+}
+```
+
+**Одна нотатка** `GET /notes/{path}`:
+```json
+{
+    "path": "retsepty/borshch",
+    "title": "Борщ класичний",
+    "icon": "🍲",
+    "visibility": "unlisted",
+    "url": "https://domain/note/retsepty/borshch/",
+    "created_at": "2026-01-15T10:00:00+00:00",
+    "updated_at": "2026-01-20T14:30:00+00:00",
+    "markdown": "## Інгредієнти\n\n- Буряк\n- Картопля",
+    "content": { "time": 1234567890, "blocks": [...], "version": "2.31.0-rc.7" }
+}
+```
+
+> Поле `url` повертається тільки для нотаток з `visibility` = `unlisted` або `public`.
+
+**Пошук** `GET /search/?q=`:
+```json
+{
+    "results": [
+        { "path": "retsepty/borshch", "title": "Борщ класичний", "icon": "🍲", "snippet": "...знайдений текст..." }
+    ]
+}
+```
+
+**Помилки:**
+```json
+{ "error": { "code": 404, "message": "Note not found" } }
+```
+
 ### Приклади
 
 **Список нотаток:**
@@ -99,7 +175,15 @@ curl -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/
 ```bash
 curl -X POST -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Назва","markdown":"## Заголовок\n\nТекст","icon":"📝","folder":"parent-slug","visibility":"private"}' \
+  -d '{"title":"Борщ","markdown":"## Інгредієнти\n\n- Буряк","icon":"🍲","folder":"retsepty"}' \
+  https://domain/api/v1/notes/
+```
+
+**Створити кореневу нотатку (без `folder`):**
+```bash
+curl -X POST -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Рецепти","markdown":"Улюблені рецепти.","icon":"🍽️"}' \
   https://domain/api/v1/notes/
 ```
 
@@ -107,8 +191,8 @@ curl -X POST -H "Authorization: Bearer TOKEN" \
 ```bash
 curl -X PUT -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Нова назва","markdown":"Новий текст","visibility":"public"}' \
-  https://domain/api/v1/notes/slug
+  -d '{"title":"Нова назва","markdown":"Новий текст"}' \
+  https://domain/api/v1/notes/retsepty/borshch
 ```
 
 **Змінити видимість:**
@@ -116,7 +200,7 @@ curl -X PUT -H "Authorization: Bearer TOKEN" \
 curl -X PATCH -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"visibility":"unlisted"}' \
-  https://domain/api/v1/notes/slug
+  https://domain/api/v1/notes/retsepty/borshch
 ```
 
 **Видалити нотатку:**
@@ -126,18 +210,8 @@ curl -X DELETE -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/slug
 
 **Пошук:**
 ```bash
-curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=запит"
+curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=борщ"
 ```
-
-### Формат відповідей
-
-Список: `{"notes": [{"path", "title", "icon", "visibility", "created_at", "updated_at"}]}`
-
-Одна нотатка: `{"path", "title", "icon", "visibility", "created_at", "updated_at", "markdown", "content"}`
-
-Пошук: `{"results": [{"path", "title", "icon", "snippet"}]}`
-
-Помилки: `{"error": {"code": 400, "message": "..."}}`
 
 ### Видимість
 

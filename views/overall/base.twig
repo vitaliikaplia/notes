@@ -67,6 +67,9 @@
     <aside class="sidebar">
         <div class="sidebar-header">
             <a href="{{ home_url }}" class="sidebar-title">{{ site.name }}</a>
+            <button class="sidebar-collapse-all" id="collapseAllFolders" title="Згорнути/Розгорнути все">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
         </div>
         <nav class="sidebar-nav">
             {% if notes_tree.notes is not empty or notes_tree.folders is not empty %}
@@ -356,6 +359,10 @@
     });
 })();
 </script>
+{% endif %}
+
+{% if authenticated %}
+<script src="{{ assets_url }}js/sidebar.js{{ asset_ver('js/sidebar.js') }}"></script>
 {% endif %}
 
 {% block scripts %}{% endblock %}
