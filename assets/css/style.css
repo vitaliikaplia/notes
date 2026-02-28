@@ -102,6 +102,21 @@ a:hover {
     overflow-y: auto;
 }
 
+.sidebar-header {
+    padding: 12px 16px 0;
+}
+
+.sidebar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.sidebar-title:hover {
+    opacity: 0.7;
+}
+
 .sidebar-nav {
     flex: 1;
     padding: 12px 8px 0;
