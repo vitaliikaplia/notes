@@ -12,10 +12,28 @@ function api_auth(): bool {
 
     if (empty($token)) return false;
 
+    // 1. Standard Authorization header
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-
     if (preg_match('/^Bearer\s+(.+)$/i', $header, $m)) {
         return hash_equals($token, trim($m[1]));
+    }
+
+    // 2. Fallback: apache_request_headers()
+    if (function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        if (preg_match('/^Bearer\s+(.+)$/i', $auth, $m)) {
+            return hash_equals($token, trim($m[1]));
+        }
+    }
+
+    // 3. Fallback: getallheaders()
+    if (function_exists('getallheaders')) {
+        foreach (getallheaders() as $name => $value) {
+            if (strtolower($name) === 'authorization' && preg_match('/^Bearer\s+(.+)$/i', $value, $m)) {
+                return hash_equals($token, trim($m[1]));
+            }
+        }
     }
 
     return false;
