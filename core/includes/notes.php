@@ -499,6 +499,56 @@ function update_note_visibility(string $relative_path, string $visibility): bool
     return $result;
 }
 
+function save_uploaded_image(string $source_path, string $mime): ?string {
+    $uploads_dir = ABSPATH . DS . 'uploads';
+    $subdir = date('Y') . DS . date('m');
+    $target_dir = $uploads_dir . DS . $subdir;
+
+    if(!is_dir($target_dir)) {
+        mkdir($target_dir, 0755, true);
+    }
+
+    $filename = bin2hex(random_bytes(8));
+
+    // SVG — store as-is (no conversion)
+    if($mime === 'image/svg+xml') {
+        $filepath = $target_dir . DS . $filename . '.svg';
+        copy($source_path, $filepath);
+        return HOME_URL . 'uploads/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.svg';
+    }
+
+    // Raster images — convert to WebP via Imagick
+    $filepath = $target_dir . DS . $filename . '.webp';
+
+    try {
+        $imagick = new \Imagick($source_path);
+
+        // Auto-orient based on EXIF
+        $imagick->autoOrient();
+
+        // Strip metadata
+        $imagick->stripImage();
+
+        // Convert to WebP
+        $imagick->setImageFormat('webp');
+        $imagick->setImageCompressionQuality(82);
+
+        // Limit max dimension to 2000px
+        $w = $imagick->getImageWidth();
+        $h = $imagick->getImageHeight();
+        if($w > 2000 || $h > 2000) {
+            $imagick->resizeImage(2000, 2000, \Imagick::FILTER_LANCZOS, 1, true);
+        }
+
+        $imagick->writeImage($filepath);
+        $imagick->destroy();
+    } catch(\Exception $e) {
+        return null;
+    }
+
+    return HOME_URL . 'uploads/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
+}
+
 function minify_svg(string $svg): ?string {
     // Strip XML declaration
     $svg = preg_replace('/<\?xml[^?]*\?>\s*/i', '', $svg);
@@ -529,6 +579,95 @@ function minify_svg(string $svg): ?string {
     $svg = preg_replace('/\s{2,}/', ' ', $svg);
 
     return trim($svg);
+}
+
+function extract_image_urls(array $blocks): array {
+    $urls = [];
+    foreach($blocks as $block) {
+        if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url'])) {
+            $urls[] = $block['data']['file']['url'];
+        }
+    }
+    return $urls;
+}
+
+function delete_upload_by_url(string $url): bool {
+    $uploads_prefix = HOME_URL . 'uploads/';
+    if(!str_starts_with($url, $uploads_prefix)) {
+        return false;
+    }
+
+    $relative = substr($url, strlen($uploads_prefix));
+    if(str_contains($relative, '..')) {
+        return false;
+    }
+
+    $filepath = ABSPATH . DS . 'uploads' . DS . str_replace('/', DS, $relative);
+    if(file_exists($filepath)) {
+        return unlink($filepath);
+    }
+    return false;
+}
+
+function collect_note_image_urls(string $relative_path): array {
+    $base = get_notes_path();
+    $file = $base . DS . $relative_path;
+    if(!file_exists($file)) return [];
+
+    $data = json_decode(file_get_contents($file), true);
+    $urls = extract_image_urls($data['content']['blocks'] ?? []);
+
+    // Collect from child notes recursively
+    $slug = basename($relative_path, '.json');
+    $child_dir = dirname($file) . DS . $slug;
+    if(is_dir($child_dir)) {
+        $urls = array_merge($urls, _collect_images_recursive($child_dir));
+    }
+
+    return $urls;
+}
+
+function _collect_images_recursive(string $dir): array {
+    $urls = [];
+    $base = get_notes_path();
+
+    foreach(scandir($dir) as $item) {
+        if($item === '.' || $item === '..' || $item === '.sort-order.json') continue;
+        $path = $dir . DS . $item;
+        if(is_dir($path)) {
+            $urls = array_merge($urls, _collect_images_recursive($path));
+        } elseif(str_ends_with($item, '.json')) {
+            $json = file_get_contents($path);
+            $data = json_decode($json, true);
+            if($data) {
+                $urls = array_merge($urls, extract_image_urls($data['content']['blocks'] ?? []));
+            }
+        }
+    }
+
+    return $urls;
+}
+
+function is_upload_referenced_in_public_note(string $filename): bool {
+    return _search_upload_in_notes(get_notes_path(), $filename);
+}
+
+function _search_upload_in_notes(string $dir, string $filename): bool {
+    foreach(scandir($dir) as $item) {
+        if($item === '.' || $item === '..' || $item[0] === '.') continue;
+        $path = $dir . DS . $item;
+        if(is_dir($path)) {
+            if(_search_upload_in_notes($path, $filename)) return true;
+        } elseif(str_ends_with($item, '.json')) {
+            $raw = file_get_contents($path);
+            if(str_contains($raw, $filename)) {
+                $data = json_decode($raw, true);
+                $vis = $data['meta']['visibility'] ?? 'private';
+                if($vis === 'public' || $vis === 'unlisted') return true;
+            }
+        }
+    }
+    return false;
 }
 
 function get_note_excerpt(array $note, int $max_length = 160): string {
@@ -609,6 +748,27 @@ function render_blocks_to_html($blocks): string {
                     $html .= "<cite>{$caption}</cite>";
                 }
                 $html .= "</blockquote>\n";
+                break;
+
+            case 'image':
+                $url = htmlspecialchars($data['file']['url'] ?? '', ENT_QUOTES, 'UTF-8');
+                $caption = $data['caption'] ?? '';
+                $classes = 'image-block';
+                if(!empty($data['withBorder'])) $classes .= ' image-border';
+                if(!empty($data['withBackground'])) $classes .= ' image-background';
+                if(!empty($data['stretched'])) $classes .= ' image-stretched';
+                $fig_style = '';
+                if(!empty($data['width'])) {
+                    $fig_style = ' style="max-width:' . intval($data['width']) . 'px"';
+                }
+                if($url) {
+                    $html .= "<figure class=\"{$classes}\"{$fig_style}>";
+                    $html .= "<img src=\"{$url}\" alt=\"" . htmlspecialchars(strip_tags($caption), ENT_QUOTES, 'UTF-8') . "\" loading=\"lazy\">";
+                    if($caption) {
+                        $html .= "<figcaption>{$caption}</figcaption>";
+                    }
+                    $html .= "</figure>\n";
+                }
                 break;
 
             case 'delimiter':

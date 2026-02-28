@@ -54,6 +54,20 @@ function initEditor(config) {
 
         try {
             const outputData = await editor.save();
+
+            // Inject custom image widths from DOM
+            const imageBlocks = document.querySelectorAll('.image-tool__image');
+            let imgIdx = 0;
+            outputData.blocks.forEach(block => {
+                if (block.type === 'image' && imageBlocks[imgIdx]) {
+                    const img = imageBlocks[imgIdx].querySelector('img');
+                    if (img && img.style.width) {
+                        block.data.width = parseInt(img.style.width);
+                    }
+                    imgIdx++;
+                }
+            });
+
             const title = titleEl.value.trim() || 'Без назви';
             const folder = noteFolder || '';
 
@@ -214,6 +228,19 @@ function initEditor(config) {
                     endpoint: homeUrl + 'api/fetch-url/'
                 }
             },
+            image: {
+                class: ImageTool,
+                config: {
+                    endpoints: {
+                        byFile: homeUrl + 'api/upload-image/',
+                        byUrl: homeUrl + 'api/fetch-image/'
+                    },
+                    field: 'image',
+                    types: 'image/jpeg,image/png,image/gif,image/webp',
+                    captionPlaceholder: 'Підпис до зображення',
+                    buttonContent: 'Вибрати зображення'
+                }
+            },
             delimiter: Delimiter,
             inlineCode: InlineCode,
             marker: Marker,
@@ -266,6 +293,7 @@ function initEditor(config) {
         onReady: () => {
             new DragDrop(editor);
             new Undo({ editor });
+            initImageResize();
         },
         onChange: () => {
             scheduleSave();
@@ -332,6 +360,82 @@ function initEditor(config) {
                 }
             }, 100);
         });
+    }
+
+    // Image resize handles
+    function initImageResize() {
+        function addResizeHandle(imageWrapper) {
+            if (imageWrapper.querySelector('.image-resize-handle')) return;
+            const img = imageWrapper.querySelector('img');
+            if (!img) return;
+
+            const handle = document.createElement('div');
+            handle.className = 'image-resize-handle';
+            imageWrapper.style.position = 'relative';
+            imageWrapper.style.display = 'inline-block';
+            imageWrapper.appendChild(handle);
+
+            let startX, startWidth;
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startX = e.clientX;
+                startWidth = img.offsetWidth;
+
+                function onMouseMove(e) {
+                    const newWidth = Math.max(100, startWidth + (e.clientX - startX));
+                    img.style.width = newWidth + 'px';
+                    img.style.maxWidth = '100%';
+                }
+
+                function onMouseUp() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    scheduleSave();
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        // Restore saved widths from block data
+        if (editorData && editorData.blocks) {
+            const imageWidths = editorData.blocks
+                .filter(b => b.type === 'image' && b.data.width)
+                .map(b => b.data.width);
+            if (imageWidths.length) {
+                setTimeout(() => {
+                    const wrappers = document.querySelectorAll('.image-tool__image');
+                    let idx = 0;
+                    editorData.blocks.forEach(b => {
+                        if (b.type === 'image') {
+                            if (b.data.width && wrappers[idx]) {
+                                const img = wrappers[idx].querySelector('img');
+                                if (img) {
+                                    img.style.width = b.data.width + 'px';
+                                    img.style.maxWidth = '100%';
+                                }
+                            }
+                            idx++;
+                        }
+                    });
+                }, 300);
+            }
+        }
+
+        // Add handles to existing images
+        document.querySelectorAll('.image-tool__image').forEach(addResizeHandle);
+
+        // Watch for new image blocks
+        const editorEl = document.getElementById('editorjs');
+        if (editorEl) {
+            const observer = new MutationObserver(() => {
+                editorEl.querySelectorAll('.image-tool__image').forEach(addResizeHandle);
+            });
+            observer.observe(editorEl, { childList: true, subtree: true });
+        }
     }
 
     // Navigate links in editor on regular click

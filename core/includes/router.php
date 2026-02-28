@@ -239,6 +239,16 @@ function router($url_segments = []): array {
             $content = $input['content'] ?? ['blocks' => []];
             $icon = $input['icon'] ?? '';
 
+            // Collect old image URLs for orphan cleanup
+            $old_image_urls = [];
+            if($old_path) {
+                $old_file = get_notes_path() . DS . $old_path;
+                if(file_exists($old_file)) {
+                    $old_data = json_decode(file_get_contents($old_file), true);
+                    $old_image_urls = extract_image_urls($old_data['content']['blocks'] ?? []);
+                }
+            }
+
             $slug = generate_slug($title);
             $relative_path = ($folder ? $folder . '/' : '') . $slug . '.json';
 
@@ -340,6 +350,15 @@ function router($url_segments = []): array {
                 }
             }
 
+            // Delete orphaned images
+            if($success && !empty($old_image_urls)) {
+                $new_image_urls = extract_image_urls($content['blocks'] ?? []);
+                $orphaned = array_diff($old_image_urls, $new_image_urls);
+                foreach($orphaned as $url) {
+                    delete_upload_by_url($url);
+                }
+            }
+
             echo json_encode([
                 'success' => $success,
                 'path' => $relative_path,
@@ -356,7 +375,18 @@ function router($url_segments = []): array {
                 exit;
             }
 
+            // Collect all image URLs before deletion (including children)
+            $note_images = collect_note_image_urls($path);
+
             $success = delete_note($path);
+
+            // Delete orphaned image files
+            if($success && !empty($note_images)) {
+                foreach($note_images as $url) {
+                    delete_upload_by_url($url);
+                }
+            }
+
             echo json_encode(['success' => $success], JSON_UNESCAPED_UNICODE);
             exit;
 
@@ -771,10 +801,119 @@ function router($url_segments = []): array {
             echo json_encode(['success' => true, 'data_uri' => $data_uri]);
             exit;
 
+        } elseif($action === 'upload-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            if(empty($_FILES['image'])) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            $file = $_FILES['image'];
+            $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+
+            if(!in_array($mime, $allowed) || $file['size'] > 10 * 1024 * 1024) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            $result = save_uploaded_image($file['tmp_name'], $mime);
+            if(!$result) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            echo json_encode(['success' => 1, 'file' => ['url' => $result]]);
+            exit;
+
+        } elseif($action === 'fetch-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $url = $input['url'] ?? '';
+
+            if(empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            $ctx = stream_context_create([
+                'http' => ['timeout' => 10, 'header' => "User-Agent: Mozilla/5.0\r\n"],
+                'ssl' => ['verify_peer' => false]
+            ]);
+
+            $data = @file_get_contents($url, false, $ctx);
+            if(!$data) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_buffer($finfo, $data);
+            finfo_close($finfo);
+
+            $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+            if(!in_array($mime, $allowed)) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            // Save to temp file for processing
+            $tmp = tempnam(sys_get_temp_dir(), 'img_');
+            file_put_contents($tmp, $data);
+
+            $result = save_uploaded_image($tmp, $mime);
+            @unlink($tmp);
+
+            if(!$result) {
+                echo json_encode(['success' => 0]);
+                exit;
+            }
+
+            echo json_encode(['success' => 1, 'file' => ['url' => $result]]);
+            exit;
+
         } else {
             echo json_encode(['error' => 'Unknown action']);
             exit;
         }
+
+    } elseif($url_segments[0] === 'uploads') {
+        // Serve uploaded images with auth check
+        $relative = implode('/', array_slice($url_segments, 1));
+
+        if(empty($relative) || str_contains($relative, '..')) {
+            header('HTTP/1.1 403 Forbidden');
+            exit;
+        }
+
+        $filepath = ABSPATH . DS . 'uploads' . DS . str_replace('/', DS, $relative);
+        if(!file_exists($filepath) || !is_file($filepath)) {
+            header('HTTP/1.1 404 Not Found');
+            exit;
+        }
+
+        if(!auth_check()) {
+            $filename = basename($relative);
+            if(!is_upload_referenced_in_public_note($filename)) {
+                header('HTTP/1.1 403 Forbidden');
+                exit;
+            }
+        }
+
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+        $mime_map = [
+            'webp' => 'image/webp',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+        ];
+        header('Content-Type: ' . ($mime_map[$ext] ?? 'application/octet-stream'));
+        header('Content-Length: ' . filesize($filepath));
+        header('Cache-Control: public, max-age=31536000, immutable');
+        readfile($filepath);
+        exit;
 
     } else {
         // 404
@@ -801,6 +940,7 @@ if ($url_segments = get_url_segments()) {
     if(
         !empty($url_segments[0])
         && $url_segments[0] !== 'api'
+        && $url_segments[0] !== 'uploads'
         && $url_segments[0] !== 'manifest.json'
         && empty($_GET)
         && substr($_SERVER['REQUEST_URI'], -1) !== '/'
