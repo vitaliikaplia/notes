@@ -288,7 +288,7 @@
                 graph.d3Force('link')
                     .distance(link => link.type === 'child' ? 40 : 45)
                     .strength(link => link.type === 'child' ? 0.9 : 0.2);
-                graph.d3Force('center').strength(1);
+                graph.d3Force('center').strength(0.05);
 
                 // Match graph shape to canvas aspect ratio
                 var aspectRatio = width / height;
