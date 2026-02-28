@@ -7,6 +7,15 @@
     <link rel="icon" type="image/svg+xml" href="{{ assets_url }}svg/favicon.svg{{ asset_ver('svg/favicon.svg') }}">
     <link rel="manifest" href="/manifest.json">
     {% if robots is defined and robots %}<meta name="robots" content="{{ robots }}">{% endif %}
+    {% if page.description is defined and page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+    {% if canonical is defined and canonical %}<link rel="canonical" href="{{ canonical }}">{% endif %}
+    {% if og is defined %}
+    <meta property="og:title" content="{{ og.title|default(page.title) }}">
+    {% if og.description %}<meta property="og:description" content="{{ og.description }}">{% endif %}
+    <meta property="og:type" content="{{ og.type|default('website') }}">
+    {% if og.url is defined %}<meta property="og:url" content="{{ og.url }}">{% endif %}
+    <meta property="og:site_name" content="{{ site.name }}">
+    {% endif %}
     <meta name="theme-color" content="#202020">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

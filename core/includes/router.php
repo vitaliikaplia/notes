@@ -29,6 +29,7 @@ function router($url_segments = []): array {
         auth_require();
         $template = 'index.twig';
         $context['page']['title'] = 'Нотатки';
+        $context['html_title'] = SITE_NAME;
         $context['recent_notes'] = get_recent_notes();
         $body_classes[] = 'page-index';
 
@@ -72,6 +73,8 @@ function router($url_segments = []): array {
 
         $template = 'login.twig';
         $context['page']['title'] = 'Вхід';
+        $context['page']['description'] = 'Авторизація для доступу до нотаток';
+        $context['robots'] = 'noindex, nofollow';
         $body_classes[] = 'page-login';
 
     } elseif($url_segments[0] === 'logout') {
@@ -109,6 +112,7 @@ function router($url_segments = []): array {
                 $template = '404.twig';
                 $context['page']['title'] = '404';
                 $context['authenticated'] = false;
+                $context['robots'] = 'noindex, nofollow';
                 $body_classes[] = 'page-404';
                 $context['body_classes'] = implode(' ', $body_classes);
                 $context['html_title'] = $context['page']['title'] . ' — ' . SITE_NAME;
@@ -144,8 +148,18 @@ function router($url_segments = []): array {
                 // Public/unlisted — read-only view
                 $template = 'public-note.twig';
                 $context['page']['title'] = $note['_title'];
+                $context['page']['description'] = get_note_excerpt($note);
                 $context['note'] = $note;
                 $body_classes[] = 'page-public-note';
+
+                $note_url = HOME_URL . 'note/' . $note['_url'] . '/';
+                $context['canonical'] = $note_url;
+                $context['og'] = [
+                    'title' => $note['_title'],
+                    'description' => get_note_excerpt($note),
+                    'type' => 'article',
+                    'url' => $note_url,
+                ];
 
                 if($visibility === 'unlisted') {
                     $context['robots'] = 'noindex, nofollow';
@@ -695,11 +709,14 @@ function router($url_segments = []): array {
         $template = '404.twig';
         $context['page']['title'] = '404';
         $context['authenticated'] = false;
+        $context['robots'] = 'noindex, nofollow';
         $body_classes[] = 'page-404';
     }
 
     $context['body_classes'] = implode(' ', $body_classes);
-    $context['html_title'] = $context['page']['title'] . ' — ' . SITE_NAME;
+    if(empty($context['html_title'])) {
+        $context['html_title'] = $context['page']['title'] . ' — ' . SITE_NAME;
+    }
 
     return [$template, $context];
 }

@@ -126,7 +126,7 @@ a:hover {
 .sidebar-folder-header {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     padding: 4px 0 4px 8px;
     border-radius: var(--radius);
     cursor: pointer;
@@ -236,6 +236,7 @@ a:hover {
 .sidebar-note-item {
     display: flex;
     align-items: center;
+    gap: 2px;
     border-radius: var(--radius);
 }
 

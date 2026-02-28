@@ -370,6 +370,26 @@ function update_note_visibility(string $relative_path, string $visibility): bool
     return $result;
 }
 
+function get_note_excerpt(array $note, int $max_length = 160): string {
+    if(empty($note['content']['blocks'])) return '';
+
+    $text = '';
+    foreach($note['content']['blocks'] as $block) {
+        $d = $block['data'] ?? [];
+        if(!empty($d['text'])) {
+            $text .= ' ' . strip_tags($d['text']);
+        }
+        if(mb_strlen($text, 'UTF-8') >= $max_length) break;
+    }
+
+    $text = trim($text);
+    if(mb_strlen($text, 'UTF-8') > $max_length) {
+        $text = mb_substr($text, 0, $max_length, 'UTF-8') . '…';
+    }
+
+    return $text;
+}
+
 function render_blocks_to_html($blocks): string {
     if(empty($blocks)) return '';
 

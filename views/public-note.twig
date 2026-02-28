@@ -9,4 +9,25 @@
         {{ render_blocks(note.content.blocks) }}
     </article>
 </div>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": {{ note._title|json_encode|raw }},
+    "description": {{ page.description|json_encode|raw }},
+    "datePublished": "{{ note.meta.created_at }}",
+    "dateModified": "{{ note.meta.updated_at }}",
+    "url": "{{ canonical }}",
+    "inLanguage": "{{ site.html_loc }}",
+    "author": {
+        "@type": "Person",
+        "name": "Віталій Капля",
+        "url": "https://vitaliikaplia.com/"
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": {{ site.name|json_encode|raw }}
+    }
+}
+</script>
 {% endblock %}
