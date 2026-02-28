@@ -1,0 +1,12 @@
+{% extends 'overall/base.twig' %}
+
+{% block public %}
+<div class="public-note">
+    <article class="public-note-content">
+        <h1 class="public-note-title">
+            {% if note.meta.icon %}<span class="public-note-icon">{{ note.meta.icon }}</span> {% endif %}{{ note._title }}
+        </h1>
+        {{ render_blocks(note.content.blocks) }}
+    </article>
+</div>
+{% endblock %}

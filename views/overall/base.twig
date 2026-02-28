@@ -6,6 +6,7 @@
     <title>{{ html_title }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ assets_url }}svg/favicon.svg{{ asset_ver('svg/favicon.svg') }}">
     <link rel="manifest" href="/manifest.json">
+    {% if robots is defined and robots %}<meta name="robots" content="{{ robots }}">{% endif %}
     <meta name="theme-color" content="#202020">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

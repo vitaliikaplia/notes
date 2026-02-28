@@ -94,37 +94,63 @@ function router($url_segments = []): array {
         }
 
     } elseif($url_segments[0] === 'note') {
-        // Open note in editor (Notion-style: view = edit)
-        auth_require();
-
+        // Open note
         $path_parts = array_slice($url_segments, 1);
         $relative_path = implode(DS, $path_parts) . '.json';
         $note = get_note($relative_path);
 
         if($note) {
-            // Enrich page blocks with child note icons
-            if(!empty($note['content']['blocks'])) {
-                foreach($note['content']['blocks'] as &$block) {
-                    if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
-                        $child_file = get_notes_path() . DS . $block['data']['pagePath'];
-                        if(file_exists($child_file)) {
-                            $child_data = json_decode(file_get_contents($child_file), true);
-                            $block['data']['icon'] = $child_data['meta']['icon'] ?? '';
-                        }
-                    }
-                }
-                unset($block);
+            $visibility = $note['meta']['visibility'] ?? 'private';
+            $is_authenticated = auth_check();
+
+            // Private notes: 404 for unauthenticated users
+            if($visibility === 'private' && !$is_authenticated) {
+                header("HTTP/1.1 404 Not Found");
+                $template = '404.twig';
+                $context['page']['title'] = '404';
+                $context['authenticated'] = false;
+                $body_classes[] = 'page-404';
+                $context['body_classes'] = implode(' ', $body_classes);
+                $context['html_title'] = $context['page']['title'] . ' — ' . SITE_NAME;
+                return [$template, $context];
             }
 
-            $template = 'editor.twig';
-            $context['page']['title'] = $note['_title'];
-            $context['note'] = $note;
-            $context['note_folder'] = dirname($note['_file']);
-            if($context['note_folder'] === '.') {
-                $context['note_folder'] = '';
+            if($is_authenticated) {
+                // Authenticated user — show editor as usual
+                // Enrich page blocks with child note icons
+                if(!empty($note['content']['blocks'])) {
+                    foreach($note['content']['blocks'] as &$block) {
+                        if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
+                            $child_file = get_notes_path() . DS . $block['data']['pagePath'];
+                            if(file_exists($child_file)) {
+                                $child_data = json_decode(file_get_contents($child_file), true);
+                                $block['data']['icon'] = $child_data['meta']['icon'] ?? '';
+                            }
+                        }
+                    }
+                    unset($block);
+                }
+
+                $template = 'editor.twig';
+                $context['page']['title'] = $note['_title'];
+                $context['note'] = $note;
+                $context['note_folder'] = dirname($note['_file']);
+                if($context['note_folder'] === '.') {
+                    $context['note_folder'] = '';
+                }
+                $context['breadcrumbs'] = get_breadcrumbs($note['_file']);
+                $body_classes[] = 'page-editor';
+            } else {
+                // Public/unlisted — read-only view
+                $template = 'public-note.twig';
+                $context['page']['title'] = $note['_title'];
+                $context['note'] = $note;
+                $body_classes[] = 'page-public-note';
+
+                if($visibility === 'unlisted') {
+                    $context['robots'] = 'noindex, nofollow';
+                }
             }
-            $context['breadcrumbs'] = get_breadcrumbs($note['_file']);
-            $body_classes[] = 'page-editor';
         } else {
             header("HTTP/1.1 404 Not Found");
             $template = '404.twig';
@@ -398,6 +424,20 @@ function router($url_segments = []): array {
                 'url' => $url_path,
                 'title' => $title,
             ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'visibility' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $path = $input['path'] ?? '';
+            $visibility = $input['visibility'] ?? '';
+
+            if(empty($path) || !in_array($visibility, ['private', 'unlisted', 'public'], true)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid input']);
+                exit;
+            }
+
+            $success = update_note_visibility($path, $visibility);
+            echo json_encode(['success' => $success], JSON_UNESCAPED_UNICODE);
             exit;
 
         } elseif($action === 'reorder' && $_SERVER['REQUEST_METHOD'] === 'POST') {

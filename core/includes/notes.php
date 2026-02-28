@@ -309,6 +309,19 @@ function collect_all_notes($dir = null): array {
     return $notes;
 }
 
+function update_note_visibility(string $relative_path, string $visibility): bool {
+    $file = get_notes_path() . DS . $relative_path;
+    if(!file_exists($file)) return false;
+
+    $json = file_get_contents($file);
+    $data = json_decode($json, true);
+    if(!$data) return false;
+
+    $data['meta']['visibility'] = $visibility;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    return file_put_contents($file, $json) !== false;
+}
+
 function render_blocks_to_html($blocks): string {
     if(empty($blocks)) return '';
 

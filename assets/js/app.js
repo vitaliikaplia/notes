@@ -666,6 +666,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Visibility toggle (private → unlisted → public → private)
+    document.querySelectorAll('.sidebar-note-visibility').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const cycle = ['private', 'unlisted', 'public'];
+            const current = btn.dataset.visibility || 'private';
+            const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+
+            const response = await fetch(homeUrl + 'api/visibility/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: btn.dataset.path, visibility: next })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                btn.dataset.visibility = next;
+            }
+        });
+    });
+
     // Delete note from sidebar (double-click confirm)
     let deleteTimer = null;
     document.querySelectorAll('.sidebar-note-delete').forEach(btn => {
