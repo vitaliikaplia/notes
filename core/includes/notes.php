@@ -557,10 +557,10 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
         $imagick->setImageFormat('webp');
         $imagick->setImageCompressionQuality(80);
 
-        // Resize so the shorter side is max 2048px (longer side scales proportionally)
+        // Resize so the shorter side is max 1024px (longer side scales proportionally)
         $minSide = min($w, $h);
-        if($minSide > 2048) {
-            $ratio = 2048 / $minSide;
+        if($minSide > 1024) {
+            $ratio = 1024 / $minSide;
             $imagick->resizeImage((int)($w * $ratio), (int)($h * $ratio), \Imagick::FILTER_LANCZOS, 1);
         }
 
