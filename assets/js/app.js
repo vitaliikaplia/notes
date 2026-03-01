@@ -168,7 +168,7 @@ function initEditor(config) {
 
     const editorData = noteData && noteData.blocks ? autoLinkUrls(noteData) : { blocks: [] };
 
-    const editor = new EditorJS({
+    const editor = window.noteEditor = new EditorJS({
         holder: 'editorjs',
         placeholder: 'Почніть писати...',
         data: editorData,

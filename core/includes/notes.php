@@ -545,15 +545,23 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
         // Strip metadata
         $imagick->stripImage();
 
-        // Convert to WebP
-        $imagick->setImageFormat('webp');
-        $imagick->setImageCompressionQuality(82);
-
-        // Limit max dimension to 2000px
+        // Reject images larger than 10240x10240
         $w = $imagick->getImageWidth();
         $h = $imagick->getImageHeight();
-        if($w > 2000 || $h > 2000) {
-            $imagick->resizeImage(2000, 2000, \Imagick::FILTER_LANCZOS, 1, true);
+        if($w > 10240 || $h > 10240) {
+            $imagick->destroy();
+            return null;
+        }
+
+        // Convert to WebP
+        $imagick->setImageFormat('webp');
+        $imagick->setImageCompressionQuality(80);
+
+        // Resize so the shorter side is max 2048px (longer side scales proportionally)
+        $minSide = min($w, $h);
+        if($minSide > 2048) {
+            $ratio = 2048 / $minSide;
+            $imagick->resizeImage((int)($w * $ratio), (int)($h * $ratio), \Imagick::FILTER_LANCZOS, 1);
         }
 
         $imagick->writeImage($filepath);
@@ -605,6 +613,40 @@ function extract_image_urls(array $blocks): array {
         }
     }
     return $urls;
+}
+
+function collect_media_from_notes(array $notes): array {
+    $media = [];
+    foreach($notes as $note) {
+        $blocks = $note['content']['blocks'] ?? [];
+        if(empty($blocks)) continue;
+
+        $preview = '';
+        foreach($blocks as $b) {
+            if(($b['type'] ?? '') === 'paragraph' && !empty($b['data']['text'])) {
+                $preview = mb_substr(strip_tags($b['data']['text']), 0, 120);
+                break;
+            }
+        }
+
+        foreach($blocks as $block) {
+            if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url'])) {
+                $media[] = [
+                    'image'   => $block['data']['file']['url'],
+                    'title'   => $note['_title'],
+                    'date'    => $note['meta']['updated_at'] ?? '',
+                    'preview' => $preview,
+                    'url'     => HOME_URL . 'note/' . $note['_url'] . '/',
+                ];
+            }
+        }
+    }
+
+    usort($media, function($a, $b) {
+        return ($b['date'] ?? '') <=> ($a['date'] ?? '');
+    });
+
+    return $media;
 }
 
 function delete_upload_by_url(string $url): bool {

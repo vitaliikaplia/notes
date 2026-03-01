@@ -6,6 +6,7 @@
         <div class="index-tabs">
             <button class="index-tab active" data-tab="notes">Нотатки</button>
             <button class="index-tab" data-tab="graph">Граф</button>
+            <button class="index-tab" data-tab="media">Зображення</button>
             <button class="index-tab" data-tab="timeline">Таймлайн</button>
         </div>
         <div class="index-controls" id="index-controls">
@@ -78,6 +79,28 @@
             <span class="graph-reset-label">Скинути</span>
         </button>
         <div id="mindmap" class="mindmap-container mindmap-fullscreen"></div>
+    </div>
+
+    <div id="tab-media" class="tab-content">
+        {% if media_items is empty %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>Нотатки з зображеннями відсутні</p>
+        </div>
+        {% else %}
+        <div class="media-grid">
+            {% for item in media_items %}
+            <a href="{{ item.url }}" class="media-card">
+                <img src="{{ item.image }}" loading="lazy" alt="">
+                <div class="media-card-overlay">
+                    <span class="media-card-title">{{ item.title }}</span>
+                    <span class="media-card-date">{{ date_format_uk(item.date) }}</span>
+                    {% if item.preview %}<span class="media-card-preview">{{ item.preview }}</span>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
 
     <div id="tab-timeline" class="tab-content">
@@ -186,6 +209,7 @@
     const tabNotes = document.getElementById('tab-notes');
     const tabGraph = document.getElementById('tab-graph');
     const tabTimeline = document.getElementById('tab-timeline');
+    const tabMedia = document.getElementById('tab-media');
     const indexControls = document.getElementById('index-controls');
     const timelineControls = document.getElementById('timeline-controls');
     const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
@@ -197,6 +221,7 @@
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
         tabNotes.classList.toggle('active', name === 'notes');
         tabGraph.classList.toggle('active', name === 'graph');
+        tabMedia.classList.toggle('active', name === 'media');
         tabTimeline.classList.toggle('active', name === 'timeline');
         indexControls.style.display = name === 'notes' ? '' : 'none';
         timelineControls.style.display = name === 'timeline' ? '' : 'none';

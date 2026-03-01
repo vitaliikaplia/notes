@@ -1099,6 +1099,76 @@ a:hover {
     text-overflow: ellipsis;
 }
 
+/* Media gallery */
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    padding: 24px 70px;
+}
+
+.media-card {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 8px;
+    display: block;
+}
+
+.media-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.media-card:hover img {
+    transform: scale(1.05);
+}
+
+.media-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 12px;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.media-card:hover .media-card-overlay {
+    opacity: 1;
+}
+
+.media-card-title {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-card-date {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.media-card-preview {
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    line-height: 1.4;
+    margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 
 /* Index page */
 .page-index .content {
@@ -1409,9 +1479,14 @@ a:hover {
     font-size: 32px;
     font-weight: 700;
     color: var(--text);
-    margin: 0 0 32px;
+    margin: 0 0 8px;
     line-height: 1.3;
     word-break: break-word;
+}
+
+.public-note .note-date {
+    padding-left: 0;
+    margin-bottom: 32px;
 }
 
 .public-note-icon {
@@ -1648,6 +1723,14 @@ a:hover {
     content: attr(data-placeholder);
     color: var(--text-secondary);
     opacity: 0.5;
+}
+
+.note-date {
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding-left: 70px;
+    margin-top: -10px;
+    margin-bottom: 12px;
 }
 
 /* Note icon button & picker */
@@ -1981,19 +2064,17 @@ a.breadcrumb-item:hover {
 }
 
 .drop-overlay-inner {
-    padding: 48px 64px;
+    padding: 40px;
     border: 3px dashed var(--accent);
     border-radius: 16px;
     background: var(--bg);
     text-align: center;
     color: var(--text);
-    font-size: 18px;
-    font-weight: 600;
 }
 
 .drop-overlay-icon {
     display: block;
-    margin: 0 auto 12px;
+    margin: 0 auto;
     color: var(--accent);
 }
 
@@ -2963,6 +3044,16 @@ a.breadcrumb-item:hover {
         padding-left: 16px;
         padding-right: 16px;
         padding-top: 12px;
+    }
+
+    .note-date {
+        padding-left: 16px;
+    }
+
+    .media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        padding: 16px;
+        gap: 6px;
     }
 
     .page-editor .ce-block__content {

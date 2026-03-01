@@ -31,6 +31,7 @@ function router($url_segments = []): array {
         $context['page']['title'] = 'Нотатки';
         $context['html_title'] = SITE_NAME;
         $context['recent_notes'] = get_recent_notes(80);
+        $context['media_items'] = collect_media_from_notes($context['recent_notes']);
 
         // Збір унікальних батьківських груп для фільтра
         $parent_groups = [];
@@ -876,16 +877,8 @@ function router($url_segments = []): array {
                 $title = 'Імпортована нотатка';
             }
 
-            $slug = generate_slug($title);
+            $slug = generate_slug($title) . '_imported_' . date('Ymd_His');
             $relative = $slug . '.json';
-
-            $base_slug = $slug;
-            $counter = 1;
-            while (file_exists(get_notes_path() . DS . $relative)) {
-                $slug = $base_slug . '-' . $counter;
-                $relative = $slug . '.json';
-                $counter++;
-            }
 
             $now = date('c');
             $blocks = !empty($markdown) ? markdown_to_blocks($markdown) : [];
@@ -944,7 +937,7 @@ function router($url_segments = []): array {
             $mime = finfo_file($finfo, $file['tmp_name']);
             finfo_close($finfo);
 
-            if(!in_array($mime, $allowed) || $file['size'] > 10 * 1024 * 1024) {
+            if(!in_array($mime, $allowed)) {
                 echo json_encode(['success' => 0]);
                 exit;
             }

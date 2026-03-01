@@ -6,6 +6,7 @@
         <h1 class="public-note-title">
             {% if note.meta.icon %}<span class="public-note-icon">{% if note.meta.icon starts with 'data:' %}<img src="{{ note.meta.icon }}" width="28" height="28" alt="">{% else %}{{ note.meta.icon }}{% endif %}</span> {% endif %}{{ note._title }}
         </h1>
+        <div class="note-date">{{ date_format_uk(note.meta.updated_at) }}</div>
         {{ render_blocks(note.content.blocks) }}
     </article>
 </div>

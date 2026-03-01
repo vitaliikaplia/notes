@@ -362,6 +362,10 @@ function markdown_to_blocks(string $markdown): array {
             $para_lines[] = $lines[$i];
             $i++;
         }
+        if (empty($para_lines)) {
+            $para_lines[] = trim($lines[$i]);
+            $i++;
+        }
         $blocks[] = make_block('paragraph', [
             'text' => md_inline_to_html(implode(' ', $para_lines)),
         ]);

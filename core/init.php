@@ -11,6 +11,9 @@ function write_log($log) {
     }
 }
 
+/** timezone */
+date_default_timezone_set('Europe/Kyiv');
+
 /** constants */
 const DS = DIRECTORY_SEPARATOR;
 const CORE_PATH = ABSPATH . DS . 'core';

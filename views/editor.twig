@@ -8,6 +8,9 @@
         </button>
         <div id="note-title" class="editor-title" contenteditable="true" data-placeholder="Без назви">{{ note ? note.meta.title : '' }}</div>
     </div>
+    {% if note %}
+    <div class="note-date">{{ date_format_uk(note.meta.updated_at) }}</div>
+    {% endif %}
     <div id="editorjs"></div>
     <div class="editor-footer">
         <div class="editor-breadcrumbs">
