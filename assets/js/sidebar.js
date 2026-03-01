@@ -92,6 +92,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Toast notification
+    function showToast(message) {
+        let toast = document.getElementById('sidebar-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'sidebar-toast';
+            toast.className = 'sidebar-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('visible');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('visible'), 2500);
+    }
+
     // Visibility toggle (private → unlisted → public → private)
     document.querySelectorAll('.sidebar-note-visibility').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -111,6 +126,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             if (result.success) {
                 btn.dataset.visibility = next;
+
+                // Copy URL to clipboard when switching to unlisted or public
+                if (next === 'unlisted' || next === 'public') {
+                    const link = btn.closest('.sidebar-folder-header')?.querySelector('.sidebar-note-parent')
+                              || btn.closest('.sidebar-note-item')?.querySelector('.sidebar-note');
+                    if (link) {
+                        const url = link.href;
+                        await navigator.clipboard.writeText(url).catch(() => {});
+                        const label = next === 'unlisted' ? 'за посиланням' : 'для всіх';
+                        showToast('Посилання скопійовано — доступ ' + label);
+                    }
+                }
             }
         });
     });
