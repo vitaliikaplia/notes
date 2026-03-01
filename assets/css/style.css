@@ -2683,6 +2683,11 @@ a.breadcrumb-item:hover {
         z-index: 99;
     }
 
+    .sidebar.open ~ .content iframe,
+    .sidebar.open ~ .content embed {
+        pointer-events: none;
+    }
+
     /* Sidebar */
     .sidebar {
         position: fixed;
