@@ -840,6 +840,21 @@ function render_blocks_to_html($blocks): string {
                 }
                 break;
 
+            case 'table':
+                $html .= "<table>\n";
+                $rows = $data['content'] ?? [];
+                $with_headings = !empty($data['withHeadings']);
+                foreach($rows as $i => $row) {
+                    $html .= "  <tr>\n";
+                    $cell_tag = ($with_headings && $i === 0) ? 'th' : 'td';
+                    foreach($row as $cell) {
+                        $html .= "    <{$cell_tag}>{$cell}</{$cell_tag}>\n";
+                    }
+                    $html .= "  </tr>\n";
+                }
+                $html .= "</table>\n";
+                break;
+
             case 'delimiter':
                 $html .= "<hr>\n";
                 break;

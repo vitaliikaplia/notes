@@ -1756,6 +1756,25 @@ body.ai-chat-active .index-header {
     margin: 4px 0;
 }
 
+/* Table blocks */
+.public-note-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.public-note-content th,
+.public-note-content td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.public-note-content th {
+    background: var(--bg-sidebar);
+    font-weight: 600;
+}
+
 /* Image blocks */
 .image-block {
     margin: 16px 0;
