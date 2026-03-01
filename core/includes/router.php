@@ -32,6 +32,7 @@ function router($url_segments = []): array {
         $context['html_title'] = SITE_NAME;
         $context['recent_notes'] = get_recent_notes(80);
         $context['media_items'] = collect_media_from_notes($context['recent_notes']);
+        $context['ai_configured'] = ai_is_configured();
 
         // Збір унікальних батьківських груп для фільтра
         $parent_groups = [];
@@ -994,6 +995,13 @@ function router($url_segments = []): array {
             }
 
             echo json_encode(['success' => 1, 'file' => ['url' => $result]]);
+            exit;
+
+        } elseif($action === 'chat' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $messages = $input['messages'] ?? [];
+            $result = ai_chat($messages);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
             exit;
 
         } else {

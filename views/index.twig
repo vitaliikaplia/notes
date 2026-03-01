@@ -8,6 +8,7 @@
             <button class="index-tab" data-tab="graph">Граф</button>
             <button class="index-tab" data-tab="media">Зображення</button>
             <button class="index-tab" data-tab="timeline">Таймлайн</button>
+            {% if ai_configured %}<button class="index-tab" data-tab="ai">ШІ</button>{% endif %}
         </div>
         <div class="index-controls" id="index-controls">
             <select class="index-select" id="sort-select">
@@ -37,6 +38,15 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
+        {% if ai_configured %}
+        <div class="index-controls" id="ai-controls" style="display:none">
+            <button class="graph-reset-btn ai-clear-btn" id="ai-clear-btn" title="Очистити історію">
+                <svg class="icon-reset" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span class="graph-reset-label">Очистити історію</span>
+            </button>
+        </div>
+        {% endif %}
     </div>
 
     <div id="tab-notes" class="tab-content active">
@@ -134,6 +144,20 @@
             </div>
         </div>
     </div>
+
+    {% if ai_configured %}
+    <div id="tab-ai" class="tab-content">
+        <div class="ai-chat-messages" id="ai-messages"></div>
+        <div class="ai-chat-input-wrap">
+            <div class="ai-chat-input-inner">
+                <textarea class="ai-chat-input" id="ai-input" placeholder="Напишіть повідомлення..." rows="1"></textarea>
+                <button class="ai-chat-send" id="ai-send" title="Надіслати">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 {% else %}
     <div class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -146,6 +170,8 @@
 <script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.js"></script>
 <script>
 (function() {
+    const homeUrl = '{{ home_url }}';
+
     // --- Grid/List toggle ---
     const view = document.getElementById('notes-view');
     if (!view) return;
@@ -210,8 +236,10 @@
     const tabGraph = document.getElementById('tab-graph');
     const tabTimeline = document.getElementById('tab-timeline');
     const tabMedia = document.getElementById('tab-media');
+    const tabAi = document.getElementById('tab-ai');
     const indexControls = document.getElementById('index-controls');
     const timelineControls = document.getElementById('timeline-controls');
+    const aiControls = document.getElementById('ai-controls');
     const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
     let graphInited = false;
 
@@ -223,10 +251,22 @@
         tabGraph.classList.toggle('active', name === 'graph');
         tabMedia.classList.toggle('active', name === 'media');
         tabTimeline.classList.toggle('active', name === 'timeline');
+        if (tabAi) tabAi.classList.toggle('active', name === 'ai');
         indexControls.style.display = name === 'notes' ? '' : 'none';
         timelineControls.style.display = name === 'timeline' ? '' : 'none';
+        if (aiControls) aiControls.style.display = name === 'ai' ? '' : 'none';
         indexHeader.classList.toggle('graph-active', name === 'graph');
+        indexHeader.classList.toggle('ai-active', name === 'ai');
+        document.body.classList.toggle('ai-chat-active', name === 'ai');
         localStorage.setItem('dashboard-tab', name);
+
+        requestAnimationFrame(() => {
+            tabs.forEach(t => {
+                if (t.dataset.tab === name) {
+                    t.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+                }
+            });
+        });
 
         if (name === 'graph' && !graphInited) {
             graphInited = true;
@@ -270,8 +310,7 @@
             var show = (!from || date >= from) && (!to || date <= to);
             g.style.display = show ? '' : 'none';
         });
-        tlReset.style.visibility = (from || to) ? '' : 'hidden';
-        tlReset.style.opacity = (from || to) ? '' : '0';
+        tlReset.style.opacity = (from || to) ? '1' : '0.3';
         localStorage.setItem('timeline-from', from);
         localStorage.setItem('timeline-to', to);
     }
@@ -297,8 +336,7 @@
         filterTimeline();
     });
 
-    tlReset.style.visibility = (savedFrom || savedTo) ? '' : 'hidden';
-    tlReset.style.opacity = (savedFrom || savedTo) ? '' : '0';
+    tlReset.style.opacity = (savedFrom || savedTo) ? '1' : '0.3';
     if (savedFrom || savedTo) filterTimeline();
 
     // Scroll timeline to the right (newest notes)
@@ -326,7 +364,6 @@
         const container = document.getElementById('mindmap');
         if (!container) return;
 
-        const homeUrl = '{{ home_url }}';
         const cs = getComputedStyle(document.documentElement);
         const textColor = cs.getPropertyValue('--text').trim() || '#e0e0e0';
         const bgColor = cs.getPropertyValue('--bg').trim() || '#191919';
@@ -476,6 +513,162 @@
                 container.innerHTML = '<div class="mindmap-empty">Помилка завантаження карти</div>';
             });
     }
+    // --- AI Chat ---
+    var aiInput = document.getElementById('ai-input');
+    var aiSend = document.getElementById('ai-send');
+    var aiMessages = document.getElementById('ai-messages');
+    var aiScroll = document.querySelector('.content');
+
+    if (aiInput && aiSend && aiMessages) {
+        var chatHistory = JSON.parse(sessionStorage.getItem('ai-chat') || '[]');
+        var aiLoading = false;
+
+        function scrollChat() {
+            if (aiScroll) aiScroll.scrollTop = aiScroll.scrollHeight;
+        }
+
+        function renderMessages() {
+            aiMessages.innerHTML = '';
+            chatHistory.forEach(function(msg) {
+                if ((msg.role === 'user' || msg.role === 'assistant') && msg.content) {
+                    var div = document.createElement('div');
+                    div.className = 'ai-msg ai-msg-' + msg.role;
+                    div.innerHTML = msg.role === 'assistant' ? formatAiText(msg.content) : escapeHtml(msg.content);
+                    aiMessages.appendChild(div);
+                }
+            });
+            scrollChat();
+        }
+
+        function escapeHtml(t) {
+            var d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        function formatAiText(text) {
+            if (!text) return '';
+            // code blocks
+            text = text.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            // inline code
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // markdown links
+            text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
+            // bold
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // italic
+            text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+            // line breaks
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
+        function sendMessage() {
+            var text = aiInput.value.trim();
+            if (!text || aiLoading) return;
+
+            chatHistory.push({ role: 'user', content: text });
+            aiInput.value = '';
+            aiInput.style.height = 'auto';
+            renderMessages();
+
+            aiLoading = true;
+            aiSend.disabled = true;
+            aiInput.disabled = true;
+
+            // typing indicator
+            var typing = document.createElement('div');
+            typing.className = 'ai-msg ai-msg-assistant ai-typing';
+            typing.innerHTML = '<span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>';
+            aiMessages.appendChild(typing);
+            scrollChat();
+
+            fetch(homeUrl + 'api/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: chatHistory })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (typing.parentNode) typing.remove();
+                if (data.error && !data.reply) {
+                    chatHistory.push({ role: 'assistant', content: '⚠️ ' + data.error });
+                } else {
+                    chatHistory = data.messages || chatHistory;
+                    if (data.reply) {
+                        // ensure last message is the reply
+                        var last = chatHistory[chatHistory.length - 1];
+                        if (!last || last.content !== data.reply) {
+                            chatHistory.push({ role: 'assistant', content: data.reply });
+                        }
+                    }
+                }
+                sessionStorage.setItem('ai-chat', JSON.stringify(chatHistory));
+                renderMessages();
+
+                // Refresh sidebar if notes were modified
+                if (data.notes_changed) {
+                    fetch(homeUrl, { credentials: 'same-origin' })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+                            var newNav = doc.querySelector('.sidebar-nav');
+                            var curNav = document.querySelector('.sidebar-nav');
+                            if (newNav && curNav) {
+                                curNav.innerHTML = newNav.innerHTML;
+                            }
+                        });
+                }
+            })
+            .catch(function(err) {
+                if (typing.parentNode) typing.remove();
+                chatHistory.push({ role: 'assistant', content: '⚠️ Помилка з\'єднання' });
+                renderMessages();
+            })
+            .finally(function() {
+                aiLoading = false;
+                aiSend.disabled = false;
+                aiInput.disabled = false;
+                aiInput.focus();
+            });
+        }
+
+        aiSend.addEventListener('click', sendMessage);
+        aiInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Auto-resize textarea
+        aiInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Restore chat on load
+        if (chatHistory.length) renderMessages();
+
+        // --- AI clear button (two-click confirm) ---
+        var aiClearBtn = document.getElementById('ai-clear-btn');
+        var aiClearTimer = null;
+        if (aiClearBtn) {
+            aiClearBtn.addEventListener('click', function() {
+                if (!aiClearBtn.classList.contains('confirm')) {
+                    aiClearBtn.classList.add('confirm');
+                    if (aiClearTimer) clearTimeout(aiClearTimer);
+                    aiClearTimer = setTimeout(function() { aiClearBtn.classList.remove('confirm'); }, 3000);
+                    return;
+                }
+                aiClearBtn.classList.remove('confirm');
+                chatHistory = [];
+                sessionStorage.removeItem('ai-chat');
+                renderMessages();
+            });
+        }
+    }
+
 })();
 </script>
 {% endblock %}

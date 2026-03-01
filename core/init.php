@@ -35,6 +35,7 @@ $includes = [
     'notes',
     'markdown',
     'api',
+    'ai',
     'render',
     'router',
 ];
