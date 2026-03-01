@@ -1798,6 +1798,26 @@ body.ai-chat-active .index-header {
     font-weight: 600;
 }
 
+.public-note-content a,
+.ce-block a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.public-note-content a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.public-note-content .cdx-page-link a:hover {
+    text-decoration: none;
+}
+
+.public-note-content .cdx-page-link a:hover span {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 /* Image blocks */
 .image-block {
     margin: 16px 0;
@@ -2787,17 +2807,7 @@ a.breadcrumb-item:hover {
         color: var(--text-secondary);
     }
 
-    /* Inline links in editor content */
-    .ce-block a {
-        color: var(--primary);
-        text-decoration: underline;
-        text-decoration-color: rgba(82, 156, 202, 0.4);
-        text-underline-offset: 2px;
-    }
-
-    .ce-block a:hover {
-        text-decoration-color: var(--primary);
-    }
+    /* Inline links — see global rule below */
 
     /* Selection */
     ::selection {

@@ -167,6 +167,20 @@ function router($url_segments = []): array {
                 $body_classes[] = 'page-editor';
             } else {
                 // Public/unlisted — read-only view
+                // Enrich page blocks with child note icons
+                if(!empty($note['content']['blocks'])) {
+                    foreach($note['content']['blocks'] as &$block) {
+                        if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
+                            $child_file = get_notes_path() . DS . $block['data']['pagePath'];
+                            if(file_exists($child_file)) {
+                                $child_data = json_decode(file_get_contents($child_file), true);
+                                $block['data']['icon'] = $child_data['meta']['icon'] ?? '';
+                            }
+                        }
+                    }
+                    unset($block);
+                }
+
                 $template = 'public-note.twig';
                 $context['page']['title'] = $note['_title'];
                 $context['page']['description'] = get_note_excerpt($note);

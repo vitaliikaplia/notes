@@ -862,8 +862,16 @@ function render_blocks_to_html($blocks): string {
             case 'page':
                 $page_title = htmlspecialchars($data['title'] ?? 'Сторінка', ENT_QUOTES, 'UTF-8');
                 $page_url = $data['pageUrl'] ?? '';
+                $page_icon = $data['icon'] ?? '';
                 if($page_url) {
-                    $html .= '<div class="cdx-page-link"><a href="' . HOME_URL . htmlspecialchars($page_url, ENT_QUOTES, 'UTF-8') . '/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> ' . $page_title . '</a></div>' . "\n";
+                    if($page_icon && !str_starts_with($page_icon, 'data:')) {
+                        $icon_html = '<span class="cdx-page-link-icon">' . $page_icon . '</span>';
+                    } elseif($page_icon && str_starts_with($page_icon, 'data:')) {
+                        $icon_html = '<img class="cdx-page-link-icon" src="' . htmlspecialchars($page_icon, ENT_QUOTES, 'UTF-8') . '" width="16" height="16" alt="">';
+                    } else {
+                        $icon_html = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+                    }
+                    $html .= '<div class="cdx-page-link"><a href="' . HOME_URL . htmlspecialchars($page_url, ENT_QUOTES, 'UTF-8') . '/">' . $icon_html . ' <span>' . $page_title . '</span></a></div>' . "\n";
                 }
                 break;
 
