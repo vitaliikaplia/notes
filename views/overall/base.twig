@@ -407,6 +407,23 @@ window.showToast = function(message) {
         dragCount = 0;
         dropOverlay.classList.remove('active');
 
+        // Sidebar note drop → insert page block in editor
+        var noteData = e.dataTransfer.getData('application/x-note');
+        if (noteData && window.noteEditor) {
+            try {
+                var note = JSON.parse(noteData);
+                var pageUrl = (note.url || '').replace(homeUrl, '').replace(/\/$/, '');
+                window.noteEditor.blocks.insert('page', {
+                    title: note.title,
+                    pageUrl: pageUrl,
+                    pagePath: note.path,
+                    icon: note.icon || ''
+                });
+                window.showToast('Посилання на «' + note.title + '» додано');
+            } catch(err) {}
+            return;
+        }
+
         var files = e.dataTransfer.files;
         if (!files.length) return;
 

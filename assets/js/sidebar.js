@@ -286,6 +286,22 @@ document.addEventListener('DOMContentLoaded', () => {
             item.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', '');
+
+            // Store note data for editor drop (page block insertion)
+            const noteLink = item.querySelector('.sidebar-note, .sidebar-note-parent');
+            if (noteLink) {
+                const iconEl = item.querySelector('.sidebar-note-icon__icon') || item.querySelector('.sidebar-note-icon');
+                // Clone link and remove icon span to get clean title
+                const titleClone = noteLink.cloneNode(true);
+                const iconInClone = titleClone.querySelector('.sidebar-note-icon');
+                if (iconInClone) iconInClone.remove();
+                e.dataTransfer.setData('application/x-note', JSON.stringify({
+                    title: titleClone.textContent.trim(),
+                    path: item.dataset.path || '',
+                    url: noteLink.getAttribute('href') || '',
+                    icon: iconEl ? iconEl.textContent.trim() : ''
+                }));
+            }
         });
     });
 
