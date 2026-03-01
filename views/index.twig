@@ -254,13 +254,15 @@
     var savedFrom = localStorage.getItem('timeline-from') || '';
     var savedTo = localStorage.getItem('timeline-to') || '';
 
-    var dpOpts = { locale: localeUk, autoClose: true, position: 'bottom right', onSelect: function() { filterTimeline(); } };
+    var dpOpts = { locale: localeUk, autoClose: true, onSelect: function() { filterTimeline(); } };
 
     var dpFrom = new AirDatepicker('#timeline-from', Object.assign({}, dpOpts, {
+        position: 'bottom left',
         selectedDates: savedFrom ? [new Date(savedFrom + 'T00:00:00')] : []
     }));
 
     var dpTo = new AirDatepicker('#timeline-to', Object.assign({}, dpOpts, {
+        position: 'bottom right',
         selectedDates: savedTo ? [new Date(savedTo + 'T00:00:00')] : []
     }));
 
