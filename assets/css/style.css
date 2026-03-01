@@ -3425,6 +3425,19 @@ a.breadcrumb-item:hover {
         padding-left: 16px;
     }
 
+    .editor-meta-row {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .editor-add-cover {
+        opacity: 1;
+    }
+
+    .editor-add-cover span {
+        display: none;
+    }
+
     .media-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         padding: 16px;
