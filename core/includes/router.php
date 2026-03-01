@@ -926,6 +926,15 @@ function router($url_segments = []): array {
             echo json_encode(['success' => true, 'data_uri' => $data_uri]);
             exit;
 
+        } elseif($action === 'emoji-search' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $q = trim($_GET['q'] ?? '');
+            if(mb_strlen($q, 'UTF-8') < 1) {
+                echo '[]';
+                exit;
+            }
+            echo json_encode(emoji_search($q, 50), JSON_UNESCAPED_UNICODE);
+            exit;
+
         } elseif($action === 'upload-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if(empty($_FILES['image'])) {
                 echo json_encode(['success' => 0]);
