@@ -6,6 +6,7 @@
         <div class="index-tabs">
             <button class="index-tab active" data-tab="notes">Нотатки</button>
             <button class="index-tab" data-tab="graph">Граф</button>
+            <button class="index-tab" data-tab="timeline">Таймлайн</button>
         </div>
         <div class="index-controls" id="index-controls">
             <select class="index-select" id="sort-select">
@@ -25,6 +26,14 @@
             </button>
             <button class="view-toggle-btn" data-view="list" title="Список">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="index-controls" id="timeline-controls" style="display:none">
+            <input type="text" class="index-select tl-datepicker" id="timeline-from" placeholder="Від" readonly>
+            <span class="timeline-range-sep">—</span>
+            <input type="text" class="index-select tl-datepicker" id="timeline-to" placeholder="До" readonly>
+            <button class="view-toggle-btn" id="timeline-reset" title="Скинути">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
     </div>
@@ -70,6 +79,38 @@
         </button>
         <div id="mindmap" class="mindmap-container mindmap-fullscreen"></div>
     </div>
+
+    <div id="tab-timeline" class="tab-content">
+        <div class="timeline" id="timeline-view">
+            <div class="timeline-track">
+                {% set current_day = '' %}
+                {% for note in recent_notes %}
+                    {% set note_day = note.meta.updated_at|slice(0, 10) %}
+                    {% if note_day != current_day %}
+                        {% if current_day != '' %}</div>{% endif %}
+                        {% set current_day = note_day %}
+                        <div class="timeline-day-group" data-date="{{ note_day }}">
+                            <div class="timeline-day-label">{{ date_format_uk(note_day ~ ' 00:00:00')|slice(0, -7) }}</div>
+                            <div class="timeline-day-tick"></div>
+                    {% endif %}
+                    <a href="{{ home_url }}note/{{ note._url }}/" class="timeline-card">
+                        <span class="timeline-card-time">{{ note.meta.updated_at|slice(11, 5) }}</span>
+                        {% if note.meta.icon %}
+                            <span class="timeline-card-icon">
+                                {%- if note.meta.icon starts with 'data:' -%}
+                                    <img src="{{ note.meta.icon }}" width="20" height="20" alt="">
+                                {%- else -%}
+                                    {{ note.meta.icon }}
+                                {%- endif -%}
+                            </span>
+                        {% endif %}
+                        <span class="timeline-card-title">{{ note._title }}</span>
+                    </a>
+                {% endfor %}
+                {% if current_day != '' %}</div>{% endif %}
+            </div>
+        </div>
+    </div>
 {% else %}
     <div class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -79,6 +120,7 @@
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/force-graph@1.49.5/dist/force-graph.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.js"></script>
 <script>
 (function() {
     // --- Grid/List toggle ---
@@ -143,7 +185,9 @@
     const tabs = document.querySelectorAll('.index-tab');
     const tabNotes = document.getElementById('tab-notes');
     const tabGraph = document.getElementById('tab-graph');
+    const tabTimeline = document.getElementById('tab-timeline');
     const indexControls = document.getElementById('index-controls');
+    const timelineControls = document.getElementById('timeline-controls');
     const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
     let graphInited = false;
 
@@ -153,7 +197,9 @@
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
         tabNotes.classList.toggle('active', name === 'notes');
         tabGraph.classList.toggle('active', name === 'graph');
+        tabTimeline.classList.toggle('active', name === 'timeline');
         indexControls.style.display = name === 'notes' ? '' : 'none';
+        timelineControls.style.display = name === 'timeline' ? '' : 'none';
         indexHeader.classList.toggle('graph-active', name === 'graph');
         localStorage.setItem('dashboard-tab', name);
 
@@ -164,6 +210,73 @@
     }
 
     setTab(savedTab);
+
+    // --- Timeline date filter ---
+    var tlGroups = document.querySelectorAll('.timeline-day-group');
+    var tlReset = document.getElementById('timeline-reset');
+
+    var localeUk = {
+        days: ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота'],
+        daysShort: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        daysMin: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        months: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
+        monthsShort: ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'],
+        today: 'Сьогодні',
+        clear: 'Очистити',
+        dateFormat: 'dd.MM.yyyy',
+        timeFormat: 'HH:mm',
+        firstDay: 1
+    };
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function toYmd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+    function getPickerDate(dp) {
+        if (!dp) return '';
+        var d = dp.selectedDates[0];
+        return d ? toYmd(d) : '';
+    }
+
+    function filterTimeline() {
+        var from = getPickerDate(dpFrom);
+        var to = getPickerDate(dpTo);
+        tlGroups.forEach(function(g) {
+            var date = g.dataset.date;
+            var show = (!from || date >= from) && (!to || date <= to);
+            g.style.display = show ? '' : 'none';
+        });
+        tlReset.style.visibility = (from || to) ? '' : 'hidden';
+        tlReset.style.opacity = (from || to) ? '' : '0';
+        localStorage.setItem('timeline-from', from);
+        localStorage.setItem('timeline-to', to);
+    }
+
+    var savedFrom = localStorage.getItem('timeline-from') || '';
+    var savedTo = localStorage.getItem('timeline-to') || '';
+
+    var dpOpts = { locale: localeUk, autoClose: true, position: 'bottom right', onSelect: function() { filterTimeline(); } };
+
+    var dpFrom = new AirDatepicker('#timeline-from', Object.assign({}, dpOpts, {
+        selectedDates: savedFrom ? [new Date(savedFrom + 'T00:00:00')] : []
+    }));
+
+    var dpTo = new AirDatepicker('#timeline-to', Object.assign({}, dpOpts, {
+        selectedDates: savedTo ? [new Date(savedTo + 'T00:00:00')] : []
+    }));
+
+    tlReset.addEventListener('click', function() {
+        dpFrom.clear();
+        dpTo.clear();
+        filterTimeline();
+    });
+
+    tlReset.style.visibility = (savedFrom || savedTo) ? '' : 'hidden';
+    tlReset.style.opacity = (savedFrom || savedTo) ? '' : '0';
+    if (savedFrom || savedTo) filterTimeline();
+
+    // Scroll timeline to the right (newest notes)
+    var tlView = document.getElementById('timeline-view');
+    if (tlView) tlView.scrollLeft = tlView.scrollWidth;
 
     // --- Graph reset button (two-click confirm like sidebar delete) ---
     var resetBtn = document.getElementById('graph-reset-btn');

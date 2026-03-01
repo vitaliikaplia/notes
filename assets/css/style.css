@@ -809,6 +809,51 @@ a:hover {
     border-color: var(--primary);
 }
 
+.timeline-range-sep {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.tl-datepicker {
+    cursor: pointer;
+    width: 100px;
+    text-align: center;
+}
+
+/* Air Datepicker dark theme */
+.air-datepicker {
+    --adp-background-color: var(--bg-secondary, #2a2a2a);
+    --adp-background-color-hover: rgba(255, 255, 255, 0.08);
+    --adp-background-color-active: rgba(255, 255, 255, 0.12);
+    --adp-color: var(--text);
+    --adp-color-secondary: var(--text-secondary);
+    --adp-accent-color: var(--primary);
+    --adp-color-current-date: var(--primary);
+    --adp-border-color: var(--border);
+    --adp-border-color-inner: var(--border);
+    --adp-cell-background-color-hover: rgba(255, 255, 255, 0.08);
+    --adp-cell-background-color-selected: var(--primary);
+    --adp-cell-background-color-selected-hover: var(--primary);
+    --adp-cell-border-color-selected: var(--primary);
+    --adp-color-other-month: rgba(255, 255, 255, 0.2);
+    --adp-color-other-month-hover: rgba(255, 255, 255, 0.4);
+    --adp-color-disabled: rgba(255, 255, 255, 0.15);
+    --adp-day-name-color: var(--text-secondary);
+    --adp-day-name-color-hover: var(--primary);
+    --adp-nav-arrow-color: var(--text-secondary);
+    --adp-nav-color-secondary: var(--text-secondary);
+    --adp-btn-color: var(--primary);
+    --adp-btn-color-hover: var(--text);
+    --adp-btn-background-color-hover: rgba(255, 255, 255, 0.08);
+    --adp-btn-background-color-active: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.air-datepicker--pointer {
+    display: none;
+}
+
 .view-toggle-btn {
     display: flex;
     align-items: center;
@@ -941,10 +986,125 @@ a:hover {
     display: none;
 }
 
+#tab-timeline.active {
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Timeline — horizontal scroll */
+.timeline {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 40px 70px 0;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.timeline::-webkit-scrollbar {
+    height: 6px;
+}
+
+.timeline::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.timeline::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.timeline-track {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    min-width: min-content;
+    gap: 0;
+    padding-bottom: 32px;
+}
+
+.timeline-day-group {
+    flex-shrink: 0;
+    min-width: 160px;
+    padding: 0 12px 0 0;
+    border-left: 2px solid var(--border);
+    position: relative;
+}
+
+.timeline-day-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 0 12px 12px;
+    white-space: nowrap;
+}
+
+.timeline-day-tick {
+    position: absolute;
+    top: 0;
+    left: -5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.timeline-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-left: 12px;
+    margin-bottom: 4px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.timeline-card:hover {
+    background: var(--bg-hover);
+    text-decoration: none;
+}
+
+.timeline-card-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.timeline-card-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.timeline-card-icon img {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+
+.timeline-card-title {
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
 /* Index page */
 .page-index .content {
     padding: 0;
     max-width: 100%;
+    min-width: 0;
     min-height: 100vh;
     min-height: 100dvh;
     position: relative;
@@ -2889,6 +3049,11 @@ a.breadcrumb-item:hover {
         height: 100vh;
         height: 100dvh;
     }
+
+    .timeline {
+        padding: 32px 16px 0;
+    }
+
 
     /* Login */
     .login-container {
