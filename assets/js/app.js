@@ -231,11 +231,39 @@ function initEditor(config) {
             image: {
                 class: ImageTool,
                 config: {
-                    endpoints: {
-                        byFile: homeUrl + 'api/upload-image/',
-                        byUrl: homeUrl + 'api/fetch-image/'
+                    uploader: {
+                        uploadByFile: function(file) {
+                            window.showToast('Завантаження зображення...');
+                            var formData = new FormData();
+                            formData.append('image', file);
+                            return fetch(homeUrl + 'api/upload-image/', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                if (data.success) window.showToast('Зображення додано');
+                                else window.showToast('Помилка завантаження');
+                                return data;
+                            })
+                            .catch(function() { window.showToast('Помилка завантаження'); });
+                        },
+                        uploadByUrl: function(url) {
+                            window.showToast('Завантаження зображення...');
+                            return fetch(homeUrl + 'api/fetch-image/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ url: url })
+                            })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                if (data.success) window.showToast('Зображення додано');
+                                else window.showToast('Помилка завантаження');
+                                return data;
+                            })
+                            .catch(function() { window.showToast('Помилка завантаження'); });
+                        }
                     },
-                    field: 'image',
                     types: 'image/jpeg,image/png,image/gif,image/webp',
                     buttonContent: 'Вибрати зображення',
                     captionPlaceholder: ''

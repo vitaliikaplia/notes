@@ -63,14 +63,15 @@ function ai_get_system_prompt(): string {
 - **notes_delete** — видалити нотатку
 
 ## Правила
-1. Шляхи нотаток без .json (наприклад: "proyekty/my-note").
-2. При створенні — давай змістовний заголовок та відповідну emoji іконку.
-3. При оновленні — спочатку прочитай поточний вміст через notes_get.
-4. Перед видаленням — запитай підтвердження у користувача.
-5. Видимість за замовчуванням: private. Варіанти: private, unlisted, public.
-6. Контент у форматі Markdown (заголовки, списки, чеклісти, код, цитати).
-7. Не вигадуй — працюй тільки з реальними даними.
-8. Коли згадуєш, створюєш, оновлюєш або показуєш нотатку — завжди додавай посилання на неї у форматі markdown: [Назва]({$base}path/). Наприклад: [Борщ класичний]({$base}retsepty/borshch/).
+1. Шляхи нотаток без .json (наприклад: "proyekty/my-note"). Нотатки бувають вкладені — шлях включає батьківську папку.
+2. Якщо не знаєш точний шлях — використай notes_search або notes_list щоб знайти нотатку.
+3. При створенні — давай змістовний заголовок та відповідну emoji іконку.
+4. При оновленні — спочатку прочитай поточний вміст через notes_get.
+5. Перед видаленням — запитай підтвердження у користувача.
+6. Видимість за замовчуванням: private. Варіанти: private, unlisted, public.
+7. Контент у форматі Markdown (заголовки, списки, чеклісти, код, цитати).
+8. Не вигадуй — працюй тільки з реальними даними.
+9. Коли згадуєш, створюєш, оновлюєш або показуєш нотатку — завжди додавай посилання на неї у форматі markdown: [Назва]({$base}path/). Наприклад: [Борщ класичний]({$base}retsepty/borshch/).
 PROMPT;
 }
 
@@ -236,6 +237,35 @@ function ai_tool_notes_get(array $args): array {
     $path = $args['path'] ?? '';
     $relative = str_replace('/', DS, $path) . '.json';
     $note = get_note($relative);
+
+    // Fallback: search by slug or title among all notes
+    if(!$note) {
+        $slug = basename($path);
+        $query = mb_strtolower($slug, 'UTF-8');
+        $all = collect_all_notes();
+
+        foreach($all as $n) {
+            $file = preg_replace('/\.json$/', '', $n['_file']);
+            // Match by slug (end of path)
+            if(basename($file) === $slug) {
+                $note = $n;
+                $path = str_replace(DS, '/', $file);
+                break;
+            }
+        }
+
+        // Still not found — try fuzzy title match
+        if(!$note) {
+            foreach($all as $n) {
+                $title_lower = mb_strtolower($n['_title'], 'UTF-8');
+                if($title_lower === $query || str_replace(['-', '_'], ' ', $query) === str_replace(['-', '_'], ' ', $title_lower)) {
+                    $note = $n;
+                    $path = str_replace(DS, '/', preg_replace('/\.json$/', '', $n['_file']));
+                    break;
+                }
+            }
+        }
+    }
 
     if(!$note) {
         throw new RuntimeException("Нотатку не знайдено: {$path}");

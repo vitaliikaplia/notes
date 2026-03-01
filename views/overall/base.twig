@@ -298,6 +298,20 @@
     </div>
 </div>
 <script>
+window.showToast = function(message) {
+    var toast = document.getElementById('sidebar-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'sidebar-toast';
+        toast.className = 'sidebar-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function() { toast.classList.remove('visible'); }, 2500);
+};
+
 (function() {
     var homeUrl = document.body.dataset.homeUrl || '/';
     var dropOverlay = document.getElementById('dropOverlay');
@@ -334,6 +348,7 @@
 
     function importMd(f) {
         var reader = new FileReader();
+        window.showToast('Імпорт ' + f.name + '...');
         reader.onload = function(ev) {
             var md = ev.target.result;
             var title = f.name.replace(/\.(md|markdown)$/, '');
@@ -345,11 +360,14 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success && data.url) {
+                    window.showToast('Нотатку імпортовано');
                     window.location.href = homeUrl + data.url + '/';
                 } else {
+                    window.showToast('Помилка імпорту');
                     window.location.reload();
                 }
-            });
+            })
+            .catch(function() { window.showToast('Помилка імпорту'); });
         };
         reader.readAsText(f);
     }
@@ -358,6 +376,7 @@
         var editor = window.noteEditor;
         if (!editor) return;
 
+        window.showToast('Завантаження зображення...');
         var formData = new FormData();
         formData.append('image', f);
 
@@ -375,8 +394,12 @@
                     stretched: false,
                     withBackground: false
                 });
+                window.showToast('Зображення додано');
+            } else {
+                window.showToast('Помилка завантаження');
             }
-        });
+        })
+        .catch(function() { window.showToast('Помилка завантаження'); });
     }
 
     document.addEventListener('drop', function(e) {

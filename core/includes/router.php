@@ -274,10 +274,15 @@ function router($url_segments = []): array {
             $relative_path = ($folder ? $folder . '/' : '') . $slug . '.json';
 
             $now = date('c');
+
+            // Preserve existing visibility when re-saving
+            $existing_visibility = isset($old_data) ? ($old_data['meta']['visibility'] ?? 'private') : 'private';
+
             $note_data = [
                 'meta' => [
                     'title' => $title,
                     'icon' => $icon,
+                    'visibility' => $existing_visibility,
                     'created_at' => $input['created_at'] ?? $now,
                     'updated_at' => $now,
                 ],

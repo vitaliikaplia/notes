@@ -92,20 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Toast notification
-    function showToast(message) {
-        let toast = document.getElementById('sidebar-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'sidebar-toast';
-            toast.className = 'sidebar-toast';
-            document.body.appendChild(toast);
-        }
-        toast.textContent = message;
-        toast.classList.add('visible');
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => toast.classList.remove('visible'), 2500);
-    }
+    // Toast notification (use global)
+    const showToast = window.showToast;
 
     // Visibility toggle (private → unlisted → public → private)
     document.querySelectorAll('.sidebar-note-visibility').forEach(btn => {
