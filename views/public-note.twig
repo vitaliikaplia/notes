@@ -3,6 +3,11 @@
 {% block public %}
 <div class="public-note">
     <article class="public-note-content">
+        {% if note.meta.cover is defined and note.meta.cover %}
+        <div class="public-note-cover">
+            <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
+        </div>
+        {% endif %}
         <h1 class="public-note-title">
             {% if note.meta.icon %}<span class="public-note-icon">{% if note.meta.icon starts with 'data:' %}<img src="{{ note.meta.icon }}" width="28" height="28" alt="">{% else %}{{ note.meta.icon }}{% endif %}</span> {% endif %}{{ note._title }}
         </h1>

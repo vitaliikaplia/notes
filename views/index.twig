@@ -52,10 +52,15 @@
     <div id="tab-notes" class="tab-content active">
         <div class="notes-grid" id="notes-view">
             {% for note in recent_notes %}
-                <a href="{{ home_url }}note/{{ note._url }}/" class="note-card"
+                <a href="{{ home_url }}note/{{ note._url }}/" class="note-card{% if note.meta.cover is defined and note.meta.cover %} has-cover{% endif %}"
                    data-date="{{ note.meta.updated_at }}"
                    data-title="{{ note._title|lower }}"
                    data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}">
+                    {% if note.meta.cover is defined and note.meta.cover %}
+                        <span class="note-card-cover">
+                            <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
+                        </span>
+                    {% endif %}
                     {% set card_icon = note.meta.icon|default('') %}
                     {% if card_icon %}
                         <span class="note-card-icon">
@@ -177,58 +182,221 @@
     if (!view) return;
     const viewBtns = document.querySelectorAll('.view-toggle-btn');
     const savedView = localStorage.getItem('notes-view') || 'grid';
+    var currentViewMode = savedView;
 
     function setView(mode) {
+        currentViewMode = mode;
         view.className = mode === 'list' ? 'notes-list' : 'notes-grid';
         viewBtns.forEach(b => b.classList.toggle('active', b.dataset.view === mode));
         localStorage.setItem('notes-view', mode);
+        if (mode === 'list') {
+            clearMasonry();
+        } else {
+            layoutMasonry();
+        }
     }
 
     setView(savedView);
     viewBtns.forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
-    // --- Sort & Filter ---
+    // --- Sort, Filter & Infinite Scroll ---
     const sortSelect = document.getElementById('sort-select');
     const filterSelect = document.getElementById('filter-select');
+    var notesOffset = view.querySelectorAll('.note-card').length;
+    var notesLoading = false;
+    var notesHasMore = {{ recent_notes|length >= 35 ? 'true' : 'false' }};
+    var NOTES_PER_PAGE = 35;
 
     sortSelect.value = localStorage.getItem('notes-sort') || 'recent';
     filterSelect.value = localStorage.getItem('notes-filter') || '';
 
-    function applySort() {
-        const cards = [...view.querySelectorAll('.note-card')];
-        const sort = sortSelect.value;
-        cards.sort((a, b) => {
-            if (sort === 'recent') return (b.dataset.date || '').localeCompare(a.dataset.date || '');
-            if (sort === 'oldest') return (a.dataset.date || '').localeCompare(b.dataset.date || '');
-            if (sort === 'az') return (a.dataset.title || '').localeCompare(b.dataset.title || '', 'uk');
-            if (sort === 'za') return (b.dataset.title || '').localeCompare(a.dataset.title || '', 'uk');
-            return 0;
-        });
-        cards.forEach(c => view.appendChild(c));
-    }
-
     function applyFilter() {
-        const filter = filterSelect.value;
-        view.querySelectorAll('.note-card').forEach(card => {
+        var filter = filterSelect.value;
+        view.querySelectorAll('.note-card').forEach(function(card) {
             card.style.display = (!filter || card.dataset.parent === filter) ? '' : 'none';
         });
     }
 
-    function applyAll() {
-        applySort();
-        applyFilter();
+    function buildCardHtml(card) {
+        var hasCover = card.cover ? ' has-cover' : '';
+        var html = '<a href="' + homeUrl + 'note/' + card.url + '/" class="note-card' + hasCover + '"'
+            + ' data-date="' + (card.date || '') + '"'
+            + ' data-title="' + (card.title || '').toLowerCase() + '"'
+            + ' data-parent="' + (card.parent || '') + '">';
+        if (card.cover) {
+            html += '<span class="note-card-cover"><img src="' + card.cover + '" alt="" style="object-position: center ' + (card.cover_position || 50) + '%"></span>';
+        }
+        if (card.icon) {
+            html += '<span class="note-card-icon">';
+            html += card.icon.indexOf('data:') === 0
+                ? '<img src="' + card.icon + '" width="28" height="28" alt="">'
+                : card.icon;
+            html += '</span>';
+        }
+        html += '<span class="note-card-title">' + card.title + '</span>';
+        html += '<span class="note-card-date">' + card.date_fmt + '</span>';
+        if (card.preview) html += '<span class="note-card-preview">' + card.preview + '</span>';
+        html += '</a>';
+        return html;
+    }
+
+    function renderCards(cards, append) {
+        if (!append) view.innerHTML = '';
+        var filter = filterSelect.value;
+        var tmp = document.createElement('div');
+        cards.forEach(function(card) {
+            tmp.innerHTML = buildCardHtml(card);
+            var el = tmp.firstElementChild;
+            if (filter && el.dataset.parent !== filter) el.style.display = 'none';
+            view.appendChild(el);
+        });
+    }
+
+    // --- JS Masonry ---
+    var masonryGap = 12;
+    var masonryMinCol = 220;
+    var colHeights = [];
+    var masonryNumCols = 0;
+    var masonryColWidth = 0;
+
+    function calcMasonryCols() {
+        var cs = getComputedStyle(view);
+        var padL = parseFloat(cs.paddingLeft) || 0;
+        var padR = parseFloat(cs.paddingRight) || 0;
+        var w = view.offsetWidth - padL - padR;
+        var n = Math.floor((w + masonryGap) / (masonryMinCol + masonryGap)) || 1;
+        var cw = (w - masonryGap * (n - 1)) / n;
+        return { numCols: n, colWidth: cw, padLeft: padL };
+    }
+
+    var masonryPadLeft = 0;
+
+    function layoutMasonry(fromIndex) {
+        if (currentViewMode === 'list') return;
+        var info = calcMasonryCols();
+        var fullRelayout = !fromIndex || info.numCols !== masonryNumCols;
+        masonryNumCols = info.numCols;
+        masonryColWidth = info.colWidth;
+        masonryPadLeft = info.padLeft;
+
+        var cards = view.querySelectorAll('.note-card');
+        var start = 0;
+        if (fullRelayout) {
+            colHeights = new Array(masonryNumCols).fill(0);
+            start = 0;
+        } else {
+            start = fromIndex;
+        }
+
+        view.style.position = 'relative';
+
+        for (var i = start; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.style.display === 'none') continue;
+            card.style.position = 'absolute';
+            card.style.width = masonryColWidth + 'px';
+
+            var minCol = 0;
+            for (var j = 1; j < masonryNumCols; j++) {
+                if (colHeights[j] < colHeights[minCol]) minCol = j;
+            }
+
+            card.style.left = (masonryPadLeft + minCol * (masonryColWidth + masonryGap)) + 'px';
+            card.style.top = colHeights[minCol] + 'px';
+            colHeights[minCol] += card.offsetHeight + masonryGap;
+        }
+
+        var maxH = 0;
+        for (var k = 0; k < colHeights.length; k++) {
+            if (colHeights[k] > maxH) maxH = colHeights[k];
+        }
+        view.style.height = maxH + 'px';
+    }
+
+    function clearMasonry() {
+        view.style.position = '';
+        view.style.height = '';
+        view.querySelectorAll('.note-card').forEach(function(card) {
+            card.style.position = '';
+            card.style.width = '';
+            card.style.left = '';
+            card.style.top = '';
+        });
+        colHeights = [];
+        masonryNumCols = 0;
+    }
+
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (currentViewMode !== 'list') layoutMasonry();
+        }, 150);
+    });
+
+    function reloadNotes() {
+        notesLoading = true;
+        fetch(homeUrl + 'api/notes-page/?offset=0&limit=' + NOTES_PER_PAGE + '&sort=' + sortSelect.value)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                renderCards(data.cards || [], false);
+                notesOffset = data.cards ? data.cards.length : 0;
+                notesHasMore = data.has_more;
+                notesLoading = false;
+                layoutMasonry();
+            })
+            .catch(function() { notesLoading = false; });
+    }
+
+    function loadMoreNotes() {
+        if (notesLoading || !notesHasMore) return;
+        notesLoading = true;
+        var prevCount = view.querySelectorAll('.note-card').length;
+        fetch(homeUrl + 'api/notes-page/?offset=' + notesOffset + '&limit=' + NOTES_PER_PAGE + '&sort=' + sortSelect.value)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.cards && data.cards.length) {
+                    renderCards(data.cards, true);
+                    notesOffset += data.cards.length;
+                    layoutMasonry(prevCount);
+                }
+                notesHasMore = data.has_more;
+                notesLoading = false;
+            })
+            .catch(function() { notesLoading = false; notesHasMore = false; });
     }
 
     sortSelect.addEventListener('change', () => {
         localStorage.setItem('notes-sort', sortSelect.value);
-        applyAll();
+        reloadNotes();
     });
     filterSelect.addEventListener('change', () => {
         localStorage.setItem('notes-filter', filterSelect.value);
-        applyAll();
+        applyFilter();
+        layoutMasonry();
     });
 
-    applyAll();
+    // Initial layout
+    if (sortSelect.value !== 'recent') {
+        reloadNotes();
+    } else {
+        applyFilter();
+        layoutMasonry();
+    }
+
+    // Sentinel element for infinite scroll
+    var sentinel = document.createElement('div');
+    sentinel.style.height = '1px';
+    view.parentNode.appendChild(sentinel);
+
+    var scrollObserver = new IntersectionObserver(function(entries) {
+        if (entries[0].isIntersecting && notesHasMore && !notesLoading) {
+            loadMoreNotes();
+        }
+    }, { rootMargin: '300px' });
+
+    // Delay observe to avoid triggering on initial layout
+    setTimeout(function() { scrollObserver.observe(sentinel); }, 800);
 
     // --- Tab switching ---
     const tabs = document.querySelectorAll('.index-tab');

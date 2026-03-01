@@ -30,7 +30,7 @@ function router($url_segments = []): array {
         $template = 'index.twig';
         $context['page']['title'] = 'Нотатки';
         $context['html_title'] = SITE_NAME;
-        $context['recent_notes'] = get_recent_notes(80);
+        $context['recent_notes'] = get_recent_notes(35);
         $context['media_items'] = collect_media_from_notes($context['recent_notes']);
         $context['ai_configured'] = ai_is_configured();
 
@@ -259,14 +259,19 @@ function router($url_segments = []): array {
             $old_path = $input['old_path'] ?? '';
             $content = $input['content'] ?? ['blocks' => []];
             $icon = $input['icon'] ?? '';
+            $cover = $input['cover'] ?? null;
+            $cover_position = isset($input['cover_position']) ? intval($input['cover_position']) : null;
 
-            // Collect old image URLs for orphan cleanup
+            // Collect old image URLs for orphan cleanup (blocks + cover)
             $old_image_urls = [];
             if($old_path) {
                 $old_file = get_notes_path() . DS . $old_path;
                 if(file_exists($old_file)) {
                     $old_data = json_decode(file_get_contents($old_file), true);
                     $old_image_urls = extract_image_urls($old_data['content']['blocks'] ?? []);
+                    if(!empty($old_data['meta']['cover'])) {
+                        $old_image_urls[] = $old_data['meta']['cover'];
+                    }
                 }
             }
 
@@ -275,13 +280,17 @@ function router($url_segments = []): array {
 
             $now = date('c');
 
-            // Preserve existing visibility when re-saving
+            // Preserve existing visibility and cover when re-saving
             $existing_visibility = isset($old_data) ? ($old_data['meta']['visibility'] ?? 'private') : 'private';
+            $existing_cover = isset($old_data) ? ($old_data['meta']['cover'] ?? '') : '';
+            $existing_cover_pos = isset($old_data) ? ($old_data['meta']['cover_position'] ?? 50) : 50;
 
             $note_data = [
                 'meta' => [
                     'title' => $title,
                     'icon' => $icon,
+                    'cover' => $cover !== null ? $cover : $existing_cover,
+                    'cover_position' => $cover_position !== null ? $cover_position : $existing_cover_pos,
                     'visibility' => $existing_visibility,
                     'created_at' => $input['created_at'] ?? $now,
                     'updated_at' => $now,
@@ -376,9 +385,13 @@ function router($url_segments = []): array {
                 }
             }
 
-            // Delete orphaned images
+            // Delete orphaned images (blocks + cover)
             if($success && !empty($old_image_urls)) {
                 $new_image_urls = extract_image_urls($content['blocks'] ?? []);
+                $new_cover = $note_data['meta']['cover'] ?? '';
+                if($new_cover) {
+                    $new_image_urls[] = $new_cover;
+                }
                 $orphaned = array_diff($old_image_urls, $new_image_urls);
                 foreach($orphaned as $url) {
                     delete_upload_by_url($url);
@@ -1009,6 +1022,52 @@ function router($url_segments = []): array {
             }
 
             echo json_encode(['success' => 1, 'file' => ['url' => $result]]);
+            exit;
+
+        } elseif($action === 'notes-page' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $offset = max(0, intval($_GET['offset'] ?? 0));
+            $limit = min(100, max(1, intval($_GET['limit'] ?? 35)));
+            $sort = $_GET['sort'] ?? 'recent';
+            $all = collect_all_notes();
+            usort($all, function($a, $b) use ($sort) {
+                if ($sort === 'oldest') return ($a['meta']['updated_at'] ?? '') <=> ($b['meta']['updated_at'] ?? '');
+                if ($sort === 'az') return strcasecmp($a['_title'] ?? '', $b['_title'] ?? '');
+                if ($sort === 'za') return strcasecmp($b['_title'] ?? '', $a['_title'] ?? '');
+                return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
+            });
+            $slice = array_slice($all, $offset, $limit);
+            $cards = [];
+            foreach($slice as $note) {
+                $card_icon = $note['meta']['icon'] ?? '';
+                $preview = '';
+                if(!empty($note['content']['blocks'])) {
+                    foreach(array_slice($note['content']['blocks'], 0, 2) as $block) {
+                        if(($block['type'] ?? '') === 'paragraph') {
+                            $text = strip_tags($block['data']['text'] ?? '');
+                            $preview .= mb_substr($text, 0, 100);
+                        }
+                    }
+                }
+                $file = $note['_file'];
+                $parts = explode('/', $file);
+                $parent = count($parts) > 1 ? implode('/', array_slice($parts, 0, -1)) . '.json' : '';
+                $cards[] = [
+                    'url'      => $note['_url'],
+                    'title'    => $note['_title'],
+                    'date'     => $note['meta']['updated_at'] ?? '',
+                    'date_fmt' => date_format_uk($note['meta']['updated_at'] ?? ''),
+                    'icon'     => $card_icon,
+                    'cover'    => $note['meta']['cover'] ?? '',
+                    'cover_position' => $note['meta']['cover_position'] ?? 50,
+                    'preview'  => $preview,
+                    'parent'   => $parent,
+                ];
+            }
+            echo json_encode([
+                'cards' => $cards,
+                'total' => count($all),
+                'has_more' => ($offset + $limit) < count($all),
+            ], JSON_UNESCAPED_UNICODE);
             exit;
 
         } elseif($action === 'chat' && $_SERVER['REQUEST_METHOD'] === 'POST') {

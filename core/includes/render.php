@@ -2,6 +2,18 @@
 
 if(!defined('ABSPATH')){exit;}
 
+function date_format_uk(string $date): string {
+    if(empty($date)) return '';
+    $ts = strtotime($date);
+    if(!$ts) return $date;
+    $months = ['', 'січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+    $d = date('j', $ts);
+    $m = $months[(int)date('n', $ts)];
+    $y = date('Y', $ts);
+    $time = date('H:i', $ts);
+    return "{$d} {$m} {$y}, {$time}";
+}
+
 function get_context(): array {
     $context = [];
 
@@ -46,18 +58,7 @@ function get_twig(): \Twig\Environment {
 
     // custom functions
     $twig->addFunction(new \Twig\TwigFunction('render_blocks', 'render_blocks_to_html', ['is_safe' => ['html']]));
-    $twig->addFunction(new \Twig\TwigFunction('date_format_uk', function(string $date): string {
-        if(empty($date)) return '';
-        $ts = strtotime($date);
-        if(!$ts) return $date;
-
-        $months = ['', 'січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
-        $d = date('j', $ts);
-        $m = $months[(int)date('n', $ts)];
-        $y = date('Y', $ts);
-        $time = date('H:i', $ts);
-        return "{$d} {$m} {$y}, {$time}";
-    }));
+    $twig->addFunction(new \Twig\TwigFunction('date_format_uk', 'date_format_uk'));
 
     // asset versioning (cache bust)
     $twig->addFunction(new \Twig\TwigFunction('asset_ver', function(string $path): string {

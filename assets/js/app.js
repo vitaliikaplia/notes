@@ -1,10 +1,12 @@
 function initEditor(config) {
-    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon } = config;
+    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition } = config;
 
     let currentPath = oldPath;
     let saveTimeout = null;
     let isSaving = false;
     let currentIcon = noteIcon || '';
+    let currentCover = noteCover || '';
+    let coverPosY = coverPosition ?? 50;
     const statusEl = document.getElementById('save-status');
     const titleEl = document.getElementById('note-title');
     const iconBtnEl = document.getElementById('note-icon-btn');
@@ -35,6 +37,141 @@ function initEditor(config) {
 
     // Set initial icon
     updateIconButton();
+
+    // Cover image
+    const coverEl = document.getElementById('editor-cover');
+    const coverImgEl = document.getElementById('editor-cover-img');
+    const coverAddBtn = document.getElementById('cover-add');
+    const coverChangeBtn = document.getElementById('cover-change');
+    const coverRemoveBtn = document.getElementById('cover-remove');
+    const coverRepositionBtn = document.getElementById('cover-reposition');
+    const coverActionsEl = document.getElementById('cover-actions');
+    const coverHintEl = document.getElementById('cover-reposition-hint');
+
+    function applyCoverPosition() {
+        if (coverImgEl) coverImgEl.style.objectPosition = 'center ' + coverPosY + '%';
+    }
+
+    function setCover(url) {
+        currentCover = url;
+        if (url) {
+            coverImgEl.src = url;
+            applyCoverPosition();
+            coverEl.style.display = '';
+            coverAddBtn.style.display = 'none';
+        } else {
+            coverEl.style.display = 'none';
+            coverAddBtn.style.display = '';
+            coverPosY = 50;
+        }
+    }
+
+    function uploadCover() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        input.addEventListener('change', function() {
+            const file = input.files[0];
+            if (!file) return;
+            window.showToast('Завантаження обкладинки...');
+            const formData = new FormData();
+            formData.append('image', file);
+            fetch(homeUrl + 'api/upload-image/', { method: 'POST', body: formData })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.file && data.file.url) {
+                        coverPosY = 50;
+                        setCover(data.file.url);
+                        window.showToast('Обкладинку додано');
+                        scheduleSave();
+                    } else {
+                        window.showToast('Помилка завантаження');
+                    }
+                })
+                .catch(function() { window.showToast('Помилка завантаження'); });
+        });
+        input.click();
+    }
+
+    // Cover reposition (drag Y only)
+    let isRepositioning = false;
+    let dragStartY = 0;
+    let dragStartPos = 0;
+
+    function startReposition() {
+        isRepositioning = true;
+        dragStartPos = coverPosY;
+        coverEl.classList.add('repositioning');
+        coverActionsEl.style.display = 'none';
+        coverHintEl.style.display = '';
+    }
+
+    function stopReposition() {
+        if (!isRepositioning) return;
+        isRepositioning = false;
+        coverEl.classList.remove('repositioning');
+        coverActionsEl.style.display = '';
+        coverHintEl.style.display = 'none';
+        scheduleSave();
+    }
+
+    if (coverRepositionBtn) coverRepositionBtn.addEventListener('click', startReposition);
+
+    if (coverEl) {
+        coverEl.addEventListener('mousedown', function(e) {
+            if (!isRepositioning) return;
+            e.preventDefault();
+            dragStartY = e.clientY;
+            dragStartPos = coverPosY;
+
+            function onMove(ev) {
+                const dy = ev.clientY - dragStartY;
+                const containerH = coverEl.offsetHeight;
+                coverPosY = Math.min(100, Math.max(0, dragStartPos - (dy / containerH) * 100));
+                applyCoverPosition();
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                stopReposition();
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+
+        // Touch support
+        coverEl.addEventListener('touchstart', function(e) {
+            if (!isRepositioning) return;
+            e.preventDefault();
+            dragStartY = e.touches[0].clientY;
+            dragStartPos = coverPosY;
+
+            function onTouchMove(ev) {
+                const dy = ev.touches[0].clientY - dragStartY;
+                const containerH = coverEl.offsetHeight;
+                coverPosY = Math.min(100, Math.max(0, dragStartPos - (dy / containerH) * 100));
+                applyCoverPosition();
+            }
+            function onTouchEnd() {
+                coverEl.removeEventListener('touchmove', onTouchMove);
+                coverEl.removeEventListener('touchend', onTouchEnd);
+                stopReposition();
+            }
+            coverEl.addEventListener('touchmove', onTouchMove);
+            coverEl.addEventListener('touchend', onTouchEnd);
+        });
+    }
+
+    // Init cover
+    setCover(currentCover);
+
+    if (coverAddBtn) coverAddBtn.addEventListener('click', uploadCover);
+    if (coverChangeBtn) coverChangeBtn.addEventListener('click', uploadCover);
+    if (coverRemoveBtn) coverRemoveBtn.addEventListener('click', function() {
+        setCover('');
+        window.showToast('Обкладинку видалено');
+        scheduleSave();
+    });
 
     const statusTexts = {
         saving: 'Збереження...',
@@ -80,6 +217,8 @@ function initEditor(config) {
                     old_path: currentPath,
                     created_at: createdAt || '',
                     icon: currentIcon || '',
+                    cover: currentCover || '',
+                    cover_position: Math.round(coverPosY),
                     content: outputData
                 })
             });
