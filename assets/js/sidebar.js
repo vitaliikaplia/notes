@@ -1,6 +1,76 @@
 // Sidebar
 document.addEventListener('DOMContentLoaded', () => {
     const homeUrl = document.body.dataset.homeUrl || '/';
+    const root = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const themeKey = 'theme-preference';
+    const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    let themePreference = null;
+
+    try {
+        const storedTheme = localStorage.getItem(themeKey);
+        if (storedTheme === 'dark' || storedTheme === 'light') {
+            themePreference = storedTheme;
+        }
+    } catch (err) {}
+
+    function getSystemTheme() {
+        return themeMedia && themeMedia.matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+        const nextTheme = theme === 'dark' ? 'dark' : 'light';
+        const isDark = nextTheme === 'dark';
+        const prevTheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
+
+        root.dataset.theme = nextTheme;
+
+        if (themeMeta) {
+            themeMeta.setAttribute('content', isDark ? '#191919' : '#f6f2ea');
+        }
+
+        if (themeToggle) {
+            const nextLabel = isDark ? 'Увімкнути світлу тему' : 'Увімкнути темну тему';
+            themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            themeToggle.setAttribute('title', nextLabel);
+            themeToggle.setAttribute('aria-label', nextLabel);
+        }
+
+        if (prevTheme !== nextTheme) {
+            window.dispatchEvent(new CustomEvent('themechange', {
+                detail: { theme: nextTheme }
+            }));
+        }
+    }
+
+    applyTheme(themePreference || getSystemTheme());
+
+    if (themeMedia) {
+        const syncTheme = () => {
+            if (!themePreference) {
+                applyTheme(getSystemTheme());
+            }
+        };
+
+        if (typeof themeMedia.addEventListener === 'function') {
+            themeMedia.addEventListener('change', syncTheme);
+        } else if (typeof themeMedia.addListener === 'function') {
+            themeMedia.addListener(syncTheme);
+        }
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
+            themePreference = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(themePreference);
+
+            try {
+                localStorage.setItem(themeKey, themePreference);
+            } catch (err) {}
+        });
+    }
 
     // Folder toggle with persistent state
     const collapsedKey = 'sidebar-collapsed';

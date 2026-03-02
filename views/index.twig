@@ -410,6 +410,8 @@
     const aiControls = document.getElementById('ai-controls');
     const savedTab = localStorage.getItem('dashboard-tab') || 'notes';
     let graphInited = false;
+    let mindmapGraph = null;
+    let mindmapPalette = null;
 
     const indexHeader = document.querySelector('.index-header');
 
@@ -528,15 +530,41 @@
     tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
 
     // --- Mindmap (lazy init) ---
+    function getMindmapPalette() {
+        const cs = getComputedStyle(document.documentElement);
+        return {
+            textColor: cs.getPropertyValue('--text').trim() || '#e0e0e0',
+            bgColor: cs.getPropertyValue('--bg').trim() || '#191919',
+            borderColor: cs.getPropertyValue('--border').trim() || '#363636',
+            accentColor: cs.getPropertyValue('--primary').trim() || '#54c0eb'
+        };
+    }
+
+    function refreshMindmapTheme() {
+        const container = document.getElementById('mindmap');
+        if (!mindmapGraph || !container) return;
+
+        mindmapPalette = getMindmapPalette();
+        mindmapGraph
+            .backgroundColor(mindmapPalette.bgColor)
+            .linkColor(() => mindmapPalette.borderColor)
+            .width(container.clientWidth)
+            .height(container.clientHeight);
+
+        if (typeof mindmapGraph.refresh === 'function') {
+            mindmapGraph.refresh();
+        } else if (typeof mindmapGraph.d3ReheatSimulation === 'function') {
+            mindmapGraph.d3ReheatSimulation();
+        }
+    }
+
+    window.addEventListener('themechange', refreshMindmapTheme);
+
     function initMindmap() {
         const container = document.getElementById('mindmap');
         if (!container) return;
 
-        const cs = getComputedStyle(document.documentElement);
-        const textColor = cs.getPropertyValue('--text').trim() || '#e0e0e0';
-        const bgColor = cs.getPropertyValue('--bg').trim() || '#191919';
-        const borderColor = cs.getPropertyValue('--border').trim() || '#363636';
-        const accentColor = '#54c0eb';
+        mindmapPalette = getMindmapPalette();
 
         fetch(homeUrl + 'api/graph/')
             .then(r => r.json())
@@ -590,20 +618,20 @@
                 const graph = ForceGraph()(container)
                     .width(width)
                     .height(height)
-                    .backgroundColor(bgColor)
+                    .backgroundColor(mindmapPalette.bgColor)
                     .graphData({ nodes, links })
                     .nodeCanvasObject((node, ctx, globalScale) => {
                         const r = Math.max(2, Math.min(8, 2 + node.deg * 1.5));
                         ctx.beginPath();
                         ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-                        ctx.fillStyle = node === graph.hoverNode ? '#ffffff' : accentColor;
+                        ctx.fillStyle = node === graph.hoverNode ? mindmapPalette.textColor : mindmapPalette.accentColor;
                         ctx.globalAlpha = 0.85;
                         ctx.fill();
                         ctx.globalAlpha = 1;
 
                         const fontSize = Math.max(3, 10 / globalScale);
                         ctx.font = fontSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
-                        ctx.fillStyle = textColor;
+                        ctx.fillStyle = mindmapPalette.textColor;
                         ctx.globalAlpha = 0.8;
                         const label = node.label.length > 20 ? node.label.slice(0, 18) + '...' : node.label;
                         ctx.fillText(label, node.x + r + 3, node.y + fontSize * 0.35);
@@ -618,7 +646,7 @@
                         ctx.fillStyle = color;
                         ctx.fill();
                     })
-                    .linkColor(() => borderColor)
+                    .linkColor(() => mindmapPalette.borderColor)
                     .linkWidth(0.5)
                     .linkDirectionalParticles(0)
                     .linkLineDash(link => link.type === 'page-link' ? [4, 4] : null)
@@ -651,6 +679,8 @@
                             }).catch(err => console.error('Save position error:', err));
                         }
                     });
+
+                mindmapGraph = graph;
 
                 graph.d3Force('charge').strength(-140);
                 graph.d3Force('link')

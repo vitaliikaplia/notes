@@ -16,7 +16,29 @@
     {% if og.url is defined %}<meta property="og:url" content="{{ og.url }}">{% endif %}
     <meta property="og:site_name" content="{{ site.name }}">
     {% endif %}
-    <meta name="theme-color" content="#202020">
+    <meta name="theme-color" content="#f6f2ea">
+    <script>
+        (function() {
+            var key = 'theme-preference';
+            var root = document.documentElement;
+            var meta = document.querySelector('meta[name="theme-color"]');
+            var stored = null;
+
+            try {
+                stored = localStorage.getItem(key);
+            } catch (e) {}
+
+            var theme = stored === 'dark' || stored === 'light'
+                ? stored
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+            root.dataset.theme = theme;
+
+            if (meta) {
+                meta.setAttribute('content', theme === 'dark' ? '#191919' : '#f6f2ea');
+            }
+        })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="{{ assets_url }}img/apple-touch-icon.png{{ asset_ver('img/apple-touch-icon.png') }}">
@@ -89,12 +111,18 @@
             {% endif %}
         </nav>
         <div class="sidebar-footer">
-            <a href="{{ home_url }}logout/" class="btn-footer-action" title="Вийти">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </a>
             <button type="button" class="btn-footer-action search-trigger" title="Пошук (Ctrl+K)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
+            <div class="sidebar-footer-actions">
+                <button type="button" class="btn-footer-action btn-theme-toggle" id="themeToggle" title="Перемкнути тему" aria-label="Перемкнути тему" aria-pressed="false">
+                    <svg class="icon-theme-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+                    <svg class="icon-theme-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </button>
+                <a href="{{ home_url }}logout/" class="btn-footer-action" title="Вийти">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
         </div>
     </aside>
 
