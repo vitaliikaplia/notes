@@ -834,6 +834,28 @@
                             var curNav = document.querySelector('.sidebar-nav');
                             if (newNav && curNav) {
                                 curNav.innerHTML = newNav.innerHTML;
+
+                                // Restore collapsed state from localStorage
+                                var collapsed = JSON.parse(localStorage.getItem('sidebar-collapsed') || '[]');
+                                curNav.querySelectorAll('.sidebar-folder[data-slug]').forEach(function(folder) {
+                                    if (collapsed.indexOf(folder.dataset.slug) !== -1) {
+                                        folder.classList.add('collapsed');
+                                    }
+                                });
+
+                                // Re-bind folder toggle handlers
+                                curNav.querySelectorAll('[data-toggle="folder"]').forEach(function(el) {
+                                    el.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        el.closest('.sidebar-folder').classList.toggle('collapsed');
+                                        var slugs = [];
+                                        document.querySelectorAll('.sidebar-folder.collapsed[data-slug]').forEach(function(f) {
+                                            slugs.push(f.dataset.slug);
+                                        });
+                                        localStorage.setItem('sidebar-collapsed', JSON.stringify(slugs));
+                                    });
+                                });
                             }
                         });
                 }
