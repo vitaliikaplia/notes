@@ -2440,7 +2440,7 @@ body.ai-chat-active .index-header {
     position: absolute;
     top: 100%;
     z-index: 100;
-    width: 220px;
+    width: 230px;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -2463,8 +2463,8 @@ body.ai-chat-active .index-header {
 }
 
 .note-color-swatch {
-    width: 36px;
-    height: 36px;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 6px;
     border: 2px solid transparent;
     cursor: pointer;
