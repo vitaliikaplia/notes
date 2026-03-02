@@ -447,6 +447,18 @@ function markdown_to_blocks(string $markdown): array {
             continue;
         }
 
+        // Standalone external link: [title](https://...)
+        if (preg_match('/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/', trim($line), $m)) {
+            $blocks[] = make_block('linkTool', [
+                'link' => $m[2],
+                'meta' => [
+                    'title' => $m[1],
+                ],
+            ]);
+            $i++;
+            continue;
+        }
+
         // Paragraph (default)
         $para_lines = [];
         while ($i < $total && trim($lines[$i]) !== '' && !is_md_block_start($lines[$i])) {
@@ -535,6 +547,7 @@ function is_md_block_start(string $line): bool {
     if (preg_match('/^!\[/', $line)) return true;
     if (preg_match('/^https?:\/\/(?:www\.)?(?:youtube\.com\/watch|youtu\.be\/|vimeo\.com\/)/', $line)) return true;
     if (preg_match('/^\[.+\]\(note\/.+\)$/', $line)) return true;
+    if (preg_match('/^\[.+\]\(https?:\/\/.+\)$/', $line)) return true;
     return false;
 }
 
