@@ -971,6 +971,7 @@ function initEditor(config) {
     var colorAddBtn = document.getElementById('color-add');
     if (colorAddBtn) {
         var colorPalette = [
+            // Пастельні (світлі)
             { name: 'Червоний', hex: '#FDECEC' },
             { name: 'Помаранчевий', hex: '#FEF0E0' },
             { name: 'Жовтий', hex: '#FEF9E0' },
@@ -980,13 +981,29 @@ function initEditor(config) {
             { name: 'Синій', hex: '#E4E8FD' },
             { name: 'Фіолетовий', hex: '#F0E6FA' },
             { name: 'Рожевий', hex: '#FDE6F2' },
-            { name: 'Коричневий', hex: '#F0EAE0' },
+            { name: 'Бежевий', hex: '#F0EAE0' },
+            // Насичені (середні)
+            { name: 'Корал', hex: '#F4A7A3' },
+            { name: 'Апельсин', hex: '#F5C27A' },
+            { name: 'Сонце', hex: '#F5E27A' },
+            { name: 'Трава', hex: '#8FD4A4' },
+            { name: 'Бірюза', hex: '#7AC8C4' },
+            { name: 'Небо', hex: '#7AB8E0' },
+            { name: 'Індиго', hex: '#9BA3E0' },
+            { name: 'Лаванда', hex: '#C4A3E0' },
+            { name: 'Фуксія', hex: '#E0A3C4' },
+            { name: 'Пісок', hex: '#D4C4A8' },
+            // Темні
             { name: 'Темно-червоний', hex: '#3D2020' },
             { name: 'Темно-помаранчевий', hex: '#3D3020' },
             { name: 'Темно-жовтий', hex: '#3D3A20' },
             { name: 'Темно-зелений', hex: '#203D28' },
+            { name: 'Темно-бірюзовий', hex: '#203D3A' },
             { name: 'Темно-синій', hex: '#20283D' },
+            { name: 'Темно-індиго', hex: '#282040' },
             { name: 'Темно-фіолетовий', hex: '#30203D' },
+            { name: 'Темно-рожевий', hex: '#3D2030' },
+            { name: 'Графіт', hex: '#2A2A2A' },
         ];
 
         var colorPickerEl = null;
