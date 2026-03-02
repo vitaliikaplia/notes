@@ -107,6 +107,23 @@ function blocks_to_markdown(array $blocks): string {
                 $lines[] = '';
                 break;
 
+            case 'image':
+                $url = $data['file']['url'] ?? '';
+                $caption = $data['caption'] ?? '';
+                if ($url) {
+                    $lines[] = "![{$caption}]({$url})";
+                    $lines[] = '';
+                }
+                break;
+
+            case 'embed':
+                $source = $data['source'] ?? '';
+                if ($source) {
+                    $lines[] = $source;
+                    $lines[] = '';
+                }
+                break;
+
             case 'linkTool':
                 $link  = $data['link'] ?? '';
                 $title = $data['meta']['title'] ?? $link;
@@ -162,7 +179,15 @@ function html_to_md_inline(string $html): string {
         '/<a\s+href="([^"]*)"[^>]*>(.*?)<\/a>/is',
         function($m) {
             $url  = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
-            $text = strip_tags($m[2]);
+            $text = $m[2];
+            // Preserve inner formatting before stripping remaining tags
+            $text = preg_replace('/<(?:b|strong)>(.*?)<\/(?:b|strong)>/is', '**$1**', $text);
+            $text = preg_replace('/<(?:i|em)>(.*?)<\/(?:i|em)>/is', '*$1*', $text);
+            $text = preg_replace('/<code>(.*?)<\/code>/is', '`$1`', $text);
+            $text = preg_replace('/<mark[^>]*>(.*?)<\/mark>/is', '==$1==', $text);
+            $text = preg_replace('/<u>(.*?)<\/u>/is', '++$1++', $text);
+            $text = preg_replace('/<(?:s|del|strike)>(.*?)<\/(?:s|del|strike)>/is', '~~$1~~', $text);
+            $text = strip_tags($text);
             return "[{$text}]({$url})";
         },
         $html
@@ -172,6 +197,8 @@ function html_to_md_inline(string $html): string {
     $html = preg_replace('/<(?:i|em)>(.*?)<\/(?:i|em)>/is', '*$1*', $html);
     $html = preg_replace('/<code>(.*?)<\/code>/is', '`$1`', $html);
     $html = preg_replace('/<mark[^>]*>(.*?)<\/mark>/is', '==$1==', $html);
+    $html = preg_replace('/<u>(.*?)<\/u>/is', '++$1++', $html);
+    $html = preg_replace('/<(?:s|del|strike)>(.*?)<\/(?:s|del|strike)>/is', '~~$1~~', $html);
     $html = preg_replace('/<br\s*\/?>/i', "\n", $html);
 
     $html = strip_tags($html);
@@ -206,6 +233,46 @@ function markdown_to_blocks(string $markdown): array {
                 'text'  => md_inline_to_html(trim($m[2])),
                 'level' => strlen($m[1]),
             ]);
+            $i++;
+            continue;
+        }
+
+        // Image: ![caption](url)
+        if (preg_match('/^!\[([^\]]*)\]\(([^)]+)\)$/', trim($line), $m)) {
+            $blocks[] = make_block('image', [
+                'file'           => ['url' => $m[2]],
+                'caption'        => $m[1],
+                'withBorder'     => false,
+                'stretched'      => false,
+                'withBackground' => false,
+            ]);
+            $i++;
+            continue;
+        }
+
+        // Embed: YouTube/Vimeo URL on its own line
+        if (preg_match('/^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=([\w-]+)|youtu\.be\/([\w-]+)|vimeo\.com\/(\d+))/', trim($line), $m)) {
+            $source = trim($line);
+            if (!empty($m[1]) || !empty($m[2])) {
+                $video_id = !empty($m[1]) ? $m[1] : $m[2];
+                $blocks[] = make_block('embed', [
+                    'service' => 'youtube',
+                    'source'  => $source,
+                    'embed'   => "https://www.youtube.com/embed/{$video_id}",
+                    'width'   => 580,
+                    'height'  => 320,
+                    'caption' => '',
+                ]);
+            } else {
+                $blocks[] = make_block('embed', [
+                    'service' => 'vimeo',
+                    'source'  => $source,
+                    'embed'   => "https://player.vimeo.com/video/{$m[3]}",
+                    'width'   => 580,
+                    'height'  => 320,
+                    'caption' => '',
+                ]);
+            }
             $i++;
             continue;
         }
@@ -444,6 +511,12 @@ function md_inline_to_html(string $md): string {
     // ==text== → <mark>
     $md = preg_replace('/==(.+?)==/', '<mark>$1</mark>', $md);
 
+    // ++text++ → <u>
+    $md = preg_replace('/\+\+(.+?)\+\+/', '<u>$1</u>', $md);
+
+    // ~~text~~ → <s>
+    $md = preg_replace('/~~(.+?)~~/', '<s>$1</s>', $md);
+
     return $md;
 }
 
@@ -459,6 +532,8 @@ function is_md_block_start(string $line): bool {
     if (preg_match('/^-\s*\[[ xX]\]/', $line)) return true;
     if (preg_match('/^\|.+\|$/', $line)) return true;
     if (preg_match('/^<details>/', $line)) return true;
+    if (preg_match('/^!\[/', $line)) return true;
+    if (preg_match('/^https?:\/\/(?:www\.)?(?:youtube\.com\/watch|youtu\.be\/|vimeo\.com\/)/', $line)) return true;
     if (preg_match('/^\[.+\]\(note\/.+\)$/', $line)) return true;
     return false;
 }

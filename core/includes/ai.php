@@ -234,12 +234,14 @@ function ai_tool_notes_search(array $args): array {
     return $results;
 }
 
-function ai_tool_notes_get(array $args): array {
-    $path = $args['path'] ?? '';
+/**
+ * Find note by path with fallback to slug/title search.
+ * Returns [note, resolved_path] or throws if not found.
+ */
+function ai_resolve_note(string $path): array {
     $relative = str_replace('/', DS, $path) . '.json';
     $note = get_note($relative);
 
-    // Fallback: search by slug or title among all notes
     if(!$note) {
         $slug = basename($path);
         $query = mb_strtolower($slug, 'UTF-8');
@@ -247,7 +249,6 @@ function ai_tool_notes_get(array $args): array {
 
         foreach($all as $n) {
             $file = preg_replace('/\.json$/', '', $n['_file']);
-            // Match by slug (end of path)
             if(basename($file) === $slug) {
                 $note = $n;
                 $path = str_replace(DS, '/', $file);
@@ -255,7 +256,6 @@ function ai_tool_notes_get(array $args): array {
             }
         }
 
-        // Still not found — try fuzzy title match
         if(!$note) {
             foreach($all as $n) {
                 $title_lower = mb_strtolower($n['_title'], 'UTF-8');
@@ -271,6 +271,12 @@ function ai_tool_notes_get(array $args): array {
     if(!$note) {
         throw new RuntimeException("Нотатку не знайдено: {$path}");
     }
+
+    return [$note, $path];
+}
+
+function ai_tool_notes_get(array $args): array {
+    [$note, $path] = ai_resolve_note($args['path'] ?? '');
 
     return [
         'path'       => $path,
@@ -334,13 +340,8 @@ function ai_tool_notes_create(array $args): array {
 }
 
 function ai_tool_notes_update(array $args): array {
-    $path = $args['path'] ?? '';
+    [$existing, $path] = ai_resolve_note($args['path'] ?? '');
     $relative = str_replace('/', DS, $path) . '.json';
-    $existing = get_note($relative);
-
-    if(!$existing) {
-        throw new RuntimeException("Нотатку не знайдено: {$path}");
-    }
 
     $title      = isset($args['title']) ? strip_tags(trim($args['title'])) : $existing['_title'];
     $markdown   = $args['markdown'] ?? null;
@@ -356,13 +357,12 @@ function ai_tool_notes_update(array $args): array {
         : ($existing['content']['blocks'] ?? []);
 
     $note_data = [
-        'meta' => [
+        'meta' => array_merge($existing['meta'] ?? [], [
             'title'      => $title,
             'icon'       => $icon,
             'visibility' => $visibility,
-            'created_at' => $existing['meta']['created_at'] ?? '',
             'updated_at' => date('c'),
-        ],
+        ]),
         'content' => [
             'time'    => round(microtime(true) * 1000),
             'blocks'  => $blocks,
@@ -378,12 +378,8 @@ function ai_tool_notes_update(array $args): array {
 }
 
 function ai_tool_notes_delete(array $args): array {
-    $path = $args['path'] ?? '';
+    [, $path] = ai_resolve_note($args['path'] ?? '');
     $relative = str_replace('/', DS, $path) . '.json';
-
-    if(!file_exists(get_notes_path() . DS . $relative)) {
-        throw new RuntimeException("Нотатку не знайдено: {$path}");
-    }
 
     if(!delete_note($relative)) {
         throw new RuntimeException('Не вдалося видалити нотатку');
@@ -413,6 +409,10 @@ function ai_chat(array $messages): array {
     $history_limit = intval($env['AI_HISTORY_LIMIT'] ?? 20);
     if($history_limit > 0 && count($messages) > $history_limit) {
         $messages = array_slice($messages, -$history_limit);
+        // Ensure we start with a genuine user message, not an orphaned tool result
+        while(!empty($messages) && ($messages[0]['role'] !== 'user' || isset($messages[0]['_raw']))) {
+            array_shift($messages);
+        }
     }
 
     $working = $messages;
