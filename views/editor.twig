@@ -36,6 +36,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <span>Додати обкладинку</span>
         </button>
+        <button type="button" class="editor-add-color" id="color-add">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            <span>Колір</span>
+        </button>
     </div>
     <div id="editorjs"></div>
     <div class="editor-footer">
@@ -94,7 +98,8 @@
         noteFolder: '{{ note_folder }}',
         noteIcon: {{ note and note.meta.icon is defined ? note.meta.icon|json_encode|raw : '""' }},
         noteCover: '{{ note and note.meta.cover is defined and note.meta.cover ? note.meta.cover : '' }}',
-        coverPosition: {{ note and note.meta.cover_position is defined ? note.meta.cover_position : 50 }}
+        coverPosition: {{ note and note.meta.cover_position is defined ? note.meta.cover_position : 50 }},
+        noteColor: '{{ note and note.meta.color is defined and note.meta.color ? note.meta.color : '' }}'
     });
 </script>
 {% endblock %}

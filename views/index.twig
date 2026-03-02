@@ -55,7 +55,8 @@
                 <a href="{{ home_url }}note/{{ note._url }}/" class="note-card{% if note.meta.cover is defined and note.meta.cover %} has-cover{% endif %}"
                    data-date="{{ note.meta.updated_at }}"
                    data-title="{{ note._title|lower }}"
-                   data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}">
+                   data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}"
+                   {% if note.meta.color is defined and note.meta.color %}style="--bg: {{ note.meta.color }}; --text: {{ contrast_color(note.meta.color) }}; background: {{ note.meta.color }}; color: {{ contrast_color(note.meta.color) }};"{% endif %}>
                     {% if note.meta.cover is defined and note.meta.cover %}
                         <span class="note-card-cover">
                             <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
@@ -217,12 +218,30 @@
         });
     }
 
+    function getContrastColor(hex) {
+        hex = hex.replace('#', '');
+        var r = parseInt(hex.substring(0, 2), 16) / 255;
+        var g = parseInt(hex.substring(2, 4), 16) / 255;
+        var b = parseInt(hex.substring(4, 6), 16) / 255;
+        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+        var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luminance > 0.4 ? '#302b25' : '#f5f5f5';
+    }
+
     function buildCardHtml(card) {
         var hasCover = card.cover ? ' has-cover' : '';
+        var colorStyle = '';
+        if (card.color) {
+            var tc = getContrastColor(card.color);
+            colorStyle = ' style="--bg: ' + card.color + '; --text: ' + tc + '; background: ' + card.color + '; color: ' + tc + ';"';
+        }
         var html = '<a href="' + homeUrl + 'note/' + card.url + '/" class="note-card' + hasCover + '"'
             + ' data-date="' + (card.date || '') + '"'
             + ' data-title="' + (card.title || '').toLowerCase() + '"'
-            + ' data-parent="' + (card.parent || '') + '">';
+            + ' data-parent="' + (card.parent || '') + '"'
+            + colorStyle + '>';
         if (card.cover) {
             html += '<span class="note-card-cover"><img src="' + card.cover + '" alt="" style="object-position: center ' + (card.cover_position || 50) + '%"></span>';
         }
@@ -595,6 +614,7 @@
                         url: n.url,
                         deg: degree[n.id] || 0,
                         icon: n.icon || '',
+                        color: n.color || '',
                     };
                     // Restore saved position (pin the node)
                     if (n.fx !== undefined && n.fy !== undefined) {
@@ -624,7 +644,7 @@
                         const r = Math.max(2, Math.min(8, 2 + node.deg * 1.5));
                         ctx.beginPath();
                         ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-                        ctx.fillStyle = node === graph.hoverNode ? mindmapPalette.textColor : mindmapPalette.accentColor;
+                        ctx.fillStyle = node === graph.hoverNode ? mindmapPalette.textColor : (node.color || mindmapPalette.accentColor);
                         ctx.globalAlpha = 0.85;
                         ctx.fill();
                         ctx.globalAlpha = 1;

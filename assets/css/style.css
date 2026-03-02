@@ -1747,6 +1747,24 @@ body.ai-chat-active .index-header {
     padding: 40px 32px;
 }
 
+.public-note[style] {
+    min-height: 100dvh;
+}
+
+.public-note[style] .public-note-title,
+.public-note[style] .note-date,
+.public-note[style] .public-note-content,
+.public-note[style] .public-note-content p,
+.public-note[style] .public-note-content li,
+.public-note[style] .public-note-content h1,
+.public-note[style] .public-note-content h2,
+.public-note[style] .public-note-content h3,
+.public-note[style] .public-note-content a,
+.public-note[style] .public-note-content blockquote,
+.public-note[style] .cdx-page-link a {
+    color: inherit;
+}
+
 .public-note-title {
     font-size: 32px;
     font-weight: 700;
@@ -2371,6 +2389,146 @@ body.ai-chat-active .index-header {
 .editor-add-cover svg {
     stroke: currentColor;
     flex-shrink: 0;
+}
+
+/* Color picker button */
+.editor-add-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    margin-left: 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-family: var(--font);
+}
+
+.editor-meta-row:hover .editor-add-color,
+.editor-title-row:hover ~ .editor-meta-row .editor-add-color {
+    opacity: 1;
+}
+
+.editor-add-color:hover {
+    color: var(--text);
+}
+
+.editor-add-color svg {
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.color-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+/* Color picker dropdown */
+.editor-meta-row {
+    position: relative;
+}
+
+.note-color-picker {
+    position: absolute;
+    top: 100%;
+    z-index: 100;
+    width: 220px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 12px;
+    margin-top: 4px;
+}
+
+.note-color-picker-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.note-color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.note-color-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+    padding: 0;
+}
+
+.note-color-swatch:hover {
+    transform: scale(1.1);
+    border-color: var(--text-secondary);
+}
+
+.note-color-swatch.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.note-color-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border);
+    position: relative;
+}
+
+.note-color-custom svg {
+    stroke: var(--text-secondary);
+}
+
+.note-color-custom:hover {
+    border-style: solid;
+}
+
+.note-color-input-hidden {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.note-color-reset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 6px;
+    border: none;
+    background: none;
+    font-size: 12px;
+    color: #e57373;
+    cursor: pointer;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    font-family: var(--font);
+}
+
+.note-color-reset:hover {
+    color: #ef5350;
+    background: rgba(229, 115, 115, 0.1);
+    border-radius: 0 0 var(--radius) var(--radius);
 }
 
 /* Public note cover */
@@ -3498,6 +3656,14 @@ a.breadcrumb-item:hover {
     }
 
     .editor-add-cover span {
+        display: none;
+    }
+
+    .editor-add-color {
+        opacity: 1;
+    }
+
+    .editor-add-color span {
         display: none;
     }
 

@@ -1,7 +1,7 @@
 {% extends 'overall/base.twig' %}
 
 {% block public %}
-<div class="public-note">
+<div class="public-note"{% if note_color %} style="--bg: {{ note_color }}; --text: {{ note_text_color }}; --text-secondary: {{ note_text_color }}; background: {{ note_color }}; color: {{ note_text_color }};"{% endif %}>
     <article class="public-note-content">
         {% if note.meta.cover is defined and note.meta.cover %}
         <div class="public-note-cover">

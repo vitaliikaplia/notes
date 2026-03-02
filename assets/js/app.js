@@ -1,5 +1,5 @@
 function initEditor(config) {
-    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition } = config;
+    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor } = config;
 
     let currentPath = oldPath;
     let saveTimeout = null;
@@ -7,6 +7,7 @@ function initEditor(config) {
     let currentIcon = noteIcon || '';
     let currentCover = noteCover || '';
     let coverPosY = coverPosition ?? 50;
+    let currentColor = noteColor || '';
     const statusEl = document.getElementById('save-status');
     const titleEl = document.getElementById('note-title');
     const iconBtnEl = document.getElementById('note-icon-btn');
@@ -37,6 +38,88 @@ function initEditor(config) {
 
     // Set initial icon
     updateIconButton();
+
+    // Note background color
+    // Light/dark theme variable sets for note color override
+    var lightThemeVars = {
+        '--bg': null, '--bg-secondary': '#f2ede4', '--bg-hover': '#e3d9c8',
+        '--text': '#302b25', '--text-secondary': '#6f6459', '--border': '#ddd2bf',
+        '--card-shadow': 'rgba(67, 49, 24, 0.12)', '--saved-color': '#2f7a44',
+        '--selection-bg': '#d7eef7', '--selection-text': '#12202a'
+    };
+    var darkThemeVars = {
+        '--bg': null, '--bg-secondary': '#202020', '--bg-hover': '#2c2c2c',
+        '--text': '#e0e0e0', '--text-secondary': '#9b9a97', '--border': '#363636',
+        '--card-shadow': 'rgba(0, 0, 0, 0.3)', '--saved-color': '#66bb6a',
+        '--selection-bg': '#2a5a72', '--selection-text': '#ffffff'
+    };
+
+    function getLuminance(hex) {
+        hex = hex.replace('#', '');
+        var r = parseInt(hex.substring(0, 2), 16) / 255;
+        var g = parseInt(hex.substring(2, 4), 16) / 255;
+        var b = parseInt(hex.substring(4, 6), 16) / 255;
+        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function getContrastColor(hex) {
+        return getLuminance(hex) > 0.4 ? '#302b25' : '#f5f5f5';
+    }
+
+    var noteColorVarNames = Object.keys(lightThemeVars);
+
+    function applyNoteColor(color) {
+        var contentEl = document.querySelector('.page-editor .content');
+        var footerEl = document.querySelector('.editor-footer');
+        if (!contentEl) return;
+
+        // Save original theme values for footer
+        var rootStyle = getComputedStyle(document.documentElement);
+        var origVars = {};
+        noteColorVarNames.forEach(function(v) {
+            origVars[v] = rootStyle.getPropertyValue(v).trim();
+        });
+
+        if (color) {
+            // Pick light or dark variable set based on note bg luminance
+            var isLight = getLuminance(color) > 0.4;
+            var vars = isLight ? lightThemeVars : darkThemeVars;
+            vars['--bg'] = color;
+
+            noteColorVarNames.forEach(function(v) {
+                contentEl.style.setProperty(v, vars[v]);
+            });
+            contentEl.style.background = color;
+            contentEl.style.color = vars['--text'];
+
+            // Reset footer to original theme
+            if (footerEl) {
+                noteColorVarNames.forEach(function(v) {
+                    footerEl.style.setProperty(v, origVars[v]);
+                });
+                footerEl.style.background = origVars['--bg'];
+                footerEl.style.color = origVars['--text'];
+            }
+        } else {
+            noteColorVarNames.forEach(function(v) {
+                contentEl.style.removeProperty(v);
+            });
+            contentEl.style.background = '';
+            contentEl.style.color = '';
+            if (footerEl) {
+                noteColorVarNames.forEach(function(v) {
+                    footerEl.style.removeProperty(v);
+                });
+                footerEl.style.background = '';
+                footerEl.style.color = '';
+            }
+        }
+    }
+
+    applyNoteColor(currentColor);
 
     // Cover image
     const coverEl = document.getElementById('editor-cover');
@@ -219,6 +302,7 @@ function initEditor(config) {
                     icon: currentIcon || '',
                     cover: currentCover || '',
                     cover_position: Math.round(coverPosY),
+                    color: currentColor || '',
                     content: outputData
                 })
             });
@@ -879,6 +963,137 @@ function initEditor(config) {
         document.addEventListener('click', (e) => {
             if (pickerEl && !pickerEl.contains(e.target) && e.target !== iconBtnEl) {
                 closePicker();
+            }
+        });
+    }
+
+    // Color picker
+    var colorAddBtn = document.getElementById('color-add');
+    if (colorAddBtn) {
+        var colorPalette = [
+            { name: 'Червоний', hex: '#FDECEC' },
+            { name: 'Помаранчевий', hex: '#FEF0E0' },
+            { name: 'Жовтий', hex: '#FEF9E0' },
+            { name: 'Зелений', hex: '#E7F5E6' },
+            { name: 'М\'ятний', hex: '#E0F5F0' },
+            { name: 'Блакитний', hex: '#E0F0FE' },
+            { name: 'Синій', hex: '#E4E8FD' },
+            { name: 'Фіолетовий', hex: '#F0E6FA' },
+            { name: 'Рожевий', hex: '#FDE6F2' },
+            { name: 'Коричневий', hex: '#F0EAE0' },
+            { name: 'Темно-червоний', hex: '#3D2020' },
+            { name: 'Темно-помаранчевий', hex: '#3D3020' },
+            { name: 'Темно-жовтий', hex: '#3D3A20' },
+            { name: 'Темно-зелений', hex: '#203D28' },
+            { name: 'Темно-синій', hex: '#20283D' },
+            { name: 'Темно-фіолетовий', hex: '#30203D' },
+        ];
+
+        var colorPickerEl = null;
+
+        function createColorPicker() {
+            var picker = document.createElement('div');
+            picker.className = 'note-color-picker';
+
+            var label = document.createElement('div');
+            label.className = 'note-color-picker-label';
+            label.textContent = 'Фон нотатки';
+            picker.appendChild(label);
+
+            var grid = document.createElement('div');
+            grid.className = 'note-color-grid';
+
+            colorPalette.forEach(function(c) {
+                var swatch = document.createElement('button');
+                swatch.type = 'button';
+                swatch.className = 'note-color-swatch';
+                swatch.style.background = c.hex;
+                swatch.title = c.name;
+                if (currentColor === c.hex) {
+                    swatch.classList.add('active');
+                }
+                swatch.addEventListener('click', function() {
+                    currentColor = c.hex;
+                    applyNoteColor(currentColor);
+                    closeColorPicker();
+                    scheduleSave();
+                });
+                grid.appendChild(swatch);
+            });
+
+            // Custom color swatch with native input
+            var customSwatch = document.createElement('button');
+            customSwatch.type = 'button';
+            customSwatch.className = 'note-color-swatch note-color-custom';
+            customSwatch.title = 'Свій колір';
+            customSwatch.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+            var isCustom = currentColor && !colorPalette.some(function(c) { return c.hex === currentColor; });
+            if (isCustom) {
+                customSwatch.style.background = currentColor;
+                customSwatch.classList.add('active');
+                customSwatch.innerHTML = '';
+            }
+            var colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = currentColor || '#ffffff';
+            colorInput.className = 'note-color-input-hidden';
+            customSwatch.appendChild(colorInput);
+            customSwatch.addEventListener('click', function(e) {
+                if (e.target !== colorInput) {
+                    colorInput.click();
+                }
+            });
+            colorInput.addEventListener('input', function() {
+                currentColor = colorInput.value;
+                applyNoteColor(currentColor);
+            });
+            colorInput.addEventListener('change', function() {
+                currentColor = colorInput.value;
+                applyNoteColor(currentColor);
+                closeColorPicker();
+                scheduleSave();
+            });
+            grid.appendChild(customSwatch);
+
+            picker.appendChild(grid);
+
+            if (currentColor) {
+                var resetBtn = document.createElement('button');
+                resetBtn.type = 'button';
+                resetBtn.className = 'note-color-reset';
+                resetBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Скинути колір';
+                resetBtn.addEventListener('click', function() {
+                    currentColor = '';
+                    applyNoteColor('');
+                    closeColorPicker();
+                    scheduleSave();
+                });
+                picker.appendChild(resetBtn);
+            }
+
+            return picker;
+        }
+
+        function closeColorPicker() {
+            if (colorPickerEl) {
+                colorPickerEl.remove();
+                colorPickerEl = null;
+            }
+        }
+
+        colorAddBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (colorPickerEl) {
+                closeColorPicker();
+                return;
+            }
+            colorPickerEl = createColorPicker();
+            colorAddBtn.parentElement.appendChild(colorPickerEl);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (colorPickerEl && !colorPickerEl.contains(e.target) && e.target !== colorAddBtn) {
+                closeColorPicker();
             }
         });
     }

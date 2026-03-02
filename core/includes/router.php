@@ -187,6 +187,9 @@ function router($url_segments = []): array {
                 $context['note'] = $note;
                 $body_classes[] = 'page-public-note';
 
+                $context['note_color'] = $note['meta']['color'] ?? '';
+                $context['note_text_color'] = $context['note_color'] ? contrast_color($context['note_color']) : '';
+
                 $note_url = HOME_URL . 'note/' . $note['_url'] . '/';
                 $context['canonical'] = $note_url;
                 $context['og'] = [
@@ -275,6 +278,7 @@ function router($url_segments = []): array {
             $icon = $input['icon'] ?? '';
             $cover = $input['cover'] ?? null;
             $cover_position = isset($input['cover_position']) ? intval($input['cover_position']) : null;
+            $color = $input['color'] ?? null;
 
             // Collect old image URLs for orphan cleanup (blocks + cover)
             $old_image_urls = [];
@@ -298,6 +302,7 @@ function router($url_segments = []): array {
             $existing_visibility = isset($old_data) ? ($old_data['meta']['visibility'] ?? 'private') : 'private';
             $existing_cover = isset($old_data) ? ($old_data['meta']['cover'] ?? '') : '';
             $existing_cover_pos = isset($old_data) ? ($old_data['meta']['cover_position'] ?? 50) : 50;
+            $existing_color = isset($old_data) ? ($old_data['meta']['color'] ?? '') : '';
 
             $note_data = [
                 'meta' => [
@@ -305,6 +310,7 @@ function router($url_segments = []): array {
                     'icon' => $icon,
                     'cover' => $cover !== null ? $cover : $existing_cover,
                     'cover_position' => $cover_position !== null ? $cover_position : $existing_cover_pos,
+                    'color' => $color !== null ? $color : $existing_color,
                     'visibility' => $existing_visibility,
                     'created_at' => $input['created_at'] ?? $now,
                     'updated_at' => $now,
@@ -719,6 +725,7 @@ function router($url_segments = []): array {
                     'id'    => $id,
                     'title' => $note['_title'],
                     'icon'  => $note['meta']['icon'] ?? '',
+                    'color' => $note['meta']['color'] ?? '',
                     'url'   => HOME_URL . 'note/' . $note['_url'] . '/',
                 ];
                 // Only restore saved position for parent notes (no "/" in path)
@@ -1073,6 +1080,7 @@ function router($url_segments = []): array {
                     'icon'     => $card_icon,
                     'cover'    => $note['meta']['cover'] ?? '',
                     'cover_position' => $note['meta']['cover_position'] ?? 50,
+                    'color'    => $note['meta']['color'] ?? '',
                     'preview'  => $preview,
                     'parent'   => $parent,
                 ];
