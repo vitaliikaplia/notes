@@ -356,6 +356,30 @@ function markdown_to_blocks(string $markdown): array {
             continue;
         }
 
+        // Page link: [icon title](note/path)
+        if (preg_match('/^\[(.+)\]\(note\/(.+)\)$/', trim($line), $m)) {
+            $display = $m[1];
+            $page_path = $m[2];
+
+            // Try to extract emoji icon from display text
+            $icon = '';
+            $title = $display;
+            $parts = explode(' ', $display, 2);
+            if (count($parts) === 2 && mb_strlen($parts[0], 'UTF-8') <= 2 && strlen($parts[0]) !== mb_strlen($parts[0], 'UTF-8')) {
+                $icon = $parts[0];
+                $title = $parts[1];
+            }
+
+            $blocks[] = make_block('page', [
+                'title'    => $title,
+                'icon'     => $icon,
+                'pageUrl'  => 'note/' . $page_path,
+                'pagePath' => $page_path . '.json',
+            ]);
+            $i++;
+            continue;
+        }
+
         // Paragraph (default)
         $para_lines = [];
         while ($i < $total && trim($lines[$i]) !== '' && !is_md_block_start($lines[$i])) {
@@ -435,6 +459,7 @@ function is_md_block_start(string $line): bool {
     if (preg_match('/^-\s*\[[ xX]\]/', $line)) return true;
     if (preg_match('/^\|.+\|$/', $line)) return true;
     if (preg_match('/^<details>/', $line)) return true;
+    if (preg_match('/^\[.+\]\(note\/.+\)$/', $line)) return true;
     return false;
 }
 
