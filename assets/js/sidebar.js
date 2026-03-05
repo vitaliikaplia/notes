@@ -97,6 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = activeLink.closest('.sidebar-note-item') || activeLink.closest('.sidebar-folder');
         if (container) container.classList.add('active');
         let parent = activeLink.closest('.sidebar-folder');
+        // If active link is a parent note, don't expand its own children — only ancestors
+        if (activeLink.classList.contains('sidebar-note-parent') && parent) {
+            parent = parent.parentElement.closest('.sidebar-folder');
+        }
         let changed = false;
         while (parent) {
             if (parent.classList.contains('collapsed')) {
