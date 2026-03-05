@@ -1,5 +1,5 @@
 function initEditor(config) {
-    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor } = config;
+    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor, children } = config;
 
     let currentPath = oldPath;
     let saveTimeout = null;
@@ -1111,6 +1111,213 @@ function initEditor(config) {
         document.addEventListener('click', function(e) {
             if (colorPickerEl && !colorPickerEl.contains(e.target) && e.target !== colorAddBtn) {
                 closeColorPicker();
+            }
+        });
+    }
+
+    // Children sync popup
+    var childrenBtn = document.getElementById('children-btn');
+    if (childrenBtn && children && children.length) {
+        var childrenPopupEl = null;
+
+        function getLinkedPagePaths() {
+            // Scan editor DOM for existing page blocks to find which children are already linked
+            var paths = new Set();
+            document.querySelectorAll('.cdx-page-link').forEach(function(link) {
+                var href = link.href || '';
+                var match = href.match(/note\/(.+?)\/?$/);
+                if (match) {
+                    paths.add(match[1].replace(/\\/g, '/') + '.json');
+                }
+            });
+            return paths;
+        }
+
+        function createChildrenPopup() {
+            var popup = document.createElement('div');
+            popup.className = 'note-children-popup';
+
+            var label = document.createElement('div');
+            label.className = 'note-children-popup-label';
+            label.textContent = 'Дочірні нотатки';
+            popup.appendChild(label);
+
+            var linkedPaths = getLinkedPagePaths();
+            var list = document.createElement('div');
+            list.className = 'note-children-list';
+
+            // Track which children exist (for detecting broken links)
+            var childPathSet = new Set();
+            children.forEach(function(c) {
+                childPathSet.add(c.path.replace(/\\/g, '/'));
+            });
+
+            // Find broken links: page blocks pointing to children that no longer exist
+            var brokenLinks = [];
+            document.querySelectorAll('.cdx-page-link').forEach(function(link) {
+                var href = link.href || '';
+                var match = href.match(/note\/(.+?)\/?$/);
+                if (!match) return;
+                var linkPath = match[1].replace(/\\/g, '/');
+                // Check if this link points to a path under the current note's child dir
+                var parentBase = currentPath.replace(/\.json$/, '').replace(/\\/g, '/');
+                if (linkPath.startsWith(parentBase + '/') && !childPathSet.has(linkPath + '.json')) {
+                    var titleEl = link.querySelector('.cdx-page-link__title');
+                    brokenLinks.push({
+                        title: titleEl ? titleEl.textContent : linkPath.split('/').pop(),
+                        path: linkPath + '.json',
+                        url: 'note/' + linkPath
+                    });
+                }
+            });
+
+            var unlinkedCount = 0;
+
+            children.forEach(function(child) {
+                var normalizedPath = child.path.replace(/\\/g, '/');
+                var isLinked = linkedPaths.has(normalizedPath);
+                if (!isLinked) unlinkedCount++;
+
+                var item = document.createElement('div');
+                item.className = 'note-children-item' + (isLinked ? ' linked' : '');
+
+                var iconEl = document.createElement('span');
+                iconEl.className = 'note-children-item-icon';
+                if (child.icon && !child.icon.startsWith('<svg') && !child.icon.startsWith('data:')) {
+                    iconEl.textContent = child.icon;
+                } else if (child.icon && child.icon.startsWith('data:')) {
+                    iconEl.innerHTML = '<img src="' + child.icon + '" width="14" height="14" alt="">';
+                } else {
+                    iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+                }
+
+                var titleSpan = document.createElement('span');
+                titleSpan.className = 'note-children-item-title';
+                titleSpan.textContent = child.title;
+
+                var statusEl = document.createElement('span');
+                statusEl.className = 'note-children-item-status';
+                if (isLinked) {
+                    statusEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                    statusEl.title = 'Додано';
+                }
+
+                item.appendChild(iconEl);
+                item.appendChild(titleSpan);
+                item.appendChild(statusEl);
+                list.appendChild(item);
+            });
+
+            // Show broken links
+            brokenLinks.forEach(function(broken) {
+                var item = document.createElement('div');
+                item.className = 'note-children-item broken';
+
+                var iconEl = document.createElement('span');
+                iconEl.className = 'note-children-item-icon';
+                iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+                var titleSpan = document.createElement('span');
+                titleSpan.className = 'note-children-item-title';
+                titleSpan.textContent = broken.title;
+
+                var statusEl = document.createElement('span');
+                statusEl.className = 'note-children-item-status';
+                statusEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e55" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+                statusEl.title = 'Видалено';
+
+                item.appendChild(iconEl);
+                item.appendChild(titleSpan);
+                item.appendChild(statusEl);
+                list.appendChild(item);
+            });
+
+            popup.appendChild(list);
+
+            // Sync button — add missing + remove broken
+            if (unlinkedCount > 0 || brokenLinks.length > 0) {
+                var syncBtn = document.createElement('button');
+                syncBtn.type = 'button';
+                syncBtn.className = 'note-children-add-btn';
+                syncBtn.textContent = 'Синхронізувати';
+                syncBtn.addEventListener('click', async function() {
+                    var changed = false;
+
+                    // Remove broken page links (iterate backwards to keep indices valid)
+                    if (brokenLinks.length > 0) {
+                        var brokenPathSet = new Set(brokenLinks.map(function(b) { return b.path.replace(/\\/g, '/'); }));
+                        var savedData = await editor.save();
+                        var toDelete = [];
+                        savedData.blocks.forEach(function(block, idx) {
+                            if (block.type === 'page' && block.data.pagePath) {
+                                var p = block.data.pagePath.replace(/\\/g, '/');
+                                if (brokenPathSet.has(p)) {
+                                    toDelete.push(idx);
+                                }
+                            }
+                        });
+                        for (var d = toDelete.length - 1; d >= 0; d--) {
+                            editor.blocks.delete(toDelete[d]);
+                        }
+                        if (toDelete.length > 0) changed = true;
+                    }
+
+                    // Add missing children
+                    var linked = getLinkedPagePaths();
+                    for (var i = 0; i < children.length; i++) {
+                        var child = children[i];
+                        var normalizedPath = child.path.replace(/\\/g, '/');
+                        if (linked.has(normalizedPath)) continue;
+
+                        await editor.blocks.insert('page', {
+                            title: child.title,
+                            icon: child.icon || '',
+                            pageUrl: child.url,
+                            pagePath: child.path
+                        });
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        closeChildrenPopup();
+                        saveNote();
+                    }
+                });
+                popup.appendChild(syncBtn);
+            }
+
+            return popup;
+        }
+
+        function pluralize(n, one, few, many) {
+            var abs = Math.abs(n) % 100;
+            var n1 = abs % 10;
+            if (abs > 10 && abs < 20) return many;
+            if (n1 > 1 && n1 < 5) return few;
+            if (n1 === 1) return one;
+            return many;
+        }
+
+        function closeChildrenPopup() {
+            if (childrenPopupEl) {
+                childrenPopupEl.remove();
+                childrenPopupEl = null;
+            }
+        }
+
+        childrenBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (childrenPopupEl) {
+                closeChildrenPopup();
+                return;
+            }
+            childrenPopupEl = createChildrenPopup();
+            childrenBtn.parentElement.appendChild(childrenPopupEl);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (childrenPopupEl && !childrenPopupEl.contains(e.target) && e.target !== childrenBtn) {
+                closeChildrenPopup();
             }
         });
     }

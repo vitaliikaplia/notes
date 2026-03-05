@@ -40,6 +40,12 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
             <span>Колір</span>
         </button>
+        {% if children_count > 0 %}
+        <button type="button" class="editor-children-btn" id="children-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="editor-children-count">{{ children_count }}</span>
+        </button>
+        {% endif %}
     </div>
     <div id="editorjs"></div>
     <div class="editor-footer">
@@ -99,7 +105,8 @@
         noteIcon: {{ note and note.meta.icon is defined ? note.meta.icon|json_encode|raw : '""' }},
         noteCover: '{{ note and note.meta.cover is defined and note.meta.cover ? note.meta.cover : '' }}',
         coverPosition: {{ note and note.meta.cover_position is defined ? note.meta.cover_position : 50 }},
-        noteColor: '{{ note and note.meta.color is defined and note.meta.color ? note.meta.color : '' }}'
+        noteColor: '{{ note and note.meta.color is defined and note.meta.color ? note.meta.color : '' }}',
+        children: {{ children is defined ? children|json_encode|raw : '[]' }}
     });
 </script>
 {% endblock %}

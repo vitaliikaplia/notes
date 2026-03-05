@@ -164,6 +164,45 @@ function router($url_segments = []): array {
                     $context['note_folder'] = '';
                 }
                 $context['breadcrumbs'] = get_breadcrumbs($note['_file']);
+
+                // Collect direct child notes
+                $child_dir = get_notes_path() . DS . preg_replace('/\.json$/', '', $note['_file']);
+                $context['children'] = [];
+                if(is_dir($child_dir)) {
+                    $child_items = [];
+                    foreach(scandir($child_dir) as $item) {
+                        if($item[0] !== '.' && str_ends_with($item, '.json')) {
+                            $child_items[] = $item;
+                        }
+                    }
+                    // Apply sort order
+                    $sort_order = get_sort_order($child_dir);
+                    if($sort_order) {
+                        usort($child_items, function($a, $b) use ($sort_order) {
+                            $sa = basename($a, '.json');
+                            $sb = basename($b, '.json');
+                            $ia = array_search($sa, $sort_order);
+                            $ib = array_search($sb, $sort_order);
+                            if($ia === false) $ia = PHP_INT_MAX;
+                            if($ib === false) $ib = PHP_INT_MAX;
+                            return $ia - $ib;
+                        });
+                    }
+                    foreach($child_items as $item) {
+                        $child_rel = preg_replace('/\.json$/', '', $note['_file']) . DS . $item;
+                        $child_note = get_note($child_rel);
+                        if($child_note) {
+                            $context['children'][] = [
+                                'title' => $child_note['_title'],
+                                'icon'  => $child_note['meta']['icon'] ?? '',
+                                'path'  => $child_rel,
+                                'url'   => 'note/' . $child_note['_url'],
+                            ];
+                        }
+                    }
+                }
+                $context['children_count'] = count($context['children']);
+
                 $body_classes[] = 'page-editor';
             } else {
                 // Public/unlisted — read-only view
