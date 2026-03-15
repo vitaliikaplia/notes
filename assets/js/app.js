@@ -344,7 +344,7 @@ function initEditor(config) {
                 }
 
                 // Slug changed (rename) — full redirect to update sidebar & URL
-                if (!window.location.pathname.includes(result.url)) {
+                if (!decodeURIComponent(window.location.pathname).includes(result.url)) {
                     window.location.href = homeUrl + result.url + '/';
                     return;
                 }
