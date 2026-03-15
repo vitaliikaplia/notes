@@ -1,5 +1,5 @@
 function initEditor(config) {
-    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor, children } = config;
+    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor, notePinned, children } = config;
 
     let currentPath = oldPath;
     let saveTimeout = null;
@@ -8,6 +8,8 @@ function initEditor(config) {
     let currentCover = noteCover || '';
     let coverPosY = coverPosition ?? 50;
     let currentColor = noteColor || '';
+    let currentPinned = notePinned || false;
+    let isInternalChange = false;
     const statusEl = document.getElementById('save-status');
     const titleEl = document.getElementById('note-title');
     const iconBtnEl = document.getElementById('note-icon-btn');
@@ -120,6 +122,27 @@ function initEditor(config) {
     }
 
     applyNoteColor(currentColor);
+
+    // Pin toggle
+    const pinBtn = document.getElementById('pin-btn');
+    if (pinBtn) {
+        function updatePinBtn() {
+            if (currentPinned) {
+                pinBtn.classList.add('active');
+                pinBtn.title = 'Відкріпити';
+            } else {
+                pinBtn.classList.remove('active');
+                pinBtn.title = 'Закріпити';
+            }
+        }
+        updatePinBtn();
+        pinBtn.addEventListener('click', function() {
+            currentPinned = !currentPinned;
+            updatePinBtn();
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveNote();
+        });
+    }
 
     // Cover image
     const coverEl = document.getElementById('editor-cover');
@@ -303,6 +326,7 @@ function initEditor(config) {
                     cover: currentCover || '',
                     cover_position: Math.round(coverPosY),
                     color: currentColor || '',
+                    pinned: currentPinned,
                     content: outputData
                 })
             });
@@ -556,7 +580,7 @@ function initEditor(config) {
             initImageResize();
         },
         onChange: () => {
-            scheduleSave();
+            if (!isInternalChange) scheduleSave();
         },
         i18n: {
             messages: {
@@ -629,11 +653,13 @@ function initEditor(config) {
             const img = imageWrapper.querySelector('img');
             if (!img) return;
 
+            isInternalChange = true;
             const handle = document.createElement('div');
             handle.className = 'image-resize-handle';
             imageWrapper.style.position = 'relative';
             imageWrapper.style.display = 'inline-block';
             imageWrapper.appendChild(handle);
+            isInternalChange = false;
 
             let startX, startWidth;
 
@@ -667,6 +693,7 @@ function initEditor(config) {
                 .map(b => b.data.width);
             if (imageWidths.length) {
                 setTimeout(() => {
+                    isInternalChange = true;
                     const wrappers = document.querySelectorAll('.image-tool__image');
                     let idx = 0;
                     editorData.blocks.forEach(b => {
@@ -681,6 +708,7 @@ function initEditor(config) {
                             idx++;
                         }
                     });
+                    isInternalChange = false;
                 }, 300);
             }
         }
@@ -692,7 +720,9 @@ function initEditor(config) {
         const editorEl = document.getElementById('editorjs');
         if (editorEl) {
             const observer = new MutationObserver(() => {
+                isInternalChange = true;
                 editorEl.querySelectorAll('.image-tool__image').forEach(addResizeHandle);
+                isInternalChange = false;
             });
             observer.observe(editorEl, { childList: true, subtree: true });
         }

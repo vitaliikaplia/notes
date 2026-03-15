@@ -933,12 +933,49 @@ a:hover {
 }
 
 /* Notes grid view (JS masonry) */
+/* Pinned section */
+.pinned-section {
+    padding: 12px 70px 0;
+}
+
+.pinned-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pinned-section-title svg {
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.pinned-grid {
+    padding: 0 !important;
+    margin-bottom: 0;
+}
+
+.other-notes-section {
+    padding: 0 70px;
+    margin-top: 20px;
+}
+
+.other-notes-section .pinned-section-title {
+    margin-bottom: 8px;
+}
+
 .notes-grid {
     padding: 12px 70px;
     position: relative;
 }
 
 .notes-grid .note-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     padding: 14px;
@@ -948,6 +985,39 @@ a:hover {
     color: var(--text);
     transition: box-shadow 0.15s;
     box-sizing: border-box;
+}
+
+.note-card-pin {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: var(--bg, transparent);
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.note-card:hover .note-card-pin,
+.note-card-pin.active {
+    opacity: 1;
+}
+
+.note-card-pin:hover {
+    background: var(--bg-hover, rgba(128, 128, 128, 0.15));
+}
+
+.note-card-pin.active svg {
+    fill: currentColor;
 }
 
 .notes-grid .note-card.has-cover {
@@ -2391,6 +2461,43 @@ body.ai-chat-active .index-header {
     flex-shrink: 0;
 }
 
+/* Pin button */
+.editor-pin-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    margin-left: 8px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.15s;
+    border-radius: 4px;
+}
+
+.editor-meta-row:hover .editor-pin-btn,
+.editor-title-row:hover ~ .editor-meta-row .editor-pin-btn {
+    opacity: 1;
+}
+
+.editor-pin-btn:hover {
+    color: var(--text);
+}
+
+.editor-pin-btn.active {
+    opacity: 1;
+}
+
+.editor-pin-btn.active svg {
+    fill: currentColor;
+}
+
+.editor-pin-btn svg {
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
 /* Color picker button */
 .editor-add-color {
     display: inline-flex;
@@ -3787,6 +3894,10 @@ a.breadcrumb-item:hover {
         padding-right: 16px;
     }
 
+    .editor-pin-btn {
+        opacity: 1;
+    }
+
     .editor-add-cover {
         opacity: 1;
     }
@@ -3874,6 +3985,14 @@ a.breadcrumb-item:hover {
     .tl-datepicker {
         width: auto;
         flex: 1;
+    }
+
+    .pinned-section {
+        padding: 8px 16px 0;
+    }
+
+    .other-notes-section {
+        padding: 0 16px;
     }
 
     .notes-grid {

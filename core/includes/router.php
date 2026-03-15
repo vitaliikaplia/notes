@@ -31,12 +31,25 @@ function router($url_segments = []): array {
         $context['page']['title'] = 'Нотатки';
         $context['html_title'] = SITE_NAME;
         $context['recent_notes'] = get_recent_notes(35);
-        $context['media_items'] = collect_media_from_notes($context['recent_notes']);
+        $context['pinned_notes'] = array_values(array_filter($context['recent_notes'], fn($n) => !empty($n['meta']['pinned'])));
+        $context['recent_notes'] = array_values(array_filter($context['recent_notes'], fn($n) => empty($n['meta']['pinned'])));
+        // Timeline: all notes sorted by date, pinned first within each day
+        $context['timeline_notes'] = array_merge($context['pinned_notes'], $context['recent_notes']);
+        usort($context['timeline_notes'], function($a, $b) {
+            $da = substr($a['meta']['updated_at'] ?? '', 0, 10);
+            $db = substr($b['meta']['updated_at'] ?? '', 0, 10);
+            if($da !== $db) return $db <=> $da; // newest day first
+            $pa = !empty($a['meta']['pinned']) ? 0 : 1;
+            $pb = !empty($b['meta']['pinned']) ? 0 : 1;
+            if($pa !== $pb) return $pa - $pb; // pinned first within day
+            return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? ''); // then by time
+        });
+        $context['media_items'] = collect_media_from_notes(array_merge($context['pinned_notes'], $context['recent_notes']));
         $context['ai_configured'] = ai_is_configured();
 
         // Збір унікальних батьківських груп для фільтра
         $parent_groups = [];
-        foreach($context['recent_notes'] as $note) {
+        foreach(array_merge($context['pinned_notes'], $context['recent_notes']) as $note) {
             $dir = dirname($note['_file']);
             if($dir !== '.') {
                 $parent_file = $dir . '.json';
@@ -318,6 +331,7 @@ function router($url_segments = []): array {
             $cover = $input['cover'] ?? null;
             $cover_position = isset($input['cover_position']) ? intval($input['cover_position']) : null;
             $color = $input['color'] ?? null;
+            $pinned = isset($input['pinned']) ? (bool)$input['pinned'] : null;
 
             // Collect old image URLs for orphan cleanup (blocks + cover)
             $old_image_urls = [];
@@ -342,6 +356,7 @@ function router($url_segments = []): array {
             $existing_cover = isset($old_data) ? ($old_data['meta']['cover'] ?? '') : '';
             $existing_cover_pos = isset($old_data) ? ($old_data['meta']['cover_position'] ?? 50) : 50;
             $existing_color = isset($old_data) ? ($old_data['meta']['color'] ?? '') : '';
+            $existing_pinned = isset($old_data) ? ($old_data['meta']['pinned'] ?? false) : false;
 
             $note_data = [
                 'meta' => [
@@ -350,6 +365,7 @@ function router($url_segments = []): array {
                     'cover' => $cover !== null ? $cover : $existing_cover,
                     'cover_position' => $cover_position !== null ? $cover_position : $existing_cover_pos,
                     'color' => $color !== null ? $color : $existing_color,
+                    'pinned' => $pinned !== null ? $pinned : $existing_pinned,
                     'visibility' => $existing_visibility,
                     'created_at' => $input['created_at'] ?? $now,
                     'updated_at' => $now,
@@ -1089,16 +1105,18 @@ function router($url_segments = []): array {
             $limit = min(100, max(1, intval($_GET['limit'] ?? 35)));
             $sort = $_GET['sort'] ?? 'recent';
             $all = collect_all_notes();
+            // Separate pinned notes
+            $pinned_all = array_values(array_filter($all, fn($n) => !empty($n['meta']['pinned'])));
+            $all = array_values(array_filter($all, fn($n) => empty($n['meta']['pinned'])));
             usort($all, function($a, $b) use ($sort) {
                 if ($sort === 'oldest') return ($a['meta']['updated_at'] ?? '') <=> ($b['meta']['updated_at'] ?? '');
                 if ($sort === 'az') return strcasecmp($a['_title'] ?? '', $b['_title'] ?? '');
                 if ($sort === 'za') return strcasecmp($b['_title'] ?? '', $a['_title'] ?? '');
                 return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
             });
+            usort($pinned_all, fn($a, $b) => ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? ''));
             $slice = array_slice($all, $offset, $limit);
-            $cards = [];
-            foreach($slice as $note) {
-                $card_icon = $note['meta']['icon'] ?? '';
+            $build_card = function($note) {
                 $preview = '';
                 if(!empty($note['content']['blocks'])) {
                     foreach(array_slice($note['content']['blocks'], 0, 2) as $block) {
@@ -1111,24 +1129,46 @@ function router($url_segments = []): array {
                 $file = $note['_file'];
                 $parts = explode('/', $file);
                 $parent = count($parts) > 1 ? implode('/', array_slice($parts, 0, -1)) . '.json' : '';
-                $cards[] = [
+                return [
                     'url'      => $note['_url'],
                     'title'    => $note['_title'],
                     'date'     => $note['meta']['updated_at'] ?? '',
                     'date_fmt' => date_format_uk($note['meta']['updated_at'] ?? ''),
-                    'icon'     => $card_icon,
+                    'icon'     => $note['meta']['icon'] ?? '',
                     'cover'    => $note['meta']['cover'] ?? '',
                     'cover_position' => $note['meta']['cover_position'] ?? 50,
                     'color'    => $note['meta']['color'] ?? '',
                     'preview'  => $preview,
                     'parent'   => $parent,
+                    'pinned'   => !empty($note['meta']['pinned']),
                 ];
-            }
+            };
+            $cards = array_map($build_card, $slice);
+            $pinned_cards = $offset === 0 ? array_map($build_card, $pinned_all) : [];
             echo json_encode([
                 'cards' => $cards,
+                'pinned' => $pinned_cards,
                 'total' => count($all),
                 'has_more' => ($offset + $limit) < count($all),
             ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'toggle-pin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $url = $input['url'] ?? '';
+            // url is like "parent/child" — convert to relative file path
+            $relative = str_replace('/', DS, $url) . '.json';
+            $file = get_notes_path() . DS . $relative;
+            if(!file_exists($file)) {
+                echo json_encode(['success' => false, 'error' => 'Note not found']);
+                exit;
+            }
+            $data = json_decode(file_get_contents($file), true);
+            $data['meta']['pinned'] = empty($data['meta']['pinned']);
+            file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            cache_delete('note:' . $relative);
+            cache_delete('tree');
+            echo json_encode(['success' => true, 'pinned' => $data['meta']['pinned']]);
             exit;
 
         } elseif($action === 'chat' && $_SERVER['REQUEST_METHOD'] === 'POST') {

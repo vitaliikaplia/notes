@@ -68,7 +68,7 @@ function ai_get_system_prompt(): string {
 3. При створенні — давай змістовний заголовок та відповідну emoji іконку.
 4. При оновленні — спочатку прочитай поточний вміст через notes_get. Зміни лише те, що просить користувач, зберігаючи решту вмісту, структуру, рівні заголовків та форматування без змін.
 5. Перед видаленням — запитай підтвердження у користувача.
-6. Видимість за замовчуванням: private. Варіанти: private, unlisted, public.
+6. Видимість за замовчуванням: private. Варіанти: private, unlisted, public. Нотатку можна закріпити (pinned: true) — закріплені відображаються окремою групою вгорі дашборду.
 7. Контент у форматі Markdown (заголовки, списки, чеклісти, код, цитати).
 8. Не вигадуй — працюй тільки з реальними даними.
 9. Коли згадуєш, створюєш, оновлюєш або показуєш нотатку — завжди додавай посилання на неї у форматі markdown: [Назва]({$base}path/). Наприклад: [Борщ класичний]({$base}retsepty/borshch/).
@@ -139,6 +139,7 @@ function ai_get_tools(): array {
                     'markdown'   => ['type' => 'string', 'description' => 'Новий вміст у markdown'],
                     'icon'       => ['type' => 'string', 'description' => 'Нова emoji іконка'],
                     'visibility' => ['type' => 'string', 'enum' => ['private', 'unlisted', 'public'], 'description' => 'Нова видимість'],
+                    'pinned'     => ['type' => 'boolean', 'description' => 'Закріпити/відкріпити нотатку'],
                 ],
                 'required' => ['path'],
             ],
@@ -347,6 +348,7 @@ function ai_tool_notes_update(array $args): array {
     $markdown   = $args['markdown'] ?? null;
     $icon       = $args['icon'] ?? ($existing['meta']['icon'] ?? '');
     $visibility = $args['visibility'] ?? ($existing['meta']['visibility'] ?? 'private');
+    $pinned     = isset($args['pinned']) ? (bool)$args['pinned'] : ($existing['meta']['pinned'] ?? false);
 
     if(!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
         $visibility = 'private';
@@ -361,6 +363,7 @@ function ai_tool_notes_update(array $args): array {
             'title'      => $title,
             'icon'       => $icon,
             'visibility' => $visibility,
+            'pinned'     => $pinned,
             'updated_at' => date('c'),
         ]),
         'content' => [

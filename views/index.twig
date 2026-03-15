@@ -50,13 +50,70 @@
     </div>
 
     <div id="tab-notes" class="tab-content active">
+        {% if pinned_notes is not empty %}
+        <div class="pinned-section" id="pinned-section">
+            <div class="pinned-section-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                Закріплені
+            </div>
+            <div class="notes-grid pinned-grid" id="pinned-view">
+                {% for note in pinned_notes %}
+                    <a href="{{ home_url }}note/{{ note._url }}/" class="note-card{% if note.meta.cover is defined and note.meta.cover %} has-cover{% endif %}"
+                       data-date="{{ note.meta.updated_at }}"
+                       data-title="{{ note._title|lower }}"
+                       data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}"
+                       data-pinned="1"
+                       data-url="{{ note._url }}"
+                       {% if note.meta.color is defined and note.meta.color %}style="--bg: {{ note.meta.color }}; --text: {{ contrast_color(note.meta.color) }}; background: {{ note.meta.color }}; color: {{ contrast_color(note.meta.color) }};"{% endif %}>
+                        <button type="button" class="note-card-pin active" title="Відкріпити"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
+                        {% if note.meta.cover is defined and note.meta.cover %}
+                            <span class="note-card-cover">
+                                <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
+                            </span>
+                        {% endif %}
+                        {% set card_icon = note.meta.icon|default('') %}
+                        {% if card_icon %}
+                            <span class="note-card-icon">
+                                {%- if card_icon starts with 'data:' -%}
+                                    <img src="{{ card_icon }}" width="28" height="28" alt="">
+                                {%- else -%}
+                                    {{ card_icon }}
+                                {%- endif -%}
+                            </span>
+                        {% endif %}
+                        <span class="note-card-title">{{ note._title }}</span>
+                        <span class="note-card-date">{{ date_format_uk(note.meta.updated_at) }}</span>
+                        {% if note.content.blocks is not empty %}
+                            <span class="note-card-preview">
+                                {% for block in note.content.blocks|slice(0, 2) %}
+                                    {% if block.type == 'paragraph' %}
+                                        {{ block.data.text|striptags|slice(0, 100) }}
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if pinned_notes is not empty %}
+        <div class="other-notes-section" id="other-notes-section">
+            <div class="pinned-section-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Інші нотатки
+            </div>
+        </div>
+        {% endif %}
         <div class="notes-grid" id="notes-view">
             {% for note in recent_notes %}
                 <a href="{{ home_url }}note/{{ note._url }}/" class="note-card{% if note.meta.cover is defined and note.meta.cover %} has-cover{% endif %}"
                    data-date="{{ note.meta.updated_at }}"
                    data-title="{{ note._title|lower }}"
                    data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}"
+                   data-url="{{ note._url }}"
                    {% if note.meta.color is defined and note.meta.color %}style="--bg: {{ note.meta.color }}; --text: {{ contrast_color(note.meta.color) }}; background: {{ note.meta.color }}; color: {{ contrast_color(note.meta.color) }};"{% endif %}>
+                    <button type="button" class="note-card-pin" title="Закріпити"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
                     {% if note.meta.cover is defined and note.meta.cover %}
                         <span class="note-card-cover">
                             <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
@@ -123,7 +180,7 @@
         <div class="timeline" id="timeline-view">
             <div class="timeline-track">
                 {% set current_day = '' %}
-                {% for note in recent_notes %}
+                {% for note in timeline_notes %}
                     {% set note_day = note.meta.updated_at|slice(0, 10) %}
                     {% if note_day != current_day %}
                         {% if current_day != '' %}</div>{% endif %}
@@ -188,17 +245,67 @@
     function setView(mode) {
         currentViewMode = mode;
         view.className = mode === 'list' ? 'notes-list' : 'notes-grid';
+        if (pinnedView) pinnedView.className = mode === 'list' ? 'notes-list pinned-grid' : 'notes-grid pinned-grid';
         viewBtns.forEach(b => b.classList.toggle('active', b.dataset.view === mode));
         localStorage.setItem('notes-view', mode);
         if (mode === 'list') {
             clearMasonry();
+            if (pinnedView) {
+                pinnedView.style.position = '';
+                pinnedView.style.height = '';
+                pinnedView.querySelectorAll('.note-card').forEach(function(card) {
+                    card.style.position = ''; card.style.width = ''; card.style.left = ''; card.style.top = '';
+                });
+            }
         } else {
             layoutMasonry();
+            if (pinnedView) layoutMasonryFor(pinnedView);
         }
     }
 
     setView(savedView);
     viewBtns.forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+
+    // --- Pinned section ---
+    var pinnedSection = document.getElementById('pinned-section');
+    var pinnedView = document.getElementById('pinned-view');
+    var otherNotesSection = document.getElementById('other-notes-section');
+
+    function renderPinnedCards(cards) {
+        if (!cards || !cards.length) {
+            if (pinnedSection) pinnedSection.style.display = 'none';
+            if (otherNotesSection) otherNotesSection.style.display = 'none';
+            return;
+        }
+        if (!pinnedSection) {
+            // Create pinned section dynamically
+            pinnedSection = document.createElement('div');
+            pinnedSection.className = 'pinned-section';
+            pinnedSection.id = 'pinned-section';
+            pinnedSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> Закріплені</div><div class="notes-grid pinned-grid" id="pinned-view"></div>';
+            view.parentNode.insertBefore(pinnedSection, view);
+            pinnedView = document.getElementById('pinned-view');
+        }
+        if (!otherNotesSection) {
+            otherNotesSection = document.createElement('div');
+            otherNotesSection.className = 'other-notes-section';
+            otherNotesSection.id = 'other-notes-section';
+            otherNotesSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Інші нотатки</div>';
+            view.parentNode.insertBefore(otherNotesSection, view);
+        }
+        pinnedSection.style.display = '';
+        otherNotesSection.style.display = '';
+        pinnedView.innerHTML = '';
+        var filter = filterSelect ? filterSelect.value : '';
+        cards.forEach(function(card) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = buildCardHtml(card);
+            var el = tmp.firstElementChild;
+            if (filter && el.dataset.parent !== filter) el.style.display = 'none';
+            pinnedView.appendChild(el);
+        });
+        layoutMasonryFor(pinnedView);
+    }
 
     // --- Sort, Filter & Infinite Scroll ---
     const sortSelect = document.getElementById('sort-select');
@@ -216,6 +323,11 @@
         view.querySelectorAll('.note-card').forEach(function(card) {
             card.style.display = (!filter || card.dataset.parent === filter) ? '' : 'none';
         });
+        if (pinnedView) {
+            pinnedView.querySelectorAll('.note-card').forEach(function(card) {
+                card.style.display = (!filter || card.dataset.parent === filter) ? '' : 'none';
+            });
+        }
     }
 
     function getContrastColor(hex) {
@@ -230,6 +342,9 @@
         return luminance > 0.4 ? '#302b25' : '#f5f5f5';
     }
 
+    var pinSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>';
+    var pinSvgFilled = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>';
+
     function buildCardHtml(card) {
         var hasCover = card.cover ? ' has-cover' : '';
         var colorStyle = '';
@@ -237,11 +352,14 @@
             var tc = getContrastColor(card.color);
             colorStyle = ' style="--bg: ' + card.color + '; --text: ' + tc + '; background: ' + card.color + '; color: ' + tc + ';"';
         }
+        var isPinned = card.pinned;
         var html = '<a href="' + homeUrl + 'note/' + card.url + '/" class="note-card' + hasCover + '"'
             + ' data-date="' + (card.date || '') + '"'
             + ' data-title="' + (card.title || '').toLowerCase() + '"'
             + ' data-parent="' + (card.parent || '') + '"'
+            + ' data-url="' + card.url + '"'
             + colorStyle + '>';
+        html += '<button type="button" class="note-card-pin' + (isPinned ? ' active' : '') + '" title="' + (isPinned ? 'Відкріпити' : 'Закріпити') + '">' + (isPinned ? pinSvgFilled : pinSvg) + '</button>';
         if (card.cover) {
             html += '<span class="note-card-cover"><img src="' + card.cover + '" alt="" style="object-position: center ' + (card.cover_position || 50) + '%"></span>';
         }
@@ -278,11 +396,12 @@
     var masonryNumCols = 0;
     var masonryColWidth = 0;
 
-    function calcMasonryCols() {
-        var cs = getComputedStyle(view);
+    function calcMasonryCols(el) {
+        el = el || view;
+        var cs = getComputedStyle(el);
         var padL = parseFloat(cs.paddingLeft) || 0;
         var padR = parseFloat(cs.paddingRight) || 0;
-        var w = view.offsetWidth - padL - padR;
+        var w = el.offsetWidth - padL - padR;
         var n = Math.floor((w + masonryGap) / (masonryMinCol + masonryGap)) || 1;
         var cw = (w - masonryGap * (n - 1)) / n;
         return { numCols: n, colWidth: cw, padLeft: padL };
@@ -345,11 +464,40 @@
         masonryNumCols = 0;
     }
 
+    function layoutMasonryFor(el) {
+        if (!el || currentViewMode === 'list') return;
+        var info = calcMasonryCols(el);
+        var heights = new Array(info.numCols).fill(0);
+        var cards = el.querySelectorAll('.note-card');
+        el.style.position = 'relative';
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.style.display === 'none') continue;
+            card.style.position = 'absolute';
+            card.style.width = info.colWidth + 'px';
+            var minCol = 0;
+            for (var j = 1; j < info.numCols; j++) {
+                if (heights[j] < heights[minCol]) minCol = j;
+            }
+            card.style.left = (info.padLeft + minCol * (info.colWidth + masonryGap)) + 'px';
+            card.style.top = heights[minCol] + 'px';
+            heights[minCol] += card.offsetHeight + masonryGap;
+        }
+        var maxH = 0;
+        for (var k = 0; k < heights.length; k++) {
+            if (heights[k] > maxH) maxH = heights[k];
+        }
+        el.style.height = maxH + 'px';
+    }
+
     var resizeTimer;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
-            if (currentViewMode !== 'list') layoutMasonry();
+            if (currentViewMode !== 'list') {
+                layoutMasonry();
+                if (pinnedView) layoutMasonryFor(pinnedView);
+            }
         }, 150);
     });
 
@@ -358,6 +506,7 @@
         fetch(homeUrl + 'api/notes-page/?offset=0&limit=' + NOTES_PER_PAGE + '&sort=' + sortSelect.value)
             .then(function(r) { return r.json(); })
             .then(function(data) {
+                renderPinnedCards(data.pinned || []);
                 renderCards(data.cards || [], false);
                 notesOffset = data.cards ? data.cards.length : 0;
                 notesHasMore = data.has_more;
@@ -393,6 +542,29 @@
         localStorage.setItem('notes-filter', filterSelect.value);
         applyFilter();
         layoutMasonry();
+        if (pinnedView) layoutMasonryFor(pinnedView);
+    });
+
+    // Pin toggle on cards
+    document.getElementById('tab-notes').addEventListener('click', function(e) {
+        var pinBtn = e.target.closest('.note-card-pin');
+        if (!pinBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var card = pinBtn.closest('.note-card');
+        var url = card.dataset.url;
+        if (!url) return;
+        pinBtn.style.pointerEvents = 'none';
+        fetch(homeUrl + 'api/toggle-pin/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) reloadNotes();
+        })
+        .catch(function() { pinBtn.style.pointerEvents = ''; });
     });
 
     // Initial layout
@@ -401,6 +573,7 @@
     } else {
         applyFilter();
         layoutMasonry();
+        if (pinnedView) layoutMasonryFor(pinnedView);
     }
 
     // Sentinel element for infinite scroll
