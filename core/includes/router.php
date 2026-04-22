@@ -327,7 +327,6 @@ function router($url_segments = []): array {
             $folder = trim($input['folder'] ?? '', '/ ');
             $old_path = $input['old_path'] ?? '';
             $content = $input['content'] ?? ['blocks' => []];
-            $icon = $input['icon'] ?? '';
             $cover = $input['cover'] ?? null;
             $cover_position = isset($input['cover_position']) ? intval($input['cover_position']) : null;
             $color = $input['color'] ?? null;
@@ -353,10 +352,12 @@ function router($url_segments = []): array {
 
             // Preserve existing visibility and cover when re-saving
             $existing_visibility = isset($old_data) ? ($old_data['meta']['visibility'] ?? 'private') : 'private';
+            $existing_icon = isset($old_data) ? ($old_data['meta']['icon'] ?? '') : '';
             $existing_cover = isset($old_data) ? ($old_data['meta']['cover'] ?? '') : '';
             $existing_cover_pos = isset($old_data) ? ($old_data['meta']['cover_position'] ?? 50) : 50;
             $existing_color = isset($old_data) ? ($old_data['meta']['color'] ?? '') : '';
             $existing_pinned = isset($old_data) ? ($old_data['meta']['pinned'] ?? false) : false;
+            $icon = resolve_note_icon_value($input, $existing_icon);
 
             $note_data = [
                 'meta' => [

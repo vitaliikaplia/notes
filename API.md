@@ -14,6 +14,14 @@
 | `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
 | `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
 
+Додаткові query params для `GET /api/v1/notes/` та `GET /api/v1/search/?q=`:
+
+| Параметр | Тип | Опис |
+|----------|-----|------|
+| `limit` | int | Опціонально. Обмежує кількість результатів. Для `notes` за замовчуванням повертаються всі нотатки, для `search` — до 20 |
+| `folder` | string | Опціонально. Фільтр по шляху/папці, напр. `retsepty` або `projects/client-a` |
+| `visibility` | string | Опціонально. Фільтр: `private`, `unlisted`, `public` |
+
 ## Параметри запитів
 
 **POST (створити нотатку):**
@@ -80,10 +88,22 @@
 ```json
 {
     "results": [
-        { "path": "retsepty/borshch", "title": "Борщ класичний", "icon": "🍲", "snippet": "...знайдений текст..." }
+        {
+            "path": "retsepty/borshch",
+            "title": "Борщ класичний",
+            "icon": "🍲",
+            "visibility": "unlisted",
+            "updated_at": "2026-01-20T14:30:00+00:00",
+            "url": "https://domain/note/retsepty/borshch/",
+            "snippet": "...знайдений текст..."
+        }
     ]
 }
 ```
+
+Результати пошуку сортуються так:
+- спочатку збіги в заголовку
+- потім за `updated_at` від найновіших
 
 **Помилки:**
 ```json
@@ -105,6 +125,18 @@ curl -X POST -H "Authorization: Bearer TOKEN" \
   https://domain/api/v1/notes/
 ```
 
+**Відповідь на створення:**
+```json
+{
+    "path": "retsepty/borshch",
+    "title": "Борщ",
+    "icon": "🍲",
+    "visibility": "private",
+    "created_at": "2026-01-15T10:00:00+00:00",
+    "updated_at": "2026-01-15T10:00:00+00:00"
+}
+```
+
 **Створити кореневу нотатку (без `folder`):**
 ```bash
 curl -X POST -H "Authorization: Bearer TOKEN" \
@@ -121,12 +153,40 @@ curl -X PUT -H "Authorization: Bearer TOKEN" \
   https://domain/api/v1/notes/retsepty/borshch
 ```
 
+**Відповідь на оновлення:**
+```json
+{
+    "path": "retsepty/borshch",
+    "title": "Нова назва",
+    "icon": "🍲",
+    "visibility": "unlisted",
+    "created_at": "2026-01-15T10:00:00+00:00",
+    "updated_at": "2026-01-20T14:30:00+00:00",
+    "url": "https://domain/note/retsepty/borshch/",
+    "markdown": "Новий текст",
+    "content": { "time": 1234567890, "blocks": [...], "version": "2.31.0-rc.7" }
+}
+```
+
 **Змінити видимість:**
 ```bash
 curl -X PATCH -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"visibility":"unlisted"}' \
   https://domain/api/v1/notes/retsepty/borshch
+```
+
+**Відповідь на зміну видимості:**
+```json
+{
+    "path": "retsepty/borshch",
+    "title": "Борщ класичний",
+    "icon": "🍲",
+    "visibility": "unlisted",
+    "created_at": "2026-01-15T10:00:00+00:00",
+    "updated_at": "2026-01-20T14:30:00+00:00",
+    "url": "https://domain/note/retsepty/borshch/"
+}
 ```
 
 **Видалити нотатку:**
@@ -137,6 +197,11 @@ curl -X DELETE -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/slug
 **Пошук:**
 ```bash
 curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=борщ"
+```
+
+**Пошук у конкретній папці з лімітом:**
+```bash
+curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=борщ&folder=retsepty&limit=5"
 ```
 
 ## Видимість

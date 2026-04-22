@@ -63,6 +63,78 @@ function api_note_url(string $path): string {
     return HOME_URL . 'note/' . $path . '/';
 }
 
+function api_note_public_url(string $visibility, string $path): ?string {
+    if ($visibility === 'private') {
+        return null;
+    }
+
+    return api_note_url($path);
+}
+
+function api_note_summary(array $note, ?string $path = null): array {
+    $path = $path ?? preg_replace('/\.json$/', '', $note['_file'] ?? '');
+    $visibility = $note['meta']['visibility'] ?? 'private';
+
+    $item = [
+        'path'       => $path,
+        'title'      => $note['_title'] ?? get_note_title($note),
+        'icon'       => $note['meta']['icon'] ?? '',
+        'visibility' => $visibility,
+        'created_at' => $note['meta']['created_at'] ?? null,
+        'updated_at' => $note['meta']['updated_at'] ?? null,
+    ];
+
+    $url = api_note_public_url($visibility, $path);
+    if ($url !== null) {
+        $item['url'] = $url;
+    }
+
+    return $item;
+}
+
+function api_get_limit(?int $default = null, int $max = 100): ?int {
+    if (!isset($_GET['limit'])) {
+        return $default;
+    }
+
+    $limit = (int) $_GET['limit'];
+    if ($limit < 1) {
+        api_error(400, 'Limit must be a positive integer');
+    }
+
+    return min($limit, $max);
+}
+
+function api_get_folder_filter(): string {
+    return trim((string) ($_GET['folder'] ?? ''), '/ ');
+}
+
+function api_get_visibility_filter(): ?string {
+    $visibility = trim((string) ($_GET['visibility'] ?? ''));
+
+    if ($visibility === '') {
+        return null;
+    }
+
+    if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
+        api_error(400, 'Invalid visibility filter. Must be: private, unlisted, public');
+    }
+
+    return $visibility;
+}
+
+function api_note_matches_filters(array $note, string $path, string $folder, ?string $visibility): bool {
+    if ($folder !== '' && $path !== $folder && !str_starts_with($path, $folder . '/')) {
+        return false;
+    }
+
+    if ($visibility !== null && ($note['meta']['visibility'] ?? 'private') !== $visibility) {
+        return false;
+    }
+
+    return true;
+}
+
 // ============================================================
 // Dispatcher
 // ============================================================
@@ -123,6 +195,9 @@ function api_dispatch(array $segments): void {
 
 function api_list_notes(): void {
     $all = collect_all_notes();
+    $folder = api_get_folder_filter();
+    $visibility = api_get_visibility_filter();
+    $limit = api_get_limit();
 
     usort($all, function($a, $b) {
         return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
@@ -131,19 +206,15 @@ function api_list_notes(): void {
     $notes = [];
     foreach ($all as $note) {
         $path = preg_replace('/\.json$/', '', $note['_file']);
-        $vis = $note['meta']['visibility'] ?? 'private';
-        $item = [
-            'path'       => $path,
-            'title'      => $note['_title'],
-            'icon'       => $note['meta']['icon'] ?? '',
-            'visibility' => $vis,
-            'created_at' => $note['meta']['created_at'] ?? null,
-            'updated_at' => $note['meta']['updated_at'] ?? null,
-        ];
-        if ($vis !== 'private') {
-            $item['url'] = api_note_url($path);
+        if (!api_note_matches_filters($note, $path, $folder, $visibility)) {
+            continue;
         }
-        $notes[] = $item;
+
+        $notes[] = api_note_summary($note, $path);
+
+        if ($limit !== null && count($notes) >= $limit) {
+            break;
+        }
     }
 
     api_json(['notes' => $notes]);
@@ -159,20 +230,10 @@ function api_get_note(string $path): void {
 
     $blocks = $note['content']['blocks'] ?? [];
 
-    $vis = $note['meta']['visibility'] ?? 'private';
-    $response = [
-        'path'       => $path,
-        'title'      => $note['_title'],
-        'icon'       => $note['meta']['icon'] ?? '',
-        'visibility' => $vis,
-        'created_at' => $note['meta']['created_at'] ?? null,
-        'updated_at' => $note['meta']['updated_at'] ?? null,
-        'markdown'   => blocks_to_markdown($blocks),
-        'content'    => $note['content'],
-    ];
-    if ($vis !== 'private') {
-        $response['url'] = api_note_url($path);
-    }
+    $response = api_note_summary($note, $path);
+    $response['markdown'] = blocks_to_markdown($blocks);
+    $response['content'] = $note['content'];
+
     api_json($response);
 }
 
@@ -234,17 +295,16 @@ function api_create_note(): void {
 
     $path = preg_replace('/\.json$/', '', $relative);
 
-    $response = [
-        'path'       => $path,
-        'title'      => $title,
-        'icon'       => $icon,
-        'visibility' => $visibility,
-        'created_at' => $now,
-        'updated_at' => $now,
-    ];
-    if ($visibility !== 'private') {
-        $response['url'] = api_note_url($path);
-    }
+    $response = api_note_summary([
+        '_file' => $relative,
+        '_title' => $title,
+        'meta' => [
+            'icon' => $icon,
+            'visibility' => $visibility,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ],
+    ], $path);
     api_json($response, 201);
 }
 
@@ -263,7 +323,7 @@ function api_update_note(string $path): void {
 
     $title      = isset($input['title']) ? strip_tags(trim($input['title'])) : $existing['_title'];
     $markdown   = $input['markdown'] ?? null;
-    $icon       = $input['icon'] ?? ($existing['meta']['icon'] ?? '');
+    $icon       = resolve_note_icon_value($input, $existing['meta']['icon'] ?? '');
     $visibility = $input['visibility'] ?? ($existing['meta']['visibility'] ?? 'private');
 
     if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
@@ -294,19 +354,14 @@ function api_update_note(string $path): void {
         api_error(500, 'Failed to update note');
     }
 
-    $response = [
-        'path'       => $path,
-        'title'      => $title,
-        'icon'       => $icon,
-        'visibility' => $visibility,
-        'created_at' => $note_data['meta']['created_at'],
-        'updated_at' => $now,
-        'markdown'   => blocks_to_markdown($blocks),
-        'content'    => $note_data['content'],
-    ];
-    if ($visibility !== 'private') {
-        $response['url'] = api_note_url($path);
-    }
+    $response = api_note_summary([
+        '_file' => $relative,
+        '_title' => $title,
+        'meta' => $note_data['meta'],
+    ], $path);
+    $response['markdown'] = blocks_to_markdown($blocks);
+    $response['content'] = $note_data['content'];
+
     api_json($response);
 }
 
@@ -337,19 +392,7 @@ function api_patch_note(string $path): void {
     // Re-read note after changes
     $note = get_note($relative);
 
-    $vis = $note['meta']['visibility'] ?? 'private';
-    $response = [
-        'path'       => $path,
-        'title'      => $note['_title'],
-        'icon'       => $note['meta']['icon'] ?? '',
-        'visibility' => $vis,
-        'created_at' => $note['meta']['created_at'] ?? null,
-        'updated_at' => $note['meta']['updated_at'] ?? null,
-    ];
-    if ($vis !== 'private') {
-        $response['url'] = api_note_url($path);
-    }
-    api_json($response);
+    api_json(api_note_summary($note, $path));
 }
 
 function api_delete_note(string $path): void {
@@ -368,6 +411,9 @@ function api_delete_note(string $path): void {
 
 function api_search_notes(): void {
     $q = mb_strtolower(trim($_GET['q'] ?? ''), 'UTF-8');
+    $folder = api_get_folder_filter();
+    $visibility = api_get_visibility_filter();
+    $limit = api_get_limit(20, 100);
 
     if (mb_strlen($q) < 2) {
         api_error(400, 'Query must be at least 2 characters');
@@ -377,6 +423,11 @@ function api_search_notes(): void {
     $results = [];
 
     foreach ($all as $note) {
+        $path = preg_replace('/\.json$/', '', $note['_file']);
+        if (!api_note_matches_filters($note, $path, $folder, $visibility)) {
+            continue;
+        }
+
         $title = $note['_title'];
         $icon  = $note['meta']['icon'] ?? '';
         $found_in_title = mb_strpos(mb_strtolower($title, 'UTF-8'), $q) !== false;
@@ -398,22 +449,38 @@ function api_search_notes(): void {
         }
 
         if ($found_in_title || $found_in_content) {
-            $p = preg_replace('/\.json$/', '', $note['_file']);
-            $vis = $note['meta']['visibility'] ?? 'private';
             $item = [
-                'path'    => $p,
-                'title'   => $title,
-                'icon'    => $icon,
-                'snippet' => $snippet,
+                'path'       => $path,
+                'title'      => $title,
+                'icon'       => $icon,
+                'visibility' => $note['meta']['visibility'] ?? 'private',
+                'updated_at' => $note['meta']['updated_at'] ?? null,
+                'snippet'    => $snippet,
+                '_score'     => $found_in_title ? 2 : 1,
             ];
-            if ($vis !== 'private') {
-                $item['url'] = api_note_url($p);
+
+            $url = api_note_public_url($item['visibility'], $path);
+            if ($url !== null) {
+                $item['url'] = $url;
             }
+
             $results[] = $item;
         }
-
-        if (count($results) >= 20) break;
     }
+
+    usort($results, function($a, $b) {
+        if (($b['_score'] ?? 0) !== ($a['_score'] ?? 0)) {
+            return ($b['_score'] ?? 0) <=> ($a['_score'] ?? 0);
+        }
+
+        return ($b['updated_at'] ?? '') <=> ($a['updated_at'] ?? '');
+    });
+
+    $results = array_slice($results, 0, $limit);
+    foreach ($results as &$result) {
+        unset($result['_score']);
+    }
+    unset($result);
 
     api_json(['results' => $results]);
 }

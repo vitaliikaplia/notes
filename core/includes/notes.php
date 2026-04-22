@@ -505,6 +505,7 @@ function update_note_visibility(string $relative_path, string $visibility): bool
     if(!$data) return false;
 
     $data['meta']['visibility'] = $visibility;
+    $data['meta']['updated_at'] = date('c');
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     $result = file_put_contents($file, $json) !== false;
 
@@ -514,6 +515,24 @@ function update_note_visibility(string $relative_path, string $visibility): bool
     }
 
     return $result;
+}
+
+function resolve_note_icon_value(array $input, string $existing_icon = ''): string {
+    if(!array_key_exists('icon', $input)) {
+        return $existing_icon;
+    }
+
+    $icon = $input['icon'];
+
+    if($icon === null) {
+        return '';
+    }
+
+    if(!is_string($icon)) {
+        return $existing_icon;
+    }
+
+    return $icon;
 }
 
 function save_uploaded_image(string $source_path, string $mime): ?string {

@@ -346,7 +346,7 @@ function ai_tool_notes_update(array $args): array {
 
     $title      = isset($args['title']) ? strip_tags(trim($args['title'])) : $existing['_title'];
     $markdown   = $args['markdown'] ?? null;
-    $icon       = $args['icon'] ?? ($existing['meta']['icon'] ?? '');
+    $icon       = resolve_note_icon_value($args, $existing['meta']['icon'] ?? '');
     $visibility = $args['visibility'] ?? ($existing['meta']['visibility'] ?? 'private');
     $pinned     = isset($args['pinned']) ? (bool)$args['pinned'] : ($existing['meta']['pinned'] ?? false);
 
