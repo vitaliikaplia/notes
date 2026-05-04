@@ -18,9 +18,9 @@ date_default_timezone_set('Europe/Kyiv');
 const DS = DIRECTORY_SEPARATOR;
 const CORE_PATH = ABSPATH . DS . 'core';
 const SITE_CHARSET = 'UTF-8';
-const HTML_LOC = 'uk';
+const HTML_LOC = 'en';
 const TWIG_VIEWS_DIRNAME = 'views';
-const SITE_NAME = 'Нотатки';
+const SITE_NAME = 'Notes';
 const NOTES_DIR = '.notes';
 
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";

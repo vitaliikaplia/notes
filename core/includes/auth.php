@@ -67,7 +67,7 @@ function remember_validate(): bool {
 
     $data = json_decode(file_get_contents($file), true);
     if(!$data || ($data['expires'] ?? 0) < time()) {
-        // Протермінований — видаляємо
+        // Expired - delete it
         @unlink($file);
         remember_clear_cookie();
         return false;

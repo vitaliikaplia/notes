@@ -1,217 +1,263 @@
 # REST API
 
-Токен-авторизація через заголовок `Authorization: Bearer <API_TOKEN>`. Обмін даними у форматі Markdown з автоматичною конвертацією в Editor.js блоки.
+The REST API uses bearer-token authentication and exchanges note content as Markdown, automatically converting Markdown to Editor.js blocks on write.
 
-## Ендпоінти
-
-| Метод | URL | Опис |
-|-------|-----|------|
-| `GET` | `/api/v1/notes/` | Список усіх нотаток |
-| `GET` | `/api/v1/notes/{path}` | Одна нотатка (markdown + JSON) |
-| `POST` | `/api/v1/notes/` | Створити нотатку |
-| `PUT` | `/api/v1/notes/{path}` | Оновити нотатку |
-| `PATCH` | `/api/v1/notes/{path}` | Змінити видимість нотатки |
-| `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
-| `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
-
-Додаткові query params для `GET /api/v1/notes/` та `GET /api/v1/search/?q=`:
-
-| Параметр | Тип | Опис |
-|----------|-----|------|
-| `limit` | int | Опціонально. Обмежує кількість результатів. Для `notes` за замовчуванням повертаються всі нотатки, для `search` — до 20 |
-| `folder` | string | Опціонально. Фільтр по шляху/папці, напр. `retsepty` або `projects/client-a` |
-| `visibility` | string | Опціонально. Фільтр: `private`, `unlisted`, `public` |
-
-## Параметри запитів
-
-**POST (створити нотатку):**
-
-| Поле | Тип | Обов'язкове | Опис |
-|------|-----|-------------|------|
-| `title` | string | ✅ | Назва нотатки |
-| `markdown` | string | — | Контент у форматі Markdown |
-| `icon` | string | — | Емоджі-іконка (напр. `📝`) |
-| `folder` | string | — | Slug батьківської нотатки для створення дочірньої (напр. `retsepty`) |
-| `visibility` | string | — | `private` (за замовч.), `unlisted` або `public` |
-
-**PUT (оновити нотатку):**
-
-| Поле | Тип | Обов'язкове | Опис |
-|------|-----|-------------|------|
-| `title` | string | — | Нова назва (залишається попередня, якщо не вказано) |
-| `markdown` | string | — | Новий контент (залишається попередній, якщо не вказано) |
-| `icon` | string | — | Нова іконка |
-| `visibility` | string | — | `private`, `unlisted` або `public` |
-
-**PATCH (змінити видимість):**
-
-| Поле | Тип | Обов'язкове | Опис |
-|------|-----|-------------|------|
-| `visibility` | string | ✅ | `private`, `unlisted` або `public` |
-
-## Формат відповідей
-
-**Список нотаток** `GET /notes/`:
-```json
-{
-    "notes": [
-        {
-            "path": "retsepty",
-            "title": "Рецепти",
-            "icon": "🍽️",
-            "visibility": "private",
-            "created_at": "2026-01-15T10:00:00+00:00",
-            "updated_at": "2026-01-20T14:30:00+00:00"
-        }
-    ]
-}
+```http
+Authorization: Bearer <API_TOKEN>
 ```
 
-**Одна нотатка** `GET /notes/{path}`:
+`API_TOKEN` is read from `.env` through `get_env()`.
+
+## Endpoints
+
+| Method | URL | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/notes/` | List all notes |
+| `GET` | `/api/v1/notes/{path}` | Get one note, including Markdown and raw Editor.js content |
+| `POST` | `/api/v1/notes/` | Create a note |
+| `PUT` | `/api/v1/notes/{path}` | Replace/update a note |
+| `PATCH` | `/api/v1/notes/{path}` | Patch note visibility |
+| `DELETE` | `/api/v1/notes/{path}` | Delete a note |
+| `GET` | `/api/v1/search/?q=` | Search notes |
+
+Additional query parameters for `GET /api/v1/notes/` and `GET /api/v1/search/?q=`:
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `limit` | int | Optional result limit. Search defaults to 20 and caps at 100. |
+| `folder` | string | Optional path/folder filter, for example `recipes` or `projects/client-a`. |
+| `visibility` | string | Optional visibility filter: `private`, `unlisted`, or `public`. |
+
+## Paths
+
+Paths never include `.json`.
+
+Examples:
+
+```text
+recipes
+recipes/classic-borsch
+projects/client-a/kickoff
+```
+
+Internally, notes are stored as `.notes/{path}.json`.
+
+## Create Note
+
+`POST /api/v1/notes/`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `title` | string | yes | Note title |
+| `markdown` | string | no | Markdown content |
+| `icon` | string | no | Emoji icon |
+| `folder` | string | no | Parent folder/path. Empty means root. |
+| `visibility` | string | no | `private` by default, or `unlisted`, `public` |
+
+Example:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Classic Borsch","markdown":"## Ingredients\n\n- Beetroot\n- Potato","icon":"🍲","folder":"recipes"}' \
+  https://domain/api/v1/notes/
+```
+
+Response:
+
 ```json
 {
-    "path": "retsepty/borshch",
-    "title": "Борщ класичний",
+    "path": "recipes/classic-borsch",
+    "title": "Classic Borsch",
     "icon": "🍲",
-    "visibility": "unlisted",
-    "url": "https://domain/note/retsepty/borshch/",
-    "created_at": "2026-01-15T10:00:00+00:00",
-    "updated_at": "2026-01-20T14:30:00+00:00",
-    "markdown": "## Інгредієнти\n\n- Буряк\n- Картопля",
-    "content": { "time": 1234567890, "blocks": [...], "version": "2.31.0-rc.7" }
+    "visibility": "private",
+    "created_at": "2026-01-15T10:00:00+02:00",
+    "updated_at": "2026-01-15T10:00:00+02:00"
 }
 ```
 
-> Поле `url` повертається тільки для нотаток з `visibility` = `unlisted` або `public`.
+## Get Notes
 
-**Пошук** `GET /search/?q=`:
-```json
-{
-    "results": [
-        {
-            "path": "retsepty/borshch",
-            "title": "Борщ класичний",
-            "icon": "🍲",
-            "visibility": "unlisted",
-            "updated_at": "2026-01-20T14:30:00+00:00",
-            "url": "https://domain/note/retsepty/borshch/",
-            "snippet": "...знайдений текст..."
-        }
-    ]
-}
-```
+`GET /api/v1/notes/`
 
-Результати пошуку сортуються так:
-- спочатку збіги в заголовку
-- потім за `updated_at` від найновіших
-
-**Помилки:**
-```json
-{ "error": { "code": 404, "message": "Note not found" } }
-```
-
-## Приклади
-
-**Список нотаток:**
 ```bash
 curl -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/
 ```
 
-**Створити нотатку:**
-```bash
-curl -X POST -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Борщ","markdown":"## Інгредієнти\n\n- Буряк","icon":"🍲","folder":"retsepty"}' \
-  https://domain/api/v1/notes/
-```
+Response:
 
-**Відповідь на створення:**
 ```json
 {
-    "path": "retsepty/borshch",
-    "title": "Борщ",
-    "icon": "🍲",
-    "visibility": "private",
-    "created_at": "2026-01-15T10:00:00+00:00",
-    "updated_at": "2026-01-15T10:00:00+00:00"
+    "notes": [
+        {
+            "path": "recipes",
+            "title": "Recipes",
+            "icon": "🍽️",
+            "visibility": "private",
+            "created_at": "2026-01-15T10:00:00+02:00",
+            "updated_at": "2026-01-20T14:30:00+02:00"
+        }
+    ]
 }
 ```
 
-**Створити кореневу нотатку (без `folder`):**
+`GET /api/v1/notes/{path}`
+
 ```bash
-curl -X POST -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Рецепти","markdown":"Улюблені рецепти.","icon":"🍽️"}' \
-  https://domain/api/v1/notes/
+curl -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/recipes/classic-borsch
 ```
 
-**Оновити нотатку:**
-```bash
-curl -X PUT -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Нова назва","markdown":"Новий текст"}' \
-  https://domain/api/v1/notes/retsepty/borshch
-```
+Response:
 
-**Відповідь на оновлення:**
 ```json
 {
-    "path": "retsepty/borshch",
-    "title": "Нова назва",
+    "path": "recipes/classic-borsch",
+    "title": "Classic Borsch",
     "icon": "🍲",
     "visibility": "unlisted",
-    "created_at": "2026-01-15T10:00:00+00:00",
-    "updated_at": "2026-01-20T14:30:00+00:00",
-    "url": "https://domain/note/retsepty/borshch/",
-    "markdown": "Новий текст",
-    "content": { "time": 1234567890, "blocks": [...], "version": "2.31.0-rc.7" }
+    "url": "https://domain/note/recipes/classic-borsch/",
+    "created_at": "2026-01-15T10:00:00+02:00",
+    "updated_at": "2026-01-20T14:30:00+02:00",
+    "markdown": "## Ingredients\n\n- Beetroot\n- Potato",
+    "content": {
+        "time": 1234567890,
+        "blocks": [],
+        "version": "2.31.0-rc.7"
+    }
 }
 ```
 
-**Змінити видимість:**
+`url` is returned only when visibility is `unlisted` or `public`.
+
+## Update Note
+
+`PUT /api/v1/notes/{path}`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `title` | string | no | New title. Existing title is preserved if omitted. |
+| `markdown` | string | no | New Markdown content. Existing content is preserved if omitted. |
+| `icon` | string | no | New icon |
+| `visibility` | string | no | `private`, `unlisted`, or `public` |
+
+Example:
+
 ```bash
-curl -X PATCH -H "Authorization: Bearer TOKEN" \
+curl -X PUT \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Updated title","markdown":"Updated text"}' \
+  https://domain/api/v1/notes/recipes/classic-borsch
+```
+
+Response:
+
+```json
+{
+    "path": "recipes/classic-borsch",
+    "title": "Updated title",
+    "icon": "🍲",
+    "visibility": "unlisted",
+    "created_at": "2026-01-15T10:00:00+02:00",
+    "updated_at": "2026-01-20T14:30:00+02:00",
+    "url": "https://domain/note/recipes/classic-borsch/",
+    "markdown": "Updated text",
+    "content": {
+        "time": 1234567890,
+        "blocks": [],
+        "version": "2.31.0-rc.7"
+    }
+}
+```
+
+## Patch Visibility
+
+`PATCH /api/v1/notes/{path}`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `visibility` | string | yes | `private`, `unlisted`, or `public` |
+
+Example:
+
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"visibility":"unlisted"}' \
-  https://domain/api/v1/notes/retsepty/borshch
+  https://domain/api/v1/notes/recipes/classic-borsch
 ```
 
-**Відповідь на зміну видимості:**
+## Delete Note
+
+`DELETE /api/v1/notes/{path}`
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer TOKEN" \
+  https://domain/api/v1/notes/recipes/classic-borsch
+```
+
+Response:
+
 ```json
 {
-    "path": "retsepty/borshch",
-    "title": "Борщ класичний",
-    "icon": "🍲",
-    "visibility": "unlisted",
-    "created_at": "2026-01-15T10:00:00+00:00",
-    "updated_at": "2026-01-20T14:30:00+00:00",
-    "url": "https://domain/note/retsepty/borshch/"
+    "deleted": true,
+    "path": "recipes/classic-borsch"
 }
 ```
 
-**Видалити нотатку:**
+Deleting a parent note also deletes its child-note directory.
+
+## Search
+
+`GET /api/v1/search/?q=`
+
 ```bash
-curl -X DELETE -H "Authorization: Bearer TOKEN" https://domain/api/v1/notes/slug
+curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=borsch"
 ```
 
-**Пошук:**
-```bash
-curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=борщ"
+Response:
+
+```json
+{
+    "results": [
+        {
+            "path": "recipes/classic-borsch",
+            "title": "Classic Borsch",
+            "icon": "🍲",
+            "visibility": "unlisted",
+            "updated_at": "2026-01-20T14:30:00+02:00",
+            "url": "https://domain/note/recipes/classic-borsch/",
+            "snippet": "...matching text..."
+        }
+    ]
+}
 ```
 
-**Пошук у конкретній папці з лімітом:**
-```bash
-curl -H "Authorization: Bearer TOKEN" "https://domain/api/v1/search/?q=борщ&folder=retsepty&limit=5"
+Results are sorted by:
+
+1. Title matches first
+2. Newest `updated_at` first
+
+## Visibility
+
+| Value | Description |
+| --- | --- |
+| `private` | Default. Available only to authenticated users. |
+| `unlisted` | Available by direct link and marked `noindex, nofollow`. |
+| `public` | Public and indexable. |
+
+## Errors
+
+Errors use this shape:
+
+```json
+{
+    "error": {
+        "code": 404,
+        "message": "Note not found"
+    }
+}
 ```
-
-## Видимість
-
-Кожна нотатка має поле `visibility` з одним із значень:
-
-| Значення | Опис |
-|----------|------|
-| `private` | За замовчуванням. Доступна лише авторизованому користувачу |
-| `unlisted` | Доступна за прямим посиланням, не індексується (noindex, nofollow) |
-| `public` | Повністю публічна, індексується пошуковими системами |
-
-Встановлюється при створенні (`POST`), оновленні (`PUT`) або окремим запитом (`PATCH`).

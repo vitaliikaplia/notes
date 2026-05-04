@@ -1,182 +1,201 @@
-# Нотатки
+# Notes
 
-Notion, Obsidian, Apple Notes — всі класні, але жоден не дає одночасно повного контролю над даними, простого self-hosted розгортання і відкритого API для своїх автоматизацій. Тому я написав свій сервіс з нуля: без фреймворків, без бази даних, без підписок. Просто PHP, JSON-файли та повна свобода робити що хочеш зі своїми нотатками — включаючи вбудованого ШІ-асистента, який може створювати, шукати, читати та редагувати нотатки прямо з чату.
+Self-hosted notes with full control over your data: no framework, no database, no subscriptions. The app is built with PHP, Twig, Editor.js, and JSON files, with a built-in AI assistant that can search, read, create, and update notes from chat.
 
-Побудований на PHP + Twig з [Editor.js](https://github.com/codex-team/editor.js) як блоковим редактором. Вбудований ШІ-асистент з підтримкою Claude, OpenAI та Gemini. REST API для зовнішніх інтеграцій (N8N, Telegram-боти тощо).
+The interface is in English. Notes can still use any language, and slugs keep Ukrainian transliteration support through `ukr_to_lat()`.
 
-![Головна — перегляд плиткою, сайдбар, темна тема](screenshots/Screenshot%202026-03-01%20at%2015.03.08.png)
+![Home grid view, sidebar, dark theme](screenshots/Screenshot%202026-03-01%20at%2015.03.08.png)
 
-## Можливості
+## Features
 
-### Редактор
-- Блоковий редактор на базі Editor.js (заголовки, списки, чеклисти, код, цитати, таблиці, роздільники, посилання)
-- Блоки коду з підсвіткою синтаксису (One Dark тема, 18 мов, пошук по мовах)
-- Inline-інструменти: жирний, курсив, підкреслення, закреслення, маркер, код
-- Кольорові блоки-сповіщення (info, success, warning, danger)
-- Розгортувані блоки (toggle)
-- Обкладинка нотатки (cover) — широке зображення над заголовком з можливістю репозиціонування по вертикалі (як у Notion)
-- Колір нотатки — палітра з 16 готових кольорів + довільний колір через нативний color picker. Автоматичне визначення білого/чорного тексту за яскравістю фону (WCAG luminance). Колір відображається в редакторі, на картках дашборду, в публічному перегляді та на графі зв'язків
-- Закріплення нотаток (pin) — закріплені нотатки відображаються окремою групою вгорі дашборду, в таймлайні піднімаються вище інших у межах дня
-- Drag-and-drop перетягування блоків
-- Drag-and-drop нотаток із сайдбару в редактор — автоматично створює блок-посилання «Сторінка»
-- Undo/Redo (Ctrl+Z / Ctrl+Y)
-- Автозбереження при редагуванні
-- Перелінковка нотаток через блок «Сторінка» з пошуком існуючих нотаток
-- Синхронізація дочірніх нотаток — кнопка в редакторі показує всі дочірні нотатки зі статусом (додано / не додано / видалено) та дозволяє додати відсутні посилання і прибрати биті одним кліком
-- Експорт нотатки в Markdown
-- Drag-and-drop імпорт .md файлів
-- Toast-сповіщення при завантаженні зображень та імпорті Markdown
+### Editor
 
-### Медіа
-- Зображення: завантаження файлу, вставка з URL, drag-and-drop, paste з буфера
-- Автоконвертація зображень у WebP (Imagick, менша сторона до 1024px)
-- Зміна розміру зображень у редакторі (drag-resize)
-- Автовидалення файлів зображень при видаленні блоку, зміні обкладинки або видаленні нотатки
-- Вбудовування YouTube та Vimeo відео (автоматично при вставці посилання)
+- Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, embeds, and page links
+- Syntax-highlighted code blocks with a searchable language dropdown
+- Inline tools: bold, italic, underline, strikethrough, marker, inline code, and links
+- Cover images with vertical repositioning
+- Note background colors with automatic contrast handling
+- Pinning notes, shown as a separate dashboard group
+- Drag-and-drop block ordering
+- Drag notes from the sidebar into the editor to create page-link blocks
+- Undo/redo
+- Autosave
+- Child-note sync popup for adding missing page links and removing broken child links
+- Export to Markdown
+- Drag-and-drop Markdown import
 
-### Навігація та організація
-- Вкладені сторінки (батьківські/дочірні нотатки)
-- Деревоподібний сайдбар з drag-and-drop сортуванням та крос-рівневим переміщенням
-- Хлібні крихти
-- Емоджі та SVG іконки для нотаток (пошук за ключовими словами UA/EN)
-- Швидкий пошук по заголовках та вмісту (Ctrl+K)
+### Media
 
-### Дашборд
-- Masonry-сітка карток (як Google Keep) з обкладинками нотаток
-- Нескінченний скрол — довантаження нотаток порціями при прокручуванні
-- Перегляд плиткою та списком з сортуванням (дата, алфавіт) та фільтром по групах
-- Галерея зображень — грід всіх картинок з нотаток з hover-прев'ю
-- Таймлайн — горизонтальна стрічка нотаток по днях з фільтром по діапазону дат
-- Граф зв'язків — інтерактивна візуалізація ієрархії та перелінковок (force-graph, d3-force)
-- ШІ-асистент — чат для керування нотатками через Claude, OpenAI або Gemini
+- Upload images, paste from clipboard, drag and drop, or fetch from URL
+- Raster images are converted to WebP with Imagick
+- Images are resized so the shorter side is at most 1024px
+- SVG images are stored as-is after validation/minification when used as icons
+- Image files are cleaned up when removed from notes or covers
+- YouTube and Vimeo embeds are detected from standalone URLs
 
-### Публічний перегляд
-- Повний рендеринг усіх блоків: заголовки, списки, чеклисти, код, цитати, таблиці, роздільники, зображення, сповіщення, вбудовані відео, блоки-посилання на сторінки
-- Обкладинка нотатки з коректним позиціонуванням
-- Schema.org розмітка (Article)
+### Navigation
 
-### Безпека та доступ
-- Авторизація за логіном та паролем з функцією «Запам'ятати мене»
-- Контроль видимості нотаток: приватна / за посиланням / публічна
-- Збереження видимості при редагуванні нотатки
-- Захист завантажених файлів: доступ тільки авторизованим або через публічні нотатки
-- Cloudflare Turnstile CAPTCHA (опціонально)
+- Nested notes through parent/child JSON paths
+- Tree sidebar with drag-and-drop sorting and cross-level moves
+- Breadcrumbs
+- Emoji and SVG note icons
+- Quick search by title and content with `Ctrl+K`
+- Private, unlisted, and public note visibility
 
-### Інше
-- Темна та світла тема: автоматично за системною + ручний перемикач у футері сайдбару
-- Мобільна адаптивна верстка з бургер-меню
-- PWA — встановлюється як застосунок на телефон та десктоп
-- REST API v1 з токен-авторизацією
-- Дата та час останнього редагування під заголовком нотатки
+### Dashboard
 
-## ШІ-асистент
+- Masonry-style note cards
+- Pinned notes section
+- Infinite scroll
+- Grid/list views with sorting and parent-group filtering
+- Image gallery
+- Timeline with date-range filtering
+- Interactive graph view powered by force-graph / d3-force
+- AI chat tab when AI is configured
 
-Вбудований чат з ШІ прямо в дашборді. Підтримує три провайдери: **Claude** (Anthropic), **OpenAI** та **Gemini** (Google). ШІ-агент має доступ до 6 інструментів для повного керування нотатками:
+### Public View
 
-- **notes_list** — список усіх нотаток
-- **notes_search** — пошук за текстом
-- **notes_get** — прочитати вміст нотатки
-- **notes_create** — створити нотатку
-- **notes_update** — оновити нотатку
-- **notes_delete** — видалити нотатку
+- Read-only rendering for unlisted and public notes
+- Rendered blocks include headings, lists, checklists, code, quotes, tables, delimiters, images, alerts, embeds, and page links
+- Cover images and note colors are preserved
+- Schema.org Article metadata
 
-Працює через tool calling цикл — ШІ сам вирішує які інструменти викликати, отримує результати та формує відповідь. Підтримує до 5 послідовних викликів інструментів за один запит. Коректно працює з вкладеними нотатками — автоматично знаходить нотатку за slug або назвою, навіть без точного шляху. При редагуванні зберігає структуру, форматування та рівні заголовків оригінальної нотатки. Після створення, оновлення чи видалення нотаток сайдбар автоматично оновлюється без перезавантаження сторінки. Історія чату зберігається в sessionStorage з обрізкою серверної історії (AI_HISTORY_LIMIT). Інтерфейс чату з glass-ефектом на шапці та формі введення, адаптивний.
+### Security
 
-![ШІ-асистент — чат з нотатками](screenshots/Screenshot%202026-03-01%20at%2015.01.51.png)
+- Login/password authentication
+- Remember-me tokens stored as hashed files
+- Optional Cloudflare Turnstile CAPTCHA
+- Uploaded files are served through `/file/` and are only available to authenticated users or when referenced from a public/unlisted note
+- REST API v1 uses bearer-token authentication
 
-## Дашборд
+## AI Assistant
 
-П'ять вкладок на головній сторінці:
+The dashboard includes an AI chat tab when `AI_PROVIDER` and `AI_API_KEY` are configured. Supported providers:
 
-### Граф зв'язків
+- Claude
+- OpenAI
+- Gemini
 
-Інтерактивна візуалізація ієрархії (батько → дитина) та перелінковок між групами. Побудований на force-graph (d3-force). Ноди можна перетягувати — позиції зберігаються. При перемиканні теми кольори графа оновлюються на льоту без перезавантаження сторінки.
+The assistant can use these tools:
 
-![Граф зв'язків між нотатками](screenshots/Screenshot%202026-03-01%20at%2015.04.15.png)
+- `notes_list` - list all notes
+- `notes_search` - search notes by text
+- `notes_get` - read note content as Markdown
+- `notes_create` - create a note
+- `notes_update` - update a note
+- `notes_delete` - delete a note
 
-### Галерея зображень
+The tool loop supports up to 5 tool iterations per request. The assistant is instructed to answer in English, preserve note formatting during updates, ask before deleting, and include links to notes it mentions or changes.
 
-Грід усіх картинок з нотаток. Hover-прев'ю з назвою нотатки, датою та сніпетом тексту. Клік по зображенню відкриває нотатку. Drag-and-drop зображення з галереї прямо в редактор іншої нотатки.
+![AI assistant chat](screenshots/Screenshot%202026-03-01%20at%2015.01.51.png)
 
-### Таймлайн
+## Stack
 
-Горизонтальна стрічка нотаток, згрупованих по днях. Фільтр по діапазону дат через Air Datepicker (українська локаль). Автоскрол до найновіших записів.
+- Backend: PHP 8.3 platform target
+- Templates: Twig 3
+- Editor: Editor.js from CDN with plugins
+- Storage: JSON files in `.notes`
+- Frontend: Vanilla JavaScript and CSS custom properties
+- Optional cache: Redis through a Unix socket
+- Image processing: Imagick
 
-### Пошук
+## Project Structure
 
-Швидкий пошук по заголовках та вмісту нотаток (Ctrl+K).
-
-![Пошук по нотатках](screenshots/Screenshot%202026-03-01%20at%2000.42.40.png)
-
-## Стек
-
-- **Backend:** PHP 8+, Twig 3
-- **Редактор:** [Editor.js](https://github.com/codex-team/editor.js) (CDN) + плагіни (image, embed, codecup, table, underline, strikethrough, alert, toggle, drag-drop, undo)
-- **Сховище:** JSON-файли (без бази даних)
-- **Графіка:** force-graph, d3-force
-- **Стилі:** CSS з кастомними змінними
-- **JS:** Vanilla JavaScript
-
-## Структура
-
-```
-core/           — ядро: роутер, авторизація, робота з нотатками, ШІ-модуль
-views/          — Twig-шаблони
-assets/css/     — стилі
-assets/js/      — клієнтська логіка (app.js, page-tool.js)
-uploads/        — завантажені зображення (WebP/SVG, організовано по рік/місяць)
-.notes/         — сховище нотаток (JSON-файли)
-.env            — конфігурація (логін, пароль, CAPTCHA-ключі, ШІ-провайдер)
+```text
+core/           Core includes: router, auth, notes, AI, API, rendering, cache
+views/          Twig templates
+assets/css/     Styles
+assets/js/      Client-side behavior
+uploads/        Uploaded images organized by year/month
+.notes/         JSON note storage
+.env            Local configuration
 ```
 
-## Запуск
+Important files:
 
-Потрібен PHP 8+ з розширенням Imagick та веб-сервер (Apache/Nginx/Laravel Herd). Точка входу — `index.php`.
-
-### Налаштування `.env`
-
+```text
+index.php                    Entry point
+core/init.php                Bootstrap, constants, includes
+core/includes/router.php     Routes and internal session API
+core/includes/notes.php      Note CRUD, tree scanning, uploads, block rendering
+core/includes/auth.php       Sessions, login, remember-me tokens
+core/includes/ai.php         AI provider integrations and tool calling
+core/includes/api.php        REST API v1
+core/includes/render.php     Twig setup and global template context
+core/includes/markdown.php   Markdown <-> Editor.js conversion
+core/includes/cache.php      Redis cache and Twig cache adapter
+views/index.twig             Dashboard
+views/editor.twig            Editor
+views/overall/base.twig      Base layout and sidebar shell
+assets/js/app.js             Editor and dashboard client logic
+assets/js/page-tool.js       Editor.js page-link tool
+assets/js/sidebar.js         Sidebar interactions and theme switching
+assets/css/style.css         Styles
 ```
+
+## Setup
+
+Requirements:
+
+- PHP 8+
+- Composer
+- Twig dependency from Composer
+- Imagick PHP extension for image conversion
+- Apache, Nginx, Laravel Herd, or another web server pointing to `index.php`
+
+Install dependencies:
+
+```bash
+composer install
+```
+
+Example `.env`:
+
+```env
 AUTH_USER=admin
 AUTH_PASS=yourpassword
 
-# Cloudflare Turnstile (залишити порожнім для вимкнення)
+# Cloudflare Turnstile, leave empty to disable
 CAPTCHA_SITE_KEY=
 CAPTCHA_SECRET_KEY=
 
-# REST API (залишити порожнім для вимкнення)
+# REST API, leave empty to disable API access
 API_TOKEN=your-secret-token
 
-# ШІ-асистент (claude / openai / gemini)
+# AI assistant: claude / openai / gemini
 AI_PROVIDER=openai
 AI_API_KEY=sk-proj-...
-AI_MODEL=                  # опціонально, дефолти: claude-sonnet-4-20250514 / gpt-4o-mini / gemini-2.0-flash
-AI_HISTORY_LIMIT=20        # кількість повідомлень в контексті
+AI_MODEL=
+AI_HISTORY_LIMIT=20
+
+# Optional Redis Unix socket
+REDIS_SOCKET=
 ```
+
+The app reads configuration through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
 
 ## REST API
 
-Токен-авторизація через заголовок `Authorization: Bearer <API_TOKEN>`. Обмін даними у форматі Markdown з автоматичною конвертацією в Editor.js блоки.
+REST API v1 is available under `/api/v1/` and uses:
 
-| Метод | URL | Опис |
-|-------|-----|------|
-| `GET` | `/api/v1/notes/` | Список усіх нотаток |
-| `GET` | `/api/v1/notes/{path}` | Одна нотатка (markdown + JSON) |
-| `POST` | `/api/v1/notes/` | Створити нотатку |
-| `PUT` | `/api/v1/notes/{path}` | Оновити нотатку |
-| `PATCH` | `/api/v1/notes/{path}` | Змінити видимість |
-| `DELETE` | `/api/v1/notes/{path}` | Видалити нотатку |
-| `GET` | `/api/v1/search/?q=` | Пошук по нотатках |
+```http
+Authorization: Bearer <API_TOKEN>
+```
 
-Для `GET /api/v1/notes/` і `GET /api/v1/search/?q=` також доступні легкі фільтри `limit`, `folder`, `visibility`. `POST`, `PUT` і `PATCH` повертають актуальні метадані нотатки, щоб зовнішньому агенту не потрібен був додатковий `GET` після змін.
+Markdown is converted to Editor.js blocks automatically.
 
-Параметри запитів, формат відповідей та приклади: [API.md](API.md).
+| Method | URL | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/notes/` | List notes |
+| `GET` | `/api/v1/notes/{path}` | Get one note |
+| `POST` | `/api/v1/notes/` | Create a note |
+| `PUT` | `/api/v1/notes/{path}` | Update a note |
+| `PATCH` | `/api/v1/notes/{path}` | Update visibility |
+| `DELETE` | `/api/v1/notes/{path}` | Delete a note |
+| `GET` | `/api/v1/search/?q=` | Search notes |
 
-## Зовнішні інтеграції
+See [API.md](API.md) for request and response examples.
 
-REST API дозволяє підключити нотатки до зовнішніх ШІ-агентів (наприклад, через N8N + Telegram-бот) для керування нотатками голосом або текстом — на додаток до вбудованого ШІ-асистента.
-
-![Керування нотатками через Telegram-бот з ШІ](screenshots/Screenshot%202026-03-01%20at%2000.45.06.png)
-
-## Ліцензія
+## License
 
 MIT

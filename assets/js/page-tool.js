@@ -2,7 +2,7 @@ class PageTool {
 
     static get toolbox() {
         return {
-            title: 'Сторінка',
+            title: 'Page',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'
         };
     }
@@ -76,11 +76,11 @@ class PageTool {
         const input = document.createElement('input');
         input.classList.add('cdx-page-input__field');
         input.type = 'text';
-        input.placeholder = 'Знайти або створити сторінку...';
+        input.placeholder = 'Find or create a page...';
 
         const btn = document.createElement('button');
         btn.classList.add('cdx-page-input__btn');
-        btn.textContent = 'Створити';
+        btn.textContent = 'Create';
         btn.type = 'button';
 
         // Dropdown for search results
@@ -142,7 +142,7 @@ class PageTool {
             }
 
             btn.disabled = true;
-            btn.textContent = 'Створення...';
+            btn.textContent = 'Creating...';
             input.disabled = true;
 
             try {
@@ -154,9 +154,9 @@ class PageTool {
 
                 if (!parentPath) {
                     btn.disabled = false;
-                    btn.textContent = 'Створити';
+                    btn.textContent = 'Create';
                     input.disabled = false;
-                    alert('Спочатку збережіть батьківську нотатку');
+                    alert('Save the parent note first');
                     return;
                 }
 
@@ -181,15 +181,15 @@ class PageTool {
                     this._addToSidebar(result.title, result.url, result.path);
                 } else {
                     btn.disabled = false;
-                    btn.textContent = 'Створити';
+                    btn.textContent = 'Create';
                     input.disabled = false;
-                    alert('Помилка: ' + (result.error || 'невідома помилка'));
+                    alert('Error: ' + (result.error || 'unknown error'));
                 }
             } catch (e) {
                 btn.disabled = false;
-                btn.textContent = 'Створити';
+                btn.textContent = 'Create';
                 input.disabled = false;
-                alert('Помилка мережі');
+                alert('Network error');
             }
         };
 
@@ -300,7 +300,7 @@ class PageTool {
         childItem.className = 'sidebar-note-item';
         childItem.innerHTML =
             '<a href="' + homeUrl + url + '/" class="sidebar-note">' + title + '</a>' +
-            '<button class="sidebar-note-delete" data-path="' + path + '" title="Видалити">' +
+            '<button class="sidebar-note-delete" data-path="' + path + '" title="Delete">' +
                 '<svg class="icon-trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
                 '<svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
             '</button>';
@@ -390,7 +390,7 @@ class PageTool {
                     if (item) item.remove();
                 }
             } else {
-                alert('Помилка видалення');
+                alert('Delete error');
             }
         });
     }

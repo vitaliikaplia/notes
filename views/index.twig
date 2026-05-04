@@ -4,46 +4,46 @@
 {% if recent_notes is not empty %}
     <div class="index-header">
         <div class="index-tabs">
-            <button class="index-tab active" data-tab="notes">Нотатки</button>
-            <button class="index-tab" data-tab="graph">Граф</button>
-            <button class="index-tab" data-tab="media">Зображення</button>
-            <button class="index-tab" data-tab="timeline">Таймлайн</button>
-            {% if ai_configured %}<button class="index-tab" data-tab="ai">ШІ</button>{% endif %}
+            <button class="index-tab active" data-tab="notes">Notes</button>
+            <button class="index-tab" data-tab="graph">Graph</button>
+            <button class="index-tab" data-tab="media">Images</button>
+            <button class="index-tab" data-tab="timeline">Timeline</button>
+            {% if ai_configured %}<button class="index-tab" data-tab="ai">AI</button>{% endif %}
         </div>
         <div class="index-controls" id="index-controls">
             <select class="index-select" id="sort-select">
-                <option value="recent">Останні</option>
-                <option value="oldest">Найстаріші</option>
-                <option value="az">А — Я</option>
-                <option value="za">Я — А</option>
+                <option value="recent">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="az">A-Z</option>
+                <option value="za">Z-A</option>
             </select>
             <select class="index-select" id="filter-select">
-                <option value="">Усі нотатки</option>
+                <option value="">All notes</option>
                 {% for group in parent_groups %}
                     <option value="{{ group.file }}">{{ group.title }}</option>
                 {% endfor %}
             </select>
-            <button class="view-toggle-btn active" data-view="grid" title="Плитки">
+            <button class="view-toggle-btn active" data-view="grid" title="Grid">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </button>
-            <button class="view-toggle-btn" data-view="list" title="Список">
+            <button class="view-toggle-btn" data-view="list" title="List">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             </button>
         </div>
         <div class="index-controls" id="timeline-controls" style="display:none">
-            <input type="text" class="index-select tl-datepicker" id="timeline-from" placeholder="Від" readonly>
+            <input type="text" class="index-select tl-datepicker" id="timeline-from" placeholder="From" readonly>
             <span class="timeline-range-sep">—</span>
-            <input type="text" class="index-select tl-datepicker" id="timeline-to" placeholder="До" readonly>
-            <button class="view-toggle-btn" id="timeline-reset" title="Скинути">
+            <input type="text" class="index-select tl-datepicker" id="timeline-to" placeholder="To" readonly>
+            <button class="view-toggle-btn" id="timeline-reset" title="Reset">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
         {% if ai_configured %}
         <div class="index-controls" id="ai-controls" style="display:none">
-            <button class="graph-reset-btn ai-clear-btn" id="ai-clear-btn" title="Очистити історію">
+            <button class="graph-reset-btn ai-clear-btn" id="ai-clear-btn" title="Clear history">
                 <svg class="icon-reset" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                <span class="graph-reset-label">Очистити історію</span>
+                <span class="graph-reset-label">Clear history</span>
             </button>
         </div>
         {% endif %}
@@ -54,7 +54,7 @@
         <div class="pinned-section" id="pinned-section">
             <div class="pinned-section-title">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
-                Закріплені
+                Pinned
             </div>
             <div class="notes-grid pinned-grid" id="pinned-view">
                 {% for note in pinned_notes %}
@@ -65,7 +65,7 @@
                        data-pinned="1"
                        data-url="{{ note._url }}"
                        {% if note.meta.color is defined and note.meta.color %}style="--bg: {{ note.meta.color }}; --text: {{ contrast_color(note.meta.color) }}; background: {{ note.meta.color }}; color: {{ contrast_color(note.meta.color) }};"{% endif %}>
-                        <button type="button" class="note-card-pin active" title="Відкріпити"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
+                        <button type="button" class="note-card-pin active" title="Unpin"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
                         {% if note.meta.cover is defined and note.meta.cover %}
                             <span class="note-card-cover">
                                 <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
@@ -101,7 +101,7 @@
         <div class="other-notes-section" id="other-notes-section">
             <div class="pinned-section-title">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                Інші нотатки
+                Other notes
             </div>
         </div>
         {% endif %}
@@ -113,7 +113,7 @@
                    data-parent="{{ note._file|split('/')|length > 1 ? note._file|split('/')|slice(0, -1)|join('/') ~ '.json' : '' }}"
                    data-url="{{ note._url }}"
                    {% if note.meta.color is defined and note.meta.color %}style="--bg: {{ note.meta.color }}; --text: {{ contrast_color(note.meta.color) }}; background: {{ note.meta.color }}; color: {{ contrast_color(note.meta.color) }};"{% endif %}>
-                    <button type="button" class="note-card-pin" title="Закріпити"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
+                    <button type="button" class="note-card-pin" title="Pin"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
                     {% if note.meta.cover is defined and note.meta.cover %}
                         <span class="note-card-cover">
                             <img src="{{ note.meta.cover }}" alt="" style="object-position: center {{ note.meta.cover_position is defined ? note.meta.cover_position : 50 }}%">
@@ -146,10 +146,10 @@
     </div>
 
     <div id="tab-graph" class="tab-content">
-        <button class="graph-reset-btn" id="graph-reset-btn" title="Скинути позиції нод">
+        <button class="graph-reset-btn" id="graph-reset-btn" title="Reset node positions">
             <svg class="icon-reset" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
             <svg class="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span class="graph-reset-label">Скинути</span>
+            <span class="graph-reset-label">Reset</span>
         </button>
         <div id="mindmap" class="mindmap-container mindmap-fullscreen"></div>
     </div>
@@ -158,7 +158,7 @@
         {% if media_items is empty %}
         <div class="empty-state">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <p>Нотатки з зображеннями відсутні</p>
+            <p>No notes with images yet</p>
         </div>
         {% else %}
         <div class="media-grid">
@@ -213,8 +213,8 @@
         <div class="ai-chat-messages" id="ai-messages"></div>
         <div class="ai-chat-input-wrap">
             <div class="ai-chat-input-inner">
-                <textarea class="ai-chat-input" id="ai-input" placeholder="Напишіть повідомлення..." rows="1"></textarea>
-                <button class="ai-chat-send" id="ai-send" title="Надіслати">
+                <textarea class="ai-chat-input" id="ai-input" placeholder="Write a message..." rows="1"></textarea>
+                <button class="ai-chat-send" id="ai-send" title="Send">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
             </div>
@@ -224,8 +224,8 @@
 {% else %}
     <div class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <p>Ще немає нотаток</p>
-        <a href="{{ home_url }}new/" class="btn btn-primary">Створити першу нотатку</a>
+        <p>No notes yet</p>
+        <a href="{{ home_url }}new/" class="btn btn-primary">Create your first note</a>
     </div>
 {% endif %}
 
@@ -282,7 +282,7 @@
             pinnedSection = document.createElement('div');
             pinnedSection.className = 'pinned-section';
             pinnedSection.id = 'pinned-section';
-            pinnedSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> Закріплені</div><div class="notes-grid pinned-grid" id="pinned-view"></div>';
+            pinnedSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> Pinned</div><div class="notes-grid pinned-grid" id="pinned-view"></div>';
             view.parentNode.insertBefore(pinnedSection, view);
             pinnedView = document.getElementById('pinned-view');
         }
@@ -290,7 +290,7 @@
             otherNotesSection = document.createElement('div');
             otherNotesSection.className = 'other-notes-section';
             otherNotesSection.id = 'other-notes-section';
-            otherNotesSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Інші нотатки</div>';
+            otherNotesSection.innerHTML = '<div class="pinned-section-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Other notes</div>';
             view.parentNode.insertBefore(otherNotesSection, view);
         }
         pinnedSection.style.display = '';
@@ -359,7 +359,7 @@
             + ' data-parent="' + (card.parent || '') + '"'
             + ' data-url="' + card.url + '"'
             + colorStyle + '>';
-        html += '<button type="button" class="note-card-pin' + (isPinned ? ' active' : '') + '" title="' + (isPinned ? 'Відкріпити' : 'Закріпити') + '">' + (isPinned ? pinSvgFilled : pinSvg) + '</button>';
+        html += '<button type="button" class="note-card-pin' + (isPinned ? ' active' : '') + '" title="' + (isPinned ? 'Unpin' : 'Pin') + '">' + (isPinned ? pinSvgFilled : pinSvg) + '</button>';
         if (card.cover) {
             html += '<span class="note-card-cover"><img src="' + card.cover + '" alt="" style="object-position: center ' + (card.cover_position || 50) + '%"></span>';
         }
@@ -643,13 +643,13 @@
     var tlReset = document.getElementById('timeline-reset');
 
     var localeUk = {
-        days: ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота'],
-        daysShort: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-        daysMin: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-        months: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
-        monthsShort: ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'],
-        today: 'Сьогодні',
-        clear: 'Очистити',
+        days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        daysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        today: 'Today',
+        clear: 'Clear',
         dateFormat: 'dd.MM.yyyy',
         timeFormat: 'HH:mm',
         firstDay: 1
@@ -762,7 +762,7 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.nodes || !data.nodes.length) {
-                    container.innerHTML = '<div class="mindmap-empty">Недостатньо нотаток для карти</div>';
+                    container.innerHTML = '<div class="mindmap-empty">Not enough notes for the map</div>';
                     return;
                 }
 
@@ -901,7 +901,7 @@
             })
             .catch(err => {
                 console.error('Mindmap error:', err);
-                container.innerHTML = '<div class="mindmap-empty">Помилка завантаження карти</div>';
+                container.innerHTML = '<div class="mindmap-empty">Map loading error</div>';
             });
     }
     // --- AI Chat ---
@@ -1035,7 +1035,7 @@
             })
             .catch(function(err) {
                 if (typing.parentNode) typing.remove();
-                chatHistory.push({ role: 'assistant', content: '⚠️ Помилка з\'єднання' });
+                chatHistory.push({ role: 'assistant', content: '⚠️ Connection error' });
                 renderMessages();
             })
             .finally(function() {

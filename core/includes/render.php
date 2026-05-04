@@ -20,7 +20,7 @@ function date_format_uk(string $date): string {
     if(empty($date)) return '';
     $ts = strtotime($date);
     if(!$ts) return $date;
-    $months = ['', 'січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+    $months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     $d = date('j', $ts);
     $m = $months[(int)date('n', $ts)];
     $y = date('Y', $ts);

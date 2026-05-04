@@ -28,7 +28,7 @@ function router($url_segments = []): array {
         // Dashboard
         auth_require();
         $template = 'index.twig';
-        $context['page']['title'] = 'Нотатки';
+        $context['page']['title'] = 'Notes';
         $context['html_title'] = SITE_NAME;
         $context['recent_notes'] = get_recent_notes(35);
         $context['pinned_notes'] = array_values(array_filter($context['recent_notes'], fn($n) => !empty($n['meta']['pinned'])));
@@ -47,7 +47,7 @@ function router($url_segments = []): array {
         $context['media_items'] = collect_media_from_notes(array_merge($context['pinned_notes'], $context['recent_notes']));
         $context['ai_configured'] = ai_is_configured();
 
-        // Збір унікальних батьківських груп для фільтра
+        // Collect unique parent groups for the filter
         $parent_groups = [];
         foreach(array_merge($context['pinned_notes'], $context['recent_notes']) as $note) {
             $dir = dirname($note['_file']);
@@ -90,7 +90,7 @@ function router($url_segments = []): array {
                 $cf_token = $_POST['cf-turnstile-response'] ?? '';
                 $captcha_ok = $cf_token && verify_turnstile($captcha_secret_key, $cf_token);
                 if(!$captcha_ok) {
-                    $context['error'] = 'Перевірка CAPTCHA не пройдена';
+                    $context['error'] = 'CAPTCHA verification failed';
                 }
             }
 
@@ -100,14 +100,14 @@ function router($url_segments = []): array {
                     header('Location: ' . HOME_URL);
                     exit;
                 } else {
-                    $context['error'] = 'Невірний логін або пароль';
+                    $context['error'] = 'Invalid username or password';
                 }
             }
         }
 
         $template = 'login.twig';
-        $context['page']['title'] = 'Вхід';
-        $context['page']['description'] = 'Авторизація для доступу до нотаток';
+        $context['page']['title'] = 'Log In';
+        $context['page']['description'] = 'Sign in to access your notes';
         $context['robots'] = 'noindex, nofollow';
         $body_classes[] = 'page-login';
 
@@ -118,7 +118,7 @@ function router($url_segments = []): array {
         // New note
         auth_require();
         $template = 'editor.twig';
-        $context['page']['title'] = 'Нова нотатка';
+        $context['page']['title'] = 'New Note';
         $context['note'] = null;
         $context['note_folder'] = '';
         $context['breadcrumbs'] = [];
@@ -291,8 +291,8 @@ function router($url_segments = []): array {
         }
 
         echo json_encode([
-            'name'             => 'Нотатки',
-            'short_name'       => 'Нотатки',
+            'name'             => 'Notes',
+            'short_name'       => 'Notes',
             'start_url'        => '/',
             'display'          => 'standalone',
             'background_color' => '#191919',
@@ -323,7 +323,7 @@ function router($url_segments = []): array {
                 exit;
             }
 
-            $title = strip_tags($input['title'] ?? 'Без назви');
+            $title = strip_tags($input['title'] ?? 'Untitled');
             $folder = trim($input['folder'] ?? '', '/ ');
             $old_path = $input['old_path'] ?? '';
             $content = $input['content'] ?? ['blocks' => []];
@@ -970,7 +970,7 @@ function router($url_segments = []): array {
             $markdown = $input['markdown'] ?? '';
 
             if (empty($title)) {
-                $title = 'Імпортована нотатка';
+                $title = 'Imported note';
             }
 
             $slug = generate_slug($title) . '_imported_' . date('Ymd_His');

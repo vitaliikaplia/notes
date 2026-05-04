@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (themeToggle) {
-            const nextLabel = isDark ? 'Увімкнути світлу тему' : 'Увімкнути темну тему';
+            const nextLabel = isDark ? 'Switch to light theme' : 'Switch to dark theme';
             themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
             themeToggle.setAttribute('title', nextLabel);
             themeToggle.setAttribute('aria-label', nextLabel);
@@ -196,8 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (link) {
                         const url = link.href;
                         await navigator.clipboard.writeText(url).catch(() => {});
-                        const label = next === 'unlisted' ? 'за посиланням' : 'для всіх';
-                        showToast('Посилання скопійовано — доступ ' + label);
+                        const label = next === 'unlisted' ? 'anyone with the link' : 'public';
+                        showToast('Link copied - access: ' + label);
                     }
                 }
             }
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (card) card.remove();
                 }
             } else {
-                alert('Помилка видалення');
+                alert('Delete error');
             }
         });
     });

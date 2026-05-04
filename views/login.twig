@@ -6,8 +6,8 @@
         <img src="{{ assets_url }}svg/favicon.svg{{ asset_ver('svg/favicon.svg') }}" alt="" width="96" height="96">
     </div>
     <div class="login-box">
-        <h1>Нотатки</h1>
-        <p class="login-subtitle">Записуйте, структуруйте, знаходьте</p>
+        <h1>Notes</h1>
+        <p class="login-subtitle">Write, organize, find</p>
 
         {% if error %}
             <div class="alert alert-error">{{ error }}</div>
@@ -15,14 +15,14 @@
 
         <form method="post" action="{{ home_url }}login/">
             <div class="form-group">
-                <input type="text" id="user" name="user" placeholder="Логін" required autofocus>
+                <input type="text" id="user" name="user" placeholder="Username" required autofocus>
             </div>
             <div class="form-group">
-                <input type="password" id="pass" name="pass" placeholder="Пароль" required>
+                <input type="password" id="pass" name="pass" placeholder="Password" required>
             </div>
             <div class="form-group form-remember">
                 <label class="checkbox-label">
-                    <span>Запам'ятати мене</span>
+                    <span>Remember me</span>
                     <input type="checkbox" name="remember" value="1">
                 </label>
             </div>
@@ -31,7 +31,7 @@
                     <div class="cf-turnstile" data-sitekey="{{ captcha_site_key }}" data-theme="auto"></div>
                 </div>
             {% endif %}
-            <button type="submit" class="btn btn-primary btn-full">Увійти</button>
+            <button type="submit" class="btn btn-primary btn-full">Log in</button>
         </form>
     </div>
 </div>

@@ -23,11 +23,11 @@ function ai_get_config(): array {
     $model    = trim($env['AI_MODEL'] ?? '');
 
     if(empty($provider) || empty($api_key)) {
-        return ['error' => 'AI не налаштовано: відсутній AI_PROVIDER або AI_API_KEY в .env'];
+        return ['error' => 'AI is not configured: AI_PROVIDER or AI_API_KEY is missing in .env'];
     }
 
     if(!in_array($provider, ['claude', 'openai', 'gemini'], true)) {
-        return ['error' => 'Невідомий AI провайдер: ' . $provider];
+        return ['error' => 'Unknown AI provider: ' . $provider];
     }
 
     if(empty($model)) {
@@ -50,29 +50,29 @@ function ai_get_system_prompt(): string {
     $now = date('Y-m-d H:i');
     $base = HOME_URL . 'note/';
     return <<<PROMPT
-Ти — AI-асистент для управління нотатками. Відповідай українською, дружньо та стисло.
-Поточний час: {$now} (Київський час).
-Базова URL нотаток: {$base}
+You are an AI assistant for managing notes. Reply in English, friendly and concise.
+Current time: {$now} (Kyiv time).
+Base notes URL: {$base}
 
-## Інструменти
-- **notes_list** — список усіх нотаток
-- **notes_search** — пошук за текстом
-- **notes_get** — прочитати вміст нотатки
-- **notes_create** — створити нотатку
-- **notes_update** — оновити нотатку
-- **notes_delete** — видалити нотатку
+## Tools
+- **notes_list** - list all notes with metadata
+- **notes_search** - search by text
+- **notes_get** - read note content
+- **notes_create** - create a note
+- **notes_update** - update a note
+- **notes_delete** - delete a note
 
-## Правила
-1. Шляхи нотаток без .json (наприклад: "proyekty/my-note"). Нотатки бувають вкладені — шлях включає батьківську папку.
-2. Якщо не знаєш точний шлях — використай notes_search або notes_list щоб знайти нотатку.
-3. При створенні — давай змістовний заголовок та відповідну emoji іконку.
-4. При оновленні — спочатку прочитай поточний вміст через notes_get. Зміни лише те, що просить користувач, зберігаючи решту вмісту, структуру, рівні заголовків та форматування без змін.
-5. Перед видаленням — запитай підтвердження у користувача.
-6. Видимість за замовчуванням: private. Варіанти: private, unlisted, public. Нотатку можна закріпити (pinned: true) — закріплені відображаються окремою групою вгорі дашборду.
-7. Контент у форматі Markdown (заголовки, списки, чеклісти, код, цитати).
-8. Не вигадуй — працюй тільки з реальними даними.
-9. Коли згадуєш, створюєш, оновлюєш або показуєш нотатку — завжди додавай посилання на неї у форматі markdown: [Назва]({$base}path/). Наприклад: [Борщ класичний]({$base}retsepty/borshch/).
-10. Коли створюєш дочірню нотатку (з параметром folder) — після створення ОБОВ'ЯЗКОВО оновити батьківську нотатку через notes_get + notes_update, додавши в кінець її вмісту блок-посилання на створену нотатку у форматі: [іконка Назва](note/шлях). Наприклад: створив нотатку "Genius.Space" з іконкою 🏆 у папці navchannya → додай в кінець батьківської нотатки рядок: [🏆 Genius.Space](note/navchannya/genius-space). Це НЕ звичайне HTML-посилання, а спеціальний формат блоку-сторінки.
+## Rules
+1. Note paths do not include .json, for example: "proyekty/my-note". Notes can be nested, so the path includes the parent folder.
+2. If you do not know the exact path, use notes_search or notes_list to find the note.
+3. When creating a note, provide a meaningful title and an appropriate emoji icon.
+4. When updating a note, first read the current content with notes_get. Change only what the user asks for and preserve the rest of the content, structure, heading levels, and formatting.
+5. Before deleting, ask the user for confirmation.
+6. Default visibility is private. Options: private, unlisted, public. Notes can be pinned (pinned: true); pinned notes appear in a separate group at the top of the dashboard.
+7. Content uses Markdown (headings, lists, checklists, code, quotes).
+8. Do not invent information. Work only with real data.
+9. Whenever you mention, create, update, or show a note, always include a Markdown link to it: [Title]({$base}path/). Example: [Classic borshch]({$base}retsepty/borshch/).
+10. When creating a child note with the folder parameter, you MUST then update the parent note via notes_get + notes_update, appending a page-link block to the end of its content in this format: [icon Title](note/path). Example: after creating "Genius.Space" with icon 🏆 in the navchannya folder, append: [🏆 Genius.Space](note/navchannya/genius-space). This is not a regular HTML link; it is the special page-block format.
 PROMPT;
 }
 
@@ -84,7 +84,7 @@ function ai_get_tools(): array {
     return [
         [
             'name' => 'notes_list',
-            'description' => 'Отримати список усіх нотаток з метаданими (назва, іконка, дата, шлях, видимість)',
+            'description' => 'Get a list of all notes with metadata (title, icon, date, path, visibility)',
             'parameters' => [
                 'type' => 'object',
                 'properties' => (object)[],
@@ -93,64 +93,64 @@ function ai_get_tools(): array {
         ],
         [
             'name' => 'notes_search',
-            'description' => 'Пошук нотаток за текстовим запитом (шукає в заголовках та вмісті)',
+            'description' => 'Search notes by text query (searches titles and content)',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'query' => ['type' => 'string', 'description' => 'Текст для пошуку (мінімум 2 символи)'],
+                    'query' => ['type' => 'string', 'description' => 'Search text (minimum 2 characters)'],
                 ],
                 'required' => ['query'],
             ],
         ],
         [
             'name' => 'notes_get',
-            'description' => 'Отримати вміст нотатки у форматі markdown за її шляхом',
+            'description' => 'Get note content as Markdown by path',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'path' => ['type' => 'string', 'description' => 'Шлях до нотатки (наприклад: "proyekty/my-note")'],
+                    'path' => ['type' => 'string', 'description' => 'Note path (for example: "proyekty/my-note")'],
                 ],
                 'required' => ['path'],
             ],
         ],
         [
             'name' => 'notes_create',
-            'description' => 'Створити нову нотатку',
+            'description' => 'Create a new note',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'title'      => ['type' => 'string', 'description' => 'Заголовок нотатки'],
-                    'markdown'   => ['type' => 'string', 'description' => 'Вміст у форматі markdown'],
-                    'icon'       => ['type' => 'string', 'description' => 'Emoji іконка (наприклад: "📝")'],
-                    'folder'     => ['type' => 'string', 'description' => 'Slug батьківської папки (порожнє = корінь)'],
-                    'visibility' => ['type' => 'string', 'enum' => ['private', 'unlisted', 'public'], 'description' => 'Видимість (за замовчуванням: private)'],
+                    'title'      => ['type' => 'string', 'description' => 'Note title'],
+                    'markdown'   => ['type' => 'string', 'description' => 'Content in Markdown format'],
+                    'icon'       => ['type' => 'string', 'description' => 'Emoji icon (for example: "📝")'],
+                    'folder'     => ['type' => 'string', 'description' => 'Parent folder slug (empty = root)'],
+                    'visibility' => ['type' => 'string', 'enum' => ['private', 'unlisted', 'public'], 'description' => 'Visibility (default: private)'],
                 ],
                 'required' => ['title', 'markdown'],
             ],
         ],
         [
             'name' => 'notes_update',
-            'description' => 'Оновити існуючу нотатку',
+            'description' => 'Update an existing note',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'path'       => ['type' => 'string', 'description' => 'Шлях до нотатки'],
-                    'title'      => ['type' => 'string', 'description' => 'Новий заголовок'],
-                    'markdown'   => ['type' => 'string', 'description' => 'Новий вміст у markdown'],
-                    'icon'       => ['type' => 'string', 'description' => 'Нова emoji іконка'],
-                    'visibility' => ['type' => 'string', 'enum' => ['private', 'unlisted', 'public'], 'description' => 'Нова видимість'],
-                    'pinned'     => ['type' => 'boolean', 'description' => 'Закріпити/відкріпити нотатку'],
+                    'path'       => ['type' => 'string', 'description' => 'Note path'],
+                    'title'      => ['type' => 'string', 'description' => 'New title'],
+                    'markdown'   => ['type' => 'string', 'description' => 'New Markdown content'],
+                    'icon'       => ['type' => 'string', 'description' => 'New emoji icon'],
+                    'visibility' => ['type' => 'string', 'enum' => ['private', 'unlisted', 'public'], 'description' => 'New visibility'],
+                    'pinned'     => ['type' => 'boolean', 'description' => 'Pin/unpin the note'],
                 ],
                 'required' => ['path'],
             ],
         ],
         [
             'name' => 'notes_delete',
-            'description' => 'Видалити нотатку за шляхом',
+            'description' => 'Delete a note by path',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'path' => ['type' => 'string', 'description' => 'Шлях до нотатки для видалення'],
+                    'path' => ['type' => 'string', 'description' => 'Path of the note to delete'],
                 ],
                 'required' => ['path'],
             ],
@@ -171,7 +171,7 @@ function ai_execute_tool(string $name, array $args): array {
             'notes_create' => ai_tool_notes_create($args),
             'notes_update' => ai_tool_notes_update($args),
             'notes_delete' => ai_tool_notes_delete($args),
-            default        => throw new RuntimeException("Невідомий інструмент: {$name}"),
+            default        => throw new RuntimeException("Unknown tool: {$name}"),
         };
         return ['success' => true, 'result' => $result];
     } catch(\Throwable $e) {
@@ -197,7 +197,7 @@ function ai_tool_notes_list(): array {
 function ai_tool_notes_search(array $args): array {
     $q = mb_strtolower(trim($args['query'] ?? ''), 'UTF-8');
     if(mb_strlen($q) < 2) {
-        throw new RuntimeException('Запит має містити мінімум 2 символи');
+        throw new RuntimeException('Query must be at least 2 characters');
     }
 
     $all = collect_all_notes();
@@ -270,7 +270,7 @@ function ai_resolve_note(string $path): array {
     }
 
     if(!$note) {
-        throw new RuntimeException("Нотатку не знайдено: {$path}");
+        throw new RuntimeException("Note not found: {$path}");
     }
 
     return [$note, $path];
@@ -296,7 +296,7 @@ function ai_tool_notes_create(array $args): array {
     $visibility = $args['visibility'] ?? 'private';
 
     if(empty($title)) {
-        throw new RuntimeException('Заголовок обов\'язковий');
+        throw new RuntimeException('Title is required');
     }
     if(!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
         $visibility = 'private';
@@ -333,7 +333,7 @@ function ai_tool_notes_create(array $args): array {
     ];
 
     if(!save_note(str_replace('/', DS, $relative), $note_data)) {
-        throw new RuntimeException('Не вдалося зберегти нотатку');
+        throw new RuntimeException('Failed to save note');
     }
 
     $path = preg_replace('/\.json$/', '', $relative);
@@ -374,7 +374,7 @@ function ai_tool_notes_update(array $args): array {
     ];
 
     if(!save_note($relative, $note_data)) {
-        throw new RuntimeException('Не вдалося оновити нотатку');
+        throw new RuntimeException('Failed to update note');
     }
 
     return ['path' => $path, 'title' => $title, 'icon' => $icon, 'visibility' => $visibility];
@@ -385,7 +385,7 @@ function ai_tool_notes_delete(array $args): array {
     $relative = str_replace('/', DS, $path) . '.json';
 
     if(!delete_note($relative)) {
-        throw new RuntimeException('Не вдалося видалити нотатку');
+        throw new RuntimeException('Failed to delete note');
     }
 
     return ['deleted' => true, 'path' => $path];
@@ -458,7 +458,7 @@ function ai_chat(array $messages): array {
         $iteration++;
     }
 
-    $fallback = 'Вибачте, виконано максимальну кількість операцій. Спробуйте уточнити запит.';
+    $fallback = 'Sorry, the maximum number of operations has been reached. Please refine your request.';
     $working[] = ['role' => 'assistant', 'content' => $fallback];
     return ['reply' => $fallback, 'messages' => $working, 'error' => 'max_iterations', 'notes_changed' => $notes_changed];
 }
@@ -593,17 +593,17 @@ function ai_send_request(string $provider, array $body, string $api_key, string 
     curl_close($ch);
 
     if($curl_error) {
-        return ['_error' => 'Помилка з\'єднання: ' . $curl_error];
+        return ['_error' => 'Connection error: ' . $curl_error];
     }
 
     $data = json_decode($response, true);
     if($data === null) {
-        return ['_error' => 'Невалідна відповідь від AI'];
+        return ['_error' => 'Invalid response from AI'];
     }
 
     if($http_code !== 200) {
         $msg = $data['error']['message'] ?? ('HTTP ' . $http_code);
-        return ['_error' => 'AI API помилка: ' . $msg];
+        return ['_error' => 'AI API error: ' . $msg];
     }
 
     return $data;

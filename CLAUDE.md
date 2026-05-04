@@ -1,50 +1,68 @@
 # CLAUDE.md
 
-## Проєкт
+## Project
 
-Self-hosted нотатки на PHP 8+ / Twig 3 / Editor.js. Без фреймворків, без БД — JSON-файли як сховище.
+Self-hosted notes on PHP 8+ / Twig 3 / Editor.js. No framework and no database; JSON files are the storage layer.
 
-## Архітектура
+The product UI is English. Notes may contain any language. Ukrainian transliteration remains part of slug generation.
 
-- Точка входу: `index.php` → `core/init.php` → модулі → роутер
-- Процедурний PHP, функції в `snake_case`, константи `UPPER_CASE`
-- Шаблони Twig 3 (`views/*.twig`)
-- Vanilla JS, CSS з кастомними змінними
+## Architecture
 
-## Ключові файли
+- Entry point: `index.php` -> `core/init.php` -> includes -> router
+- Procedural PHP
+- Functions use `snake_case`
+- Constants use `UPPER_CASE`
+- Twig 3 templates live in `views/*.twig`
+- Vanilla JavaScript
+- CSS uses custom properties
 
+## Key Files
+
+```text
+core/includes/router.php   Routing and all internal routes
+core/includes/notes.php    Note CRUD, tree scanning, slug generation, uploads
+core/includes/auth.php     Sessions, login, remember-me tokens, .env parser
+core/includes/ai.php       AI module for Claude/OpenAI/Gemini tool calling
+core/includes/api.php      REST API v1
+core/includes/render.php   Twig rendering and shared context
+core/includes/markdown.php Markdown <-> Editor.js conversion
+core/includes/cache.php    Redis cache with graceful fallback
+views/index.twig           Dashboard tabs and page-level JS
+views/editor.twig          Note editor
+views/overall/base.twig    Base layout and sidebar shell
+assets/css/style.css       Styles
+assets/js/app.js           Editor and dashboard client logic
+assets/js/sidebar.js       Sidebar interactions
+assets/js/page-tool.js     Editor.js page-link tool
 ```
-core/includes/router.php   — маршрутизація, всі роути
-core/includes/notes.php    — CRUD нотаток, дерево, slug-генерація
-core/includes/auth.php     — сесії, remember-me токени
-core/includes/ai.php       — ШІ-модуль (Claude/OpenAI/Gemini), tool calling
-core/includes/api.php      — REST API v1
-core/includes/render.php   — Twig-рендеринг, контекст
-core/includes/markdown.php — MD ↔ Editor.js конвертація
-core/includes/cache.php    — Redis-кеш з fallback на диск
-views/index.twig           — дашборд (5 вкладок + JS логіка)
-views/editor.twig          — редактор нотаток
-views/overall/base.twig    — базовий layout, сайдбар
-assets/css/style.css       — всі стилі
-assets/js/app.js           — клієнтська логіка
-```
 
-## Конфігурація
+## Configuration
 
-- `.env` — кастомний парсер через `get_env()` (НЕ `getenv()` / `$_ENV`)
-- Константи: `ABSPATH`, `HOME_URL`, `NOTES_DIR` (`.notes`), `SITE_NAME`
-- Часовий пояс: `Europe/Kyiv`
+- `.env` is parsed by `get_env()` from `core/includes/auth.php`
+- Do not use `getenv()` or `$_ENV`
+- Important constants: `ABSPATH`, `HOME_URL`, `NOTES_DIR` (`.notes`), `SITE_NAME`
+- Timezone: `Europe/Kyiv`
 
-## Конвенції
+## Conventions
 
-- Нотатки зберігаються як `.notes/{slug}.json`, вкладені — `.notes/{parent}/{child}.json`
-- Slug — транслітерація з української через `ukr_to_lat()`
-- Кожен PHP-файл починається з `if(!defined('ABSPATH')){exit;}`
-- CSS: темна/світла тема через `prefers-color-scheme` + кастомні змінні `var(--bg)`, `var(--text)` тощо
-- JS: IIFE, без модулів/бандлерів, Editor.js з CDN
+- Root notes are stored as `.notes/{slug}.json`
+- Nested notes are stored as `.notes/{parent}/{child}.json`
+- Slugs use Ukrainian transliteration through `ukr_to_lat()`
+- Each PHP include starts with `if(!defined('ABSPATH')){exit;}`
+- Light/dark themes use custom properties such as `var(--bg)` and `var(--text)`
+- JavaScript is IIFE-style, without modules or a bundler
+- Editor.js and plugins are loaded from CDN
 
-## Команди
+## Commands
 
-- Веб-сервер: Apache/Nginx/Laravel Herd, точка входу `index.php`
-- Залежності: `composer install` (тільки Twig)
-- PHP-розширення: Imagick (конвертація зображень у WebP)
+- Install dependencies: `composer install`
+- Web server: Apache, Nginx, or Laravel Herd pointing to `index.php`
+- Required PHP extension for image conversion: Imagick
+
+## Notes For Agents
+
+- Avoid introducing a framework or database.
+- Preserve existing JSON note format: `meta` plus Editor.js `content`.
+- Clear note/tree cache after note mutations.
+- Keep public UI text in English.
+- Do not remove the Ukrainian transliteration table in `core/includes/notes.php`; it is part of slug compatibility.

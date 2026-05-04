@@ -129,10 +129,10 @@ function initEditor(config) {
         function updatePinBtn() {
             if (currentPinned) {
                 pinBtn.classList.add('active');
-                pinBtn.title = 'Відкріпити';
+                pinBtn.title = 'Unpin';
             } else {
                 pinBtn.classList.remove('active');
-                pinBtn.title = 'Закріпити';
+                pinBtn.title = 'Pin';
             }
         }
         updatePinBtn();
@@ -179,7 +179,7 @@ function initEditor(config) {
         input.addEventListener('change', function() {
             const file = input.files[0];
             if (!file) return;
-            window.showToast('Завантаження обкладинки...');
+            window.showToast('Uploading cover...');
             const formData = new FormData();
             formData.append('image', file);
             fetch(homeUrl + 'api/upload-image/', { method: 'POST', body: formData })
@@ -188,13 +188,13 @@ function initEditor(config) {
                     if (data.success && data.file && data.file.url) {
                         coverPosY = 50;
                         setCover(data.file.url);
-                        window.showToast('Обкладинку додано');
+                        window.showToast('Cover added');
                         scheduleSave();
                     } else {
-                        window.showToast('Помилка завантаження');
+                        window.showToast('Upload error');
                     }
                 })
-                .catch(function() { window.showToast('Помилка завантаження'); });
+                .catch(function() { window.showToast('Upload error'); });
         });
         input.click();
     }
@@ -275,14 +275,14 @@ function initEditor(config) {
     if (coverChangeBtn) coverChangeBtn.addEventListener('click', uploadCover);
     if (coverRemoveBtn) coverRemoveBtn.addEventListener('click', function() {
         setCover('');
-        window.showToast('Обкладинку видалено');
+        window.showToast('Cover removed');
         scheduleSave();
     });
 
     const statusTexts = {
-        saving: 'Збереження...',
-        saved: 'Збережено',
-        error: 'Помилка збереження',
+        saving: 'Saving...',
+        saved: 'Saved',
+        error: 'Save error',
     };
 
     function setStatus(text, type) {
@@ -293,7 +293,7 @@ function initEditor(config) {
     async function saveNote() {
         if (isSaving) return;
         isSaving = true;
-        setStatus('Зберігається...', 'saving');
+        setStatus('Saving...', 'saving');
 
         try {
             const outputData = await editor.save();
@@ -311,7 +311,7 @@ function initEditor(config) {
                 }
             });
 
-            const title = titleEl.textContent.trim() || 'Без назви';
+            const title = titleEl.textContent.trim() || 'Untitled';
             const folder = noteFolder || '';
 
             const response = await fetch(homeUrl + 'api/save/', {
@@ -350,7 +350,7 @@ function initEditor(config) {
                 }
 
                 // Update sidebar title and icon
-                const noteTitle = titleEl.textContent.trim() || 'Без назви';
+                const noteTitle = titleEl.textContent.trim() || 'Untitled';
                 const noteUrl = homeUrl + result.url + '/';
                 const sidebarLink = document.querySelector('.sidebar-note[href="' + noteUrl + '"], .sidebar-note-parent[href="' + noteUrl + '"]');
                 if (sidebarLink) {
@@ -380,13 +380,13 @@ function initEditor(config) {
                     crumbCurrent.textContent = noteTitle;
                 }
 
-                setStatus('Збережено', 'saved');
+                setStatus('Saved', 'saved');
                 setTimeout(() => setStatus(''), 2000);
             } else {
-                setStatus('Помилка збереження', 'error');
+                setStatus('Save error', 'error');
             }
         } catch (e) {
-            setStatus('Помилка збереження', 'error');
+            setStatus('Save error', 'error');
         }
 
         isSaving = false;
@@ -395,7 +395,7 @@ function initEditor(config) {
     // Debounced autosave
     function scheduleSave() {
         if (saveTimeout) clearTimeout(saveTimeout);
-        setStatus('Редагування...', '');
+        setStatus('Editing...', '');
         saveTimeout = setTimeout(saveNote, 1500);
     }
 
@@ -417,13 +417,13 @@ function initEditor(config) {
 
     const editor = window.noteEditor = new EditorJS({
         holder: 'editorjs',
-        placeholder: 'Почніть писати...',
+        placeholder: 'Start writing...',
         data: editorData,
         tools: {
             header: {
                 class: Header,
                 config: {
-                    placeholder: 'Заголовок',
+                    placeholder: 'Heading',
                     levels: [1, 2, 3, 4],
                     defaultLevel: 2
                 }
@@ -465,8 +465,8 @@ function initEditor(config) {
             quote: {
                 class: Quote,
                 config: {
-                    quotePlaceholder: 'Цитата',
-                    captionPlaceholder: 'Автор'
+                    quotePlaceholder: 'Quote',
+                    captionPlaceholder: 'Author'
                 }
             },
             linkTool: {
@@ -480,7 +480,7 @@ function initEditor(config) {
                 config: {
                     uploader: {
                         uploadByFile: function(file) {
-                            window.showToast('Завантаження зображення...');
+                            window.showToast('Uploading image...');
                             var formData = new FormData();
                             formData.append('image', file);
                             return fetch(homeUrl + 'api/upload-image/', {
@@ -489,14 +489,14 @@ function initEditor(config) {
                             })
                             .then(function(r) { return r.json(); })
                             .then(function(data) {
-                                if (data.success) window.showToast('Зображення додано');
-                                else window.showToast('Помилка завантаження');
+                                if (data.success) window.showToast('Image added');
+                                else window.showToast('Upload error');
                                 return data;
                             })
-                            .catch(function() { window.showToast('Помилка завантаження'); });
+                            .catch(function() { window.showToast('Upload error'); });
                         },
                         uploadByUrl: function(url) {
-                            window.showToast('Завантаження зображення...');
+                            window.showToast('Uploading image...');
                             return fetch(homeUrl + 'api/fetch-image/', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -504,15 +504,15 @@ function initEditor(config) {
                             })
                             .then(function(r) { return r.json(); })
                             .then(function(data) {
-                                if (data.success) window.showToast('Зображення додано');
-                                else window.showToast('Помилка завантаження');
+                                if (data.success) window.showToast('Image added');
+                                else window.showToast('Upload error');
                                 return data;
                             })
-                            .catch(function() { window.showToast('Помилка завантаження'); });
+                            .catch(function() { window.showToast('Upload error'); });
                         }
                     },
                     types: 'image/jpeg,image/png,image/gif,image/webp',
-                    buttonContent: 'Вибрати зображення',
+                    buttonContent: 'Choose image',
                     captionPlaceholder: ''
                 }
             },
@@ -543,7 +543,7 @@ function initEditor(config) {
                 inlineToolbar: true,
                 config: {
                     defaultType: 'info',
-                    messagePlaceholder: 'Введіть повідомлення'
+                    messagePlaceholder: 'Enter a message'
                 }
             },
             toggle: {
@@ -586,40 +586,40 @@ function initEditor(config) {
             messages: {
                 ui: {
                     blockTunes: {
-                        toggler: { 'Click to tune': 'Налаштування' }
+                        toggler: { 'Click to tune': 'Settings' }
                     },
                     inlineToolbar: {
-                        converter: { 'Convert to': 'Перетворити на' }
+                        converter: { 'Convert to': 'Convert to' }
                     },
                     toolbar: {
-                        toolbox: { 'Add': 'Додати' }
+                        toolbox: { 'Add': 'Add' }
                     }
                 },
                 toolNames: {
-                    'Text': 'Текст',
-                    'Heading': 'Заголовок',
-                    'List': 'Список',
-                    'Checklist': 'Чеклист',
-                    'Code': 'Код',
-                    'Quote': 'Цитата',
-                    'Delimiter': 'Розділювач',
-                    'Bold': 'Жирний',
-                    'Italic': 'Курсив',
-                    'InlineCode': 'Код',
-                    'Marker': 'Маркер',
-                    'Link': 'Посилання',
-                    'Link Tool': 'Посилання',
-                    'Сторінка': 'Сторінка',
-                    'Table': 'Таблиця',
-                    'Underline': 'Підкреслений',
-                    'Strikethrough': 'Закреслений',
-                    'Alert': 'Сповіщення',
-                    'Toggle': 'Розгортуваний блок'
+                    'Text': 'Text',
+                    'Heading': 'Heading',
+                    'List': 'List',
+                    'Checklist': 'Checklist',
+                    'Code': 'Code',
+                    'Quote': 'Quote',
+                    'Delimiter': 'Delimiter',
+                    'Bold': 'Bold',
+                    'Italic': 'Italic',
+                    'InlineCode': 'Code',
+                    'Marker': 'Marker',
+                    'Link': 'Link',
+                    'Link Tool': 'Link',
+                    'Page': 'Page',
+                    'Table': 'Table',
+                    'Underline': 'Underline',
+                    'Strikethrough': 'Strikethrough',
+                    'Alert': 'Alert',
+                    'Toggle': 'Toggle block'
                 },
                 blockTunes: {
-                    delete: { 'Delete': 'Видалити', 'Click to delete': 'Натисніть для видалення' },
-                    moveUp: { 'Move up': 'Вгору' },
-                    moveDown: { 'Move down': 'Вниз' }
+                    delete: { 'Delete': 'Delete', 'Click to delete': 'Click to delete' },
+                    moveUp: { 'Move up': 'Move up' },
+                    moveDown: { 'Move down': 'Move down' }
                 }
             }
         }
@@ -778,17 +778,17 @@ function initEditor(config) {
     // Icon picker
     if (iconBtnEl) {
         const emojiCategories = [
-            { name: 'Обличчя', emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','☹️','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'] },
-            { name: 'Жести', emojis: ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💪','🦾','🦿'] },
-            { name: 'Люди', emojis: ['👶','👧','🧒','👦','👩','🧑','👨','👩‍🦱','🧑‍🦱','👨‍🦱','👩‍🦰','🧑‍🦰','👨‍🦰','👱‍♀️','👱','👱‍♂️','👩‍🦳','🧑‍🦳','👨‍🦳','👩‍🦲','🧑‍🦲','👨‍🦲','🧔‍♀️','🧔','🧔‍♂️','👵','🧓','👴','👮','🕵️','💂','🥷','👷','🫅','🤴','👸','🧙','🧝','🧛','🧟','🧞','🧜','👼','🤰','🫃','🤱','🎅','🤶'] },
-            { name: 'Тварини', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🪼','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🪸','🐊','🐅','🐆','🦓','🫏','🦍','🦧','🐘','🦣','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🫎','🐕','🐩','🦮','🐈','🐈‍⬛','🪿','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
-            { name: 'Природа', emojis: ['🌵','🎄','🌲','🌳','🌴','🪹','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪻','🌾','🌺','🌻','🌹','🥀','🌷','🌼','💐','🍄','🌰','🐚','🪨','🌎','🌍','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌚','🌝','🌛','🌜','☀️','🌞','⭐','🌟','💫','✨','🌈','☁️','⛅','⛈️','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','⚡','🔥','💥','❄️','🌊','💧','💦','🫧'] },
-            { name: 'Їжа', emojis: ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🫛','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🫚','🥔','🍠','🫘','🥐','🥖','🍞','🥨','🥯','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🫘','🍯','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🫗','🥃','🍸','🍹','🧉','🍾','🧊'] },
-            { name: 'Спорт', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤼','🤽','🤾','🤺','🏄','🏊','🚣','🧘','🏇','🚴','🚵','🎖️','🏅','🥇','🥈','🥉','🏆'] },
-            { name: 'Подорожі', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🚏','🛣️','🛤️','🛞','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🏕️','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🎠','🎡','🎢','🗻','🏔️','🌋','🗾','🏖️','🏜️','🏝️','🧭','🗺️','🌐','🌍','🌎','🌏'] },
-            { name: 'Обʼєкти', emojis: ['📱','💻','🖥️','🖨️','⌨️','🖱️','🖲️','💾','💿','📀','📼','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🪫','🔌','💡','🔦','🕯️','🧯','🛢️','🪙','💵','💴','💶','💷','💰','💳','💎','⚖️','🪜','🧰','🪛','🔧','🔨','⚒️','🛠️','⛏️','🪚','🔩','⚙️','🪤','🧱','⛓️','🧲','🔫','💣','🪓','🔪','🗡️','⚔️','🛡️','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿','🪬','💈','⚗️','🔭','🔬','🕳️','🩹','🩺','🩻','🩼','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡️','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒','🪮','🧽','🪣','🧴','🛎️','🔑','🗝️','🚪','🪑','🛋️','🛏️','🛌','🧸','🪆','🖼️','🪞','🪟','🛍️','🛒','🎁','🎈','🎏','🎀','🪄','🪅','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷️','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','🗒️','🗓️','📆','📅','🗑️','📇','🗃️','🗳️','🗄️','📋','📁','📂','🗂️','🗞️','📰','📓','📔','📒','📕','📗','📘','📙','📚','📖','🔖','🧷','🔗','📎','🖇️','📐','📏','🧮','📌','📍','✂️','🖊️','🖋️','✒️','🖌️','🖍️','📝','✏️','🔍','🔎','🔏','🔐','🔒','🔓'] },
-            { name: 'Символи', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧️','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','🟰','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯️','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'] },
-            { name: 'Прапори', emojis: ['🏳️','🏴','🏁','🚩','🏳️‍🌈','🏳️‍⚧️','🇺🇦','🇺🇸','🇬🇧','🇩🇪','🇫🇷','🇪🇸','🇮🇹','🇵🇱','🇯🇵','🇰🇷','🇨🇳','🇧🇷','🇨🇦','🇦🇺','🇮🇳','🇹🇷','🇳🇱','🇸🇪','🇳🇴','🇩🇰','🇫🇮','🇨🇿','🇦🇹','🇨🇭','🇧🇪','🇵🇹','🇬🇷','🇷🇴','🇭🇺','🇭🇷','🇸🇰','🇧🇬','🇱🇹','🇱🇻','🇪🇪','🇬🇪','🇲🇩','🇦🇿','🇦🇲','🇰🇿','🇺🇿','🇮🇱','🇦🇪','🇸🇦','🇪🇬','🇿🇦','🇳🇬','🇰🇪','🇲🇽','🇦🇷','🇨🇱','🇨🇴','🇵🇪','🇻🇪','🇹🇭','🇻🇳','🇮🇩','🇲🇾','🇵🇭','🇸🇬','🇳🇿'] }
+            { name: 'Faces', emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','☹️','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'] },
+            { name: 'Gestures', emojis: ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💪','🦾','🦿'] },
+            { name: 'People', emojis: ['👶','👧','🧒','👦','👩','🧑','👨','👩‍🦱','🧑‍🦱','👨‍🦱','👩‍🦰','🧑‍🦰','👨‍🦰','👱‍♀️','👱','👱‍♂️','👩‍🦳','🧑‍🦳','👨‍🦳','👩‍🦲','🧑‍🦲','👨‍🦲','🧔‍♀️','🧔','🧔‍♂️','👵','🧓','👴','👮','🕵️','💂','🥷','👷','🫅','🤴','👸','🧙','🧝','🧛','🧟','🧞','🧜','👼','🤰','🫃','🤱','🎅','🤶'] },
+            { name: 'Animals', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🪼','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🪸','🐊','🐅','🐆','🦓','🫏','🦍','🦧','🐘','🦣','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🫎','🐕','🐩','🦮','🐈','🐈‍⬛','🪿','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
+            { name: 'Nature', emojis: ['🌵','🎄','🌲','🌳','🌴','🪹','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪻','🌾','🌺','🌻','🌹','🥀','🌷','🌼','💐','🍄','🌰','🐚','🪨','🌎','🌍','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌚','🌝','🌛','🌜','☀️','🌞','⭐','🌟','💫','✨','🌈','☁️','⛅','⛈️','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','⚡','🔥','💥','❄️','🌊','💧','💦','🫧'] },
+            { name: 'Food', emojis: ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🫛','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🫚','🥔','🍠','🫘','🥐','🥖','🍞','🥨','🥯','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🫘','🍯','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🫗','🥃','🍸','🍹','🧉','🍾','🧊'] },
+            { name: 'Sports', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤼','🤽','🤾','🤺','🏄','🏊','🚣','🧘','🏇','🚴','🚵','🎖️','🏅','🥇','🥈','🥉','🏆'] },
+            { name: 'Travel', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🚏','🛣️','🛤️','🛞','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🏕️','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🎠','🎡','🎢','🗻','🏔️','🌋','🗾','🏖️','🏜️','🏝️','🧭','🗺️','🌐','🌍','🌎','🌏'] },
+            { name: 'Objects', emojis: ['📱','💻','🖥️','🖨️','⌨️','🖱️','🖲️','💾','💿','📀','📼','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🪫','🔌','💡','🔦','🕯️','🧯','🛢️','🪙','💵','💴','💶','💷','💰','💳','💎','⚖️','🪜','🧰','🪛','🔧','🔨','⚒️','🛠️','⛏️','🪚','🔩','⚙️','🪤','🧱','⛓️','🧲','🔫','💣','🪓','🔪','🗡️','⚔️','🛡️','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿','🪬','💈','⚗️','🔭','🔬','🕳️','🩹','🩺','🩻','🩼','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡️','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒','🪮','🧽','🪣','🧴','🛎️','🔑','🗝️','🚪','🪑','🛋️','🛏️','🛌','🧸','🪆','🖼️','🪞','🪟','🛍️','🛒','🎁','🎈','🎏','🎀','🪄','🪅','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷️','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','🗒️','🗓️','📆','📅','🗑️','📇','🗃️','🗳️','🗄️','📋','📁','📂','🗂️','🗞️','📰','📓','📔','📒','📕','📗','📘','📙','📚','📖','🔖','🧷','🔗','📎','🖇️','📐','📏','🧮','📌','📍','✂️','🖊️','🖋️','✒️','🖌️','🖍️','📝','✏️','🔍','🔎','🔏','🔐','🔒','🔓'] },
+            { name: 'Symbols', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧️','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','🟰','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯️','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'] },
+            { name: 'Flags', emojis: ['🏳️','🏴','🏁','🚩','🏳️‍🌈','🏳️‍⚧️','🇺🇦','🇺🇸','🇬🇧','🇩🇪','🇫🇷','🇪🇸','🇮🇹','🇵🇱','🇯🇵','🇰🇷','🇨🇳','🇧🇷','🇨🇦','🇦🇺','🇮🇳','🇹🇷','🇳🇱','🇸🇪','🇳🇴','🇩🇰','🇫🇮','🇨🇿','🇦🇹','🇨🇭','🇧🇪','🇵🇹','🇬🇷','🇷🇴','🇭🇺','🇭🇷','🇸🇰','🇧🇬','🇱🇹','🇱🇻','🇪🇪','🇬🇪','🇲🇩','🇦🇿','🇦🇲','🇰🇿','🇺🇿','🇮🇱','🇦🇪','🇸🇦','🇪🇬','🇿🇦','🇳🇬','🇰🇪','🇲🇽','🇦🇷','🇨🇱','🇨🇴','🇵🇪','🇻🇪','🇹🇭','🇻🇳','🇮🇩','🇲🇾','🇵🇭','🇸🇬','🇳🇿'] }
         ];
 
         let pickerEl = null;
@@ -804,7 +804,7 @@ function initEditor(config) {
             const emojiTab = document.createElement('button');
             emojiTab.type = 'button';
             emojiTab.className = 'note-icon-picker-tab active';
-            emojiTab.textContent = 'Емоджі';
+            emojiTab.textContent = 'Emoji';
 
             const svgTab = document.createElement('button');
             svgTab.type = 'button';
@@ -823,7 +823,7 @@ function initEditor(config) {
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.className = 'note-icon-search';
-            searchInput.placeholder = 'Пошук...';
+            searchInput.placeholder = 'Search...';
             emojiPanel.appendChild(searchInput);
 
             const emojiContent = document.createElement('div');
@@ -864,13 +864,13 @@ function initEditor(config) {
                 if (!results.length) {
                     const empty = document.createElement('div');
                     empty.className = 'note-icon-emoji-category';
-                    empty.textContent = 'Нічого не знайдено';
+                    empty.textContent = 'No results found';
                     emojiContent.appendChild(empty);
                     return;
                 }
                 const label = document.createElement('div');
                 label.className = 'note-icon-emoji-category';
-                label.textContent = 'Результати пошуку';
+                label.textContent = 'Search results';
                 emojiContent.appendChild(label);
 
                 const grid = document.createElement('div');
@@ -904,7 +904,7 @@ function initEditor(config) {
 
             const uploadLabel = document.createElement('label');
             uploadLabel.className = 'note-icon-svg-upload';
-            uploadLabel.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Завантажити SVG</span>';
+            uploadLabel.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Upload SVG</span>';
 
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -930,10 +930,10 @@ function initEditor(config) {
                             closePicker();
                             scheduleSave();
                         } else {
-                            alert(data.error || 'Невалідний SVG файл');
+                            alert(data.error || 'Invalid SVG file');
                         }
                     })
-                    .catch(() => alert('Помилка обробки SVG'));
+                    .catch(() => alert('SVG processing error'));
                 };
                 reader.readAsText(file);
             });
@@ -960,7 +960,7 @@ function initEditor(config) {
                 const resetBtn = document.createElement('button');
                 resetBtn.type = 'button';
                 resetBtn.className = 'note-icon-reset';
-                resetBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Видалити іконку';
+                resetBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Remove icon';
                 resetBtn.addEventListener('click', () => {
                     currentIcon = '';
                     updateIconButton();
@@ -1001,39 +1001,39 @@ function initEditor(config) {
     var colorAddBtn = document.getElementById('color-add');
     if (colorAddBtn) {
         var colorPalette = [
-            // Пастельні (світлі)
-            { name: 'Червоний', hex: '#FDECEC' },
-            { name: 'Помаранчевий', hex: '#FEF0E0' },
-            { name: 'Жовтий', hex: '#FEF9E0' },
-            { name: 'Зелений', hex: '#E7F5E6' },
-            { name: 'М\'ятний', hex: '#E0F5F0' },
-            { name: 'Блакитний', hex: '#E0F0FE' },
-            { name: 'Синій', hex: '#E4E8FD' },
-            { name: 'Фіолетовий', hex: '#F0E6FA' },
-            { name: 'Рожевий', hex: '#FDE6F2' },
-            { name: 'Бежевий', hex: '#F0EAE0' },
-            // Насичені (середні)
-            { name: 'Корал', hex: '#F4A7A3' },
-            { name: 'Апельсин', hex: '#F5C27A' },
-            { name: 'Сонце', hex: '#F5E27A' },
-            { name: 'Трава', hex: '#8FD4A4' },
-            { name: 'Бірюза', hex: '#7AC8C4' },
-            { name: 'Небо', hex: '#7AB8E0' },
-            { name: 'Індиго', hex: '#9BA3E0' },
-            { name: 'Лаванда', hex: '#C4A3E0' },
-            { name: 'Фуксія', hex: '#E0A3C4' },
-            { name: 'Пісок', hex: '#D4C4A8' },
-            // Темні
-            { name: 'Темно-червоний', hex: '#3D2020' },
-            { name: 'Темно-помаранчевий', hex: '#3D3020' },
-            { name: 'Темно-жовтий', hex: '#3D3A20' },
-            { name: 'Темно-зелений', hex: '#203D28' },
-            { name: 'Темно-бірюзовий', hex: '#203D3A' },
-            { name: 'Темно-синій', hex: '#20283D' },
-            { name: 'Темно-індиго', hex: '#282040' },
-            { name: 'Темно-фіолетовий', hex: '#30203D' },
-            { name: 'Темно-рожевий', hex: '#3D2030' },
-            { name: 'Графіт', hex: '#2A2A2A' },
+            // Pastels (light)
+            { name: 'Red', hex: '#FDECEC' },
+            { name: 'Orange', hex: '#FEF0E0' },
+            { name: 'Yellow', hex: '#FEF9E0' },
+            { name: 'Green', hex: '#E7F5E6' },
+            { name: 'Mint', hex: '#E0F5F0' },
+            { name: 'Light blue', hex: '#E0F0FE' },
+            { name: 'Blue', hex: '#E4E8FD' },
+            { name: 'Purple', hex: '#F0E6FA' },
+            { name: 'Pink', hex: '#FDE6F2' },
+            { name: 'Beige', hex: '#F0EAE0' },
+            // Saturated (medium)
+            { name: 'Coral', hex: '#F4A7A3' },
+            { name: 'Tangerine', hex: '#F5C27A' },
+            { name: 'Sun', hex: '#F5E27A' },
+            { name: 'Grass', hex: '#8FD4A4' },
+            { name: 'Turquoise', hex: '#7AC8C4' },
+            { name: 'Sky', hex: '#7AB8E0' },
+            { name: 'Indigo', hex: '#9BA3E0' },
+            { name: 'Lavender', hex: '#C4A3E0' },
+            { name: 'Fuchsia', hex: '#E0A3C4' },
+            { name: 'Sand', hex: '#D4C4A8' },
+            // Dark
+            { name: 'Dark red', hex: '#3D2020' },
+            { name: 'Dark orange', hex: '#3D3020' },
+            { name: 'Dark yellow', hex: '#3D3A20' },
+            { name: 'Dark green', hex: '#203D28' },
+            { name: 'Dark turquoise', hex: '#203D3A' },
+            { name: 'Dark blue', hex: '#20283D' },
+            { name: 'Dark indigo', hex: '#282040' },
+            { name: 'Dark purple', hex: '#30203D' },
+            { name: 'Dark pink', hex: '#3D2030' },
+            { name: 'Graphite', hex: '#2A2A2A' },
         ];
 
         var colorPickerEl = null;
@@ -1044,7 +1044,7 @@ function initEditor(config) {
 
             var label = document.createElement('div');
             label.className = 'note-color-picker-label';
-            label.textContent = 'Фон нотатки';
+            label.textContent = 'Note background';
             picker.appendChild(label);
 
             var grid = document.createElement('div');
@@ -1072,7 +1072,7 @@ function initEditor(config) {
             var customSwatch = document.createElement('button');
             customSwatch.type = 'button';
             customSwatch.className = 'note-color-swatch note-color-custom';
-            customSwatch.title = 'Свій колір';
+            customSwatch.title = 'Custom color';
             customSwatch.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
             var isCustom = currentColor && !colorPalette.some(function(c) { return c.hex === currentColor; });
             if (isCustom) {
@@ -1108,7 +1108,7 @@ function initEditor(config) {
                 var resetBtn = document.createElement('button');
                 resetBtn.type = 'button';
                 resetBtn.className = 'note-color-reset';
-                resetBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Скинути колір';
+                resetBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reset color';
                 resetBtn.addEventListener('click', function() {
                     currentColor = '';
                     applyNoteColor('');
@@ -1169,7 +1169,7 @@ function initEditor(config) {
 
             var label = document.createElement('div');
             label.className = 'note-children-popup-label';
-            label.textContent = 'Дочірні нотатки';
+            label.textContent = 'Child notes';
             popup.appendChild(label);
 
             var linkedPaths = getLinkedPagePaths();
@@ -1229,7 +1229,7 @@ function initEditor(config) {
                 statusEl.className = 'note-children-item-status';
                 if (isLinked) {
                     statusEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-                    statusEl.title = 'Додано';
+                    statusEl.title = 'Added';
                 }
 
                 item.appendChild(iconEl);
@@ -1254,7 +1254,7 @@ function initEditor(config) {
                 var statusEl = document.createElement('span');
                 statusEl.className = 'note-children-item-status';
                 statusEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e55" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-                statusEl.title = 'Видалено';
+                statusEl.title = 'Deleted';
 
                 item.appendChild(iconEl);
                 item.appendChild(titleSpan);
@@ -1269,7 +1269,7 @@ function initEditor(config) {
                 var syncBtn = document.createElement('button');
                 syncBtn.type = 'button';
                 syncBtn.className = 'note-children-add-btn';
-                syncBtn.textContent = 'Синхронізувати';
+                syncBtn.textContent = 'Sync';
                 syncBtn.addEventListener('click', async function() {
                     var changed = false;
 
@@ -1392,7 +1392,7 @@ function initEditor(config) {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.className = 'lang-search';
-                    input.placeholder = 'Пошук...';
+                    input.placeholder = 'Search...';
                     dropdown.prepend(input);
                     setTimeout(() => input.focus(), 0);
 

@@ -214,7 +214,7 @@ function get_note_title($note_data): string {
         }
     }
 
-    return 'Без назви';
+    return 'Untitled';
 }
 
 function get_breadcrumbs($relative_path): array {
@@ -880,7 +880,7 @@ function render_blocks_to_html($blocks): string {
                 break;
 
             case 'page':
-                $page_title = htmlspecialchars($data['title'] ?? 'Сторінка', ENT_QUOTES, 'UTF-8');
+                $page_title = htmlspecialchars($data['title'] ?? 'Page', ENT_QUOTES, 'UTF-8');
                 $page_url = $data['pageUrl'] ?? '';
                 $page_icon = $data['icon'] ?? '';
                 if($page_url) {
