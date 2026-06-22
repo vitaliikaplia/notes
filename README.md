@@ -31,6 +31,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Images are resized so the shorter side is at most 1024px
 - SVG images are stored as-is after validation/minification when used as icons
 - Image files are cleaned up when removed from notes or covers
+- Image references are stored as host-relative URLs (`/file/...`), so notes stay portable across hosts (local, production, backups) and never break when moved
 - YouTube and Vimeo embeds are detected from standalone URLs
 
 ### Navigation
@@ -67,6 +68,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Optional Cloudflare Turnstile CAPTCHA
 - Uploaded files are served through `/file/` and are only available to authenticated users or when referenced from a public/unlisted note
 - REST API v1 uses bearer-token authentication
+- Configuration and secrets live in `config.php`, which is served as PHP and never exposed as plaintext (unlike a web-served `.env`)
 
 ## AI Assistant
 
@@ -91,7 +93,7 @@ The tool loop supports up to 5 tool iterations per request. The assistant is ins
 
 ## Stack
 
-- Backend: PHP 8.3 platform target
+- Backend: PHP 8.5 (Composer platform pinned to 8.5)
 - Templates: Twig 3
 - Editor: Editor.js from CDN with plugins
 - Storage: JSON files in `.notes`
@@ -108,7 +110,7 @@ assets/css/     Styles
 assets/js/      Client-side behavior
 uploads/        Uploaded images organized by year/month
 .notes/         JSON note storage
-.env            Local configuration
+config.php      Local configuration (gitignored)
 ```
 
 Important files:
@@ -137,7 +139,7 @@ assets/css/style.css         Styles
 
 Requirements:
 
-- PHP 8+
+- PHP 8.5
 - Composer
 - Twig dependency from Composer
 - Imagick PHP extension for image conversion
@@ -149,30 +151,40 @@ Install dependencies:
 composer install
 ```
 
-Example `.env`:
+Copy the example config and fill it in:
 
-```env
-AUTH_USER=admin
-AUTH_PASS=yourpassword
-
-# Cloudflare Turnstile, leave empty to disable
-CAPTCHA_SITE_KEY=
-CAPTCHA_SECRET_KEY=
-
-# REST API, leave empty to disable API access
-API_TOKEN=your-secret-token
-
-# AI assistant: claude / openai / gemini
-AI_PROVIDER=openai
-AI_API_KEY=sk-proj-...
-AI_MODEL=
-AI_HISTORY_LIMIT=20
-
-# Optional Redis Unix socket
-REDIS_SOCKET=
+```bash
+cp config.example.php config.php
 ```
 
-The app reads configuration through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
+Example `config.php`:
+
+```php
+<?php
+
+return [
+    'AUTH_USER' => 'admin',
+    'AUTH_PASS' => 'yourpassword',
+
+    // Cloudflare Turnstile, leave empty to disable
+    'CAPTCHA_SITE_KEY'   => '',
+    'CAPTCHA_SECRET_KEY' => '',
+
+    // REST API, leave empty to disable API access
+    'API_TOKEN' => 'your-secret-token',
+
+    // AI assistant: claude / openai / gemini
+    'AI_PROVIDER'      => 'openai',
+    'AI_API_KEY'       => 'sk-proj-...',
+    'AI_MODEL'         => '',
+    'AI_HISTORY_LIMIT' => '20',
+
+    // Optional Redis Unix socket
+    'REDIS_SOCKET' => '',
+];
+```
+
+`config.php` is gitignored and is served as PHP (a direct request executes it to nothing), so it never leaks as plaintext the way a web-served `.env` would. The app reads configuration through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
 
 ## REST API
 

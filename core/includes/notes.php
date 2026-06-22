@@ -6,6 +6,30 @@ function get_notes_path(): string {
     return ABSPATH . DS . NOTES_DIR;
 }
 
+/**
+ * Reduce an upload URL to its path under the uploads dir (e.g. "2026/03/x.webp"),
+ * regardless of host or whether it points at /file/ or the legacy /uploads/.
+ * Returns null for external or non-upload URLs.
+ */
+function upload_url_to_relative_path(string $url): ?string {
+    if($url === '') return null;
+    // strip optional scheme + host so any copy's hostname is ignored
+    $path = preg_replace('#^https?://[^/]+#i', '', $url);
+    if(preg_match('#^/(?:file|uploads)/(.+)$#', $path, $m)) {
+        return $m[1];
+    }
+    return null;
+}
+
+/**
+ * Normalize an upload URL to a host-relative /file/ URL so notes stay portable
+ * across hosts (local, prod, future copies). External URLs are returned unchanged.
+ */
+function normalize_upload_url(string $url): string {
+    $rel = upload_url_to_relative_path($url);
+    return $rel !== null ? '/file/' . $rel : $url;
+}
+
 function ukr_to_lat($str) {
     $map = [
         'а' => 'a',  'б' => 'b',  'в' => 'v',  'г' => 'h',  'ґ' => 'g',
@@ -178,13 +202,24 @@ function get_note($relative_path): ?array {
         $need_save = true;
     }
 
-    // Migrate legacy /uploads/ URLs to /file/
+    // Normalize image URLs to host-relative /file/ paths so notes stay portable
+    // across hosts. Covers legacy /uploads/ URLs and any absolute host baked in by
+    // another copy (e.g. notes moved from production into a local instance).
+    if(!empty($data['meta']['cover'])) {
+        $normalized = normalize_upload_url($data['meta']['cover']);
+        if($normalized !== $data['meta']['cover']) {
+            $data['meta']['cover'] = $normalized;
+            $need_save = true;
+        }
+    }
     if(!empty($data['content']['blocks'])) {
-        $uploads_prefix = HOME_URL . 'uploads/';
         foreach($data['content']['blocks'] as &$block) {
-            if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url']) && str_starts_with($block['data']['file']['url'], $uploads_prefix)) {
-                $block['data']['file']['url'] = HOME_URL . 'file/' . substr($block['data']['file']['url'], strlen($uploads_prefix));
-                $need_save = true;
+            if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url'])) {
+                $normalized = normalize_upload_url($block['data']['file']['url']);
+                if($normalized !== $block['data']['file']['url']) {
+                    $block['data']['file']['url'] = $normalized;
+                    $need_save = true;
+                }
             }
         }
         unset($block);
@@ -550,7 +585,7 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
     if($mime === 'image/svg+xml') {
         $filepath = $target_dir . DS . $filename . '.svg';
         copy($source_path, $filepath);
-        return HOME_URL . 'file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.svg';
+        return '/file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.svg';
     }
 
     // Raster images — convert to WebP via Imagick
@@ -590,7 +625,7 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
         return null;
     }
 
-    return HOME_URL . 'file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
+    return '/file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
 }
 
 function minify_svg(string $svg): ?string {
@@ -670,17 +705,8 @@ function collect_media_from_notes(array $notes): array {
 }
 
 function delete_upload_by_url(string $url): bool {
-    $file_prefix = HOME_URL . 'file/';
-    $uploads_prefix = HOME_URL . 'uploads/';
-
-    if(str_starts_with($url, $file_prefix)) {
-        $relative = substr($url, strlen($file_prefix));
-    } elseif(str_starts_with($url, $uploads_prefix)) {
-        $relative = substr($url, strlen($uploads_prefix));
-    } else {
-        return false;
-    }
-    if(str_contains($relative, '..')) {
+    $relative = upload_url_to_relative_path($url);
+    if($relative === null || str_contains($relative, '..')) {
         return false;
     }
 

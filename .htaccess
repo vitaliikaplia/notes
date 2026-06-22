@@ -1,5 +1,14 @@
 RewriteEngine On
 RewriteBase /
+
+# --- Security: deny hidden files/dirs and sensitive files ---
+# Covers .env, .git, .notes, .twig-cache, .remember_tokens; keeps ACME .well-known reachable.
+# NOTE: this only works on Apache. On nginx (e.g. Laravel Herd) .htaccess is ignored —
+# there the docroot MUST be moved to a public/ dir or dotfiles denied in the nginx config.
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+RewriteRule ^(config\.php|composer\.(json|lock)|debug\.log)$ - [F,L]
+
+# --- App routing ---
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]

@@ -468,7 +468,12 @@ function router($url_segments = []): array {
                 if($new_cover) {
                     $new_image_urls[] = $new_cover;
                 }
-                $orphaned = array_diff($old_image_urls, $new_image_urls);
+                // Normalize both sides (host-relative) so an absolute old URL is not
+                // treated as orphaned when the same image is now stored relative.
+                $orphaned = array_diff(
+                    array_map('normalize_upload_url', $old_image_urls),
+                    array_map('normalize_upload_url', $new_image_urls)
+                );
                 foreach($orphaned as $url) {
                     delete_upload_by_url($url);
                 }
