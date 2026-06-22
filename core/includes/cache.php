@@ -70,6 +70,62 @@ function cache_flush(): bool {
     return true;
 }
 
+// --- Assets version + cache reset ---
+
+/**
+ * Increment the assets version (e.g. 1.00 -> 1.01). Static JS/CSS are tagged with
+ * this value (?v=...), so bumping it busts browser caches for everyone.
+ */
+function bump_assets_version(): string {
+    $current = str_replace(',', '.', (string)(get_option('assets_version', '1')));
+    $cents = is_numeric($current) ? (int)round(((float)$current) * 100) : 100;
+    $next = number_format(($cents + 1) / 100, 2, '.', '');
+    set_option('assets_version', $next);
+    return $next;
+}
+
+/** Clear server-side caches: Redis (notes_* keys), the Twig disk cache, and OPcache. */
+function clear_app_cache(): array {
+    $result = ['redis' => false, 'redis_keys' => 0, 'twig_disk' => 0, 'opcache' => false];
+
+    $r = get_redis();
+    if($r) {
+        $keys = $r->keys(CACHE_PREFIX . '*');
+        $result['redis_keys'] = is_array($keys) ? count($keys) : 0;
+        if(!empty($keys)) {
+            $r->del($keys);
+        }
+        $result['redis'] = true;
+    }
+
+    $twig_dir = ABSPATH . DS . '.twig-cache';
+    if(is_dir($twig_dir)) {
+        $result['twig_disk'] = cache_clear_directory($twig_dir);
+    }
+
+    if(function_exists('opcache_reset')) {
+        $result['opcache'] = (bool)@opcache_reset();
+    }
+
+    return $result;
+}
+
+/** Recursively delete the contents of a directory; returns the number of files removed. */
+function cache_clear_directory(string $dir): int {
+    $deleted = 0;
+    foreach(scandir($dir) as $item) {
+        if($item === '.' || $item === '..') continue;
+        $path = $dir . DS . $item;
+        if(is_dir($path)) {
+            $deleted += cache_clear_directory($path);
+            @rmdir($path);
+        } elseif(@unlink($path)) {
+            $deleted++;
+        }
+    }
+    return $deleted;
+}
+
 // --- Twig Redis Cache ---
 
 class RedisTwigCache implements \Twig\Cache\CacheInterface

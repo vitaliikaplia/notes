@@ -1093,6 +1093,12 @@ function router($url_segments = []): array {
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'clear-cache' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $version = bump_assets_version();
+            $result = clear_app_cache();
+            echo json_encode(['success' => true, 'assets_version' => $version, 'result' => $result]);
+            exit;
+
         } elseif($action === 'options' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode([
                 'REDIS_SOCKET'       => get_option('REDIS_SOCKET', ''),

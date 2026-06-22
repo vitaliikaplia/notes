@@ -4492,11 +4492,48 @@ body.popup-open {
     }
 }
 
-/* Sidebar footer right-hand group (settings + logout) */
+/* Sidebar footer right-hand group (clear-cache + settings + logout) */
 .sidebar-footer-actions {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+/* Minimal clear-cache button (icon + assets version, no background) */
+.cache-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 4px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font: inherit;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: opacity 0.15s, color 0.15s;
+}
+
+.cache-button:hover {
+    opacity: 1;
+    color: var(--text);
+}
+
+.cache-button:disabled {
+    cursor: default;
+}
+
+.cache-button-icon {
+    display: block;
+    flex-shrink: 0;
+    transition: transform 0.5s ease;
+}
+
+.cache-button-version {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
 }
 
 /* Options popup */

@@ -45,6 +45,7 @@ function get_context(): array {
     // notes tree for sidebar
     if(auth_check()) {
         $context['notes_tree'] = scan_notes();
+        $context['assets_version'] = get_option('assets_version', '1');
     }
 
     $context['page'] = [
@@ -75,10 +76,9 @@ function get_twig(): \Twig\Environment {
     $twig->addFunction(new \Twig\TwigFunction('date_format_uk', 'date_format_uk'));
     $twig->addFunction(new \Twig\TwigFunction('contrast_color', 'contrast_color'));
 
-    // asset versioning (cache bust)
-    $twig->addFunction(new \Twig\TwigFunction('asset_ver', function(string $path): string {
-        $file = ABSPATH . DS . 'assets' . DS . str_replace('/', DS, $path);
-        return file_exists($file) ? '?v=' . filemtime($file) : '';
+    // asset versioning (cache bust) — uses the assets_version option, bumped by the clear-cache button
+    $twig->addFunction(new \Twig\TwigFunction('asset_ver', function(string $path = ''): string {
+        return '?v=' . get_option('assets_version', '1');
     }));
 
     // filters
