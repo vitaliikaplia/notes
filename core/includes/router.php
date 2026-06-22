@@ -1093,6 +1093,67 @@ function router($url_segments = []): array {
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'options' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            echo json_encode([
+                'REDIS_SOCKET'       => get_option('REDIS_SOCKET', ''),
+                'API_TOKEN'          => get_option('API_TOKEN', ''),
+                'CAPTCHA_SITE_KEY'   => get_option('CAPTCHA_SITE_KEY', ''),
+                'CAPTCHA_SECRET_KEY' => get_option('CAPTCHA_SECRET_KEY', ''),
+                'AI_PROVIDER'        => get_option('AI_PROVIDER', ''),
+                'AI_API_KEY'         => get_option('AI_API_KEY', ''),
+                'AI_MODEL'           => get_option('AI_MODEL', ''),
+                'AI_HISTORY_LIMIT'   => get_option('AI_HISTORY_LIMIT', '20'),
+                'login'              => get_option('AUTH_USER', ''),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'save-options' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+
+            // Password change — only when a new password is supplied
+            $new_password = (string)($input['new_password'] ?? '');
+            if($new_password !== '') {
+                $current = (string)($input['current_password'] ?? '');
+                $confirm = (string)($input['confirm_password'] ?? '');
+
+                if(!auth_verify_password($current, get_option('AUTH_PASS', ''))) {
+                    echo json_encode(['success' => false, 'error' => 'Current password is incorrect']);
+                    exit;
+                }
+                if($new_password !== $confirm) {
+                    echo json_encode(['success' => false, 'error' => 'New passwords do not match']);
+                    exit;
+                }
+                auth_set_password($new_password);
+            }
+
+            // Admin login
+            if(isset($input['login'])) {
+                $login = trim((string)$input['login']);
+                if($login !== '') {
+                    set_option('AUTH_USER', $login);
+                }
+            }
+
+            // AI provider (validated enum)
+            if(isset($input['AI_PROVIDER'])) {
+                $provider = (string)$input['AI_PROVIDER'];
+                if(in_array($provider, ['', 'claude', 'openai', 'gemini'], true)) {
+                    set_option('AI_PROVIDER', $provider);
+                }
+            }
+
+            // Plain settings (whitelisted)
+            $allowed = ['REDIS_SOCKET', 'API_TOKEN', 'CAPTCHA_SITE_KEY', 'CAPTCHA_SECRET_KEY', 'AI_API_KEY', 'AI_MODEL', 'AI_HISTORY_LIMIT'];
+            foreach($allowed as $key) {
+                if(array_key_exists($key, $input)) {
+                    set_option($key, (string)$input[$key]);
+                }
+            }
+
+            echo json_encode(['success' => true, 'ai_configured' => ai_is_configured()]);
+            exit;
+
         } else {
             echo json_encode(['error' => 'Unknown action']);
             exit;

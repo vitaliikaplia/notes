@@ -132,7 +132,13 @@ a:hover {
     justify-content: space-between;
 }
 
-.sidebar-collapse-all {
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-header-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -144,10 +150,10 @@ a:hover {
     color: var(--text-secondary);
     cursor: pointer;
     opacity: 0.5;
-    transition: opacity 0.15s, transform 0.15s;
+    transition: opacity 0.15s, transform 0.15s, color 0.15s;
 }
 
-.sidebar-collapse-all:hover {
+.sidebar-header-btn:hover {
     opacity: 1;
     color: var(--text);
 }
@@ -572,12 +578,6 @@ a:hover {
 
 :root[data-theme="dark"] .sidebar-footer {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0), var(--bg-secondary) 18%);
-}
-
-.sidebar-footer-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .sidebar-add-note {
@@ -4490,4 +4490,100 @@ body.popup-open {
         box-shadow: none;
         background: var(--bg);
     }
+}
+
+/* Sidebar footer right-hand group (settings + logout) */
+.sidebar-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Options popup */
+.options-tabs {
+    margin: 0 0 18px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.options-panel {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.options-panel.active {
+    display: flex;
+}
+
+.options-ai-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.options-ai-fields.is-hidden {
+    display: none;
+}
+
+.options-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+}
+
+.options-field > span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.options-field input,
+.options-field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.options-field input:focus,
+.options-field select:focus {
+    border-color: var(--primary);
+}
+
+.options-field small,
+.options-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.options-note {
+    display: block;
+}
+
+.options-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+}
+
+.options-error {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--alert-error-border);
+    border-radius: var(--radius);
+    background: var(--alert-error-bg);
+    color: var(--danger);
+    font-size: 13px;
+    line-height: 1.4;
 }

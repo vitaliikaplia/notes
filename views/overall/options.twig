@@ -1,0 +1,85 @@
+<div id="optionsTemplate" hidden>
+    <div class="options">
+        <div class="index-tabs options-tabs">
+            <button type="button" class="index-tab options-tab active" data-tab="system">System</button>
+            <button type="button" class="index-tab options-tab" data-tab="cloudflare">Cloudflare</button>
+            <button type="button" class="index-tab options-tab" data-tab="ai">AI</button>
+            <button type="button" class="index-tab options-tab" data-tab="account">Account</button>
+        </div>
+
+        <div class="options-panels">
+            <div class="options-panel active" data-panel="system">
+                <label class="options-field">
+                    <span>Redis socket</span>
+                    <input type="text" name="REDIS_SOCKET" placeholder="unix:///path/to/redis.sock" autocomplete="off" spellcheck="false">
+                    <small>Leave empty to disable Redis caching.</small>
+                </label>
+                <label class="options-field">
+                    <span>REST API token</span>
+                    <input type="text" name="API_TOKEN" placeholder="Bearer token for /api/v1" autocomplete="off" spellcheck="false">
+                    <small>Leave empty to disable the REST API.</small>
+                </label>
+            </div>
+
+            <div class="options-panel" data-panel="cloudflare">
+                <label class="options-field">
+                    <span>Turnstile site key</span>
+                    <input type="text" name="CAPTCHA_SITE_KEY" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="options-field">
+                    <span>Turnstile secret key</span>
+                    <input type="password" name="CAPTCHA_SECRET_KEY" autocomplete="off">
+                </label>
+                <small class="options-note">Both keys enable the Cloudflare Turnstile CAPTCHA on the login page. Leave empty to disable.</small>
+            </div>
+
+            <div class="options-panel" data-panel="ai">
+                <label class="options-field">
+                    <span>Provider</span>
+                    <select name="AI_PROVIDER">
+                        <option value="">Disabled</option>
+                        <option value="claude">Claude</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </label>
+                <div class="options-ai-fields">
+                    <label class="options-field">
+                        <span>API key</span>
+                        <input type="password" name="AI_API_KEY" autocomplete="off">
+                    </label>
+                    <label class="options-field">
+                        <span>Model</span>
+                        <input type="text" name="AI_MODEL" placeholder="e.g. gpt-4o, claude-sonnet-4-..." autocomplete="off" spellcheck="false">
+                    </label>
+                    <label class="options-field">
+                        <span>History limit</span>
+                        <input type="number" name="AI_HISTORY_LIMIT" min="1" max="100">
+                    </label>
+                </div>
+            </div>
+
+            <div class="options-panel" data-panel="account">
+                <label class="options-field">
+                    <span>Login</span>
+                    <input type="text" name="login" autocomplete="username" spellcheck="false">
+                </label>
+                <div class="options-divider"></div>
+                <label class="options-field">
+                    <span>Current password</span>
+                    <input type="password" name="current_password" autocomplete="current-password" placeholder="Required only to change the password">
+                </label>
+                <label class="options-field">
+                    <span>New password</span>
+                    <input type="password" name="new_password" autocomplete="new-password">
+                </label>
+                <label class="options-field">
+                    <span>Confirm new password</span>
+                    <input type="password" name="confirm_password" autocomplete="new-password">
+                </label>
+            </div>
+        </div>
+
+        <div class="options-error" hidden></div>
+    </div>
+</div>
