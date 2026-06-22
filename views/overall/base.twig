@@ -119,7 +119,13 @@
                     <svg class="icon-theme-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
                     <svg class="icon-theme-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                 </button>
-                <a href="{{ home_url }}logout/" class="btn-footer-action" title="Log out">
+                <a href="{{ home_url }}logout/" class="btn-footer-action js-popup-confirm" title="Log out"
+                   data-popup-size="narrow"
+                   data-popup-title="Log out"
+                   data-popup-message="Are you sure you want to log out?"
+                   data-popup-confirm-label="Log out"
+                   data-popup-cancel-label="Cancel"
+                   data-popup-confirm-style="danger">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </a>
             </div>
@@ -137,91 +143,101 @@
 {% endif %}
 
 {% if authenticated %}
-<div class="search-overlay" id="searchOverlay">
-    <div class="search-overlay-inner">
-        <div class="search-header">
-            <svg class="search-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" class="search-input" id="searchInput" placeholder="Search notes..." autocomplete="off" />
-            <button class="search-close" id="searchClose" type="button" aria-label="Close">&times;</button>
-        </div>
-        <div class="search-results" id="searchResults">
-            <div class="search-hint">Start typing a note title or text</div>
-        </div>
+<div id="searchTemplate" hidden>
+    <div class="search-header">
+        <svg class="search-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="search-input" placeholder="Search notes..." autocomplete="off" />
+        <button class="search-close" type="button" aria-label="Close" data-popup-close>&times;</button>
+    </div>
+    <div class="search-results">
+        <div class="search-hint">Start typing a note title or text</div>
     </div>
 </div>
 <script>
 (function() {
-    var overlay = document.getElementById('searchOverlay');
-    var input = document.getElementById('searchInput');
-    var results = document.getElementById('searchResults');
-    var closeBtn = document.getElementById('searchClose');
     var homeUrl = document.body.dataset.homeUrl || '/';
     var debounceTimer = null;
     var selectedIndex = -1;
 
+    function popupContent() {
+        return document.querySelector('.js-popup-content');
+    }
+
+    function isSearchOpen() {
+        return document.body.classList.contains('popup-open')
+            && document.querySelector('.js-popup-content .search-input') !== null;
+    }
+
     function openSearch() {
-        if (!overlay) return;
-        overlay.classList.add('is-active');
-        document.body.style.overflow = 'hidden';
-        setTimeout(function() { input.focus(); }, 100);
-    }
-
-    function closeSearch() {
-        if (!overlay) return;
-        overlay.classList.remove('is-active');
-        document.body.style.overflow = '';
-        input.value = '';
-        results.innerHTML = '<div class="search-hint">Start typing a note title or text</div>';
+        if (!window.Popup) return;
         selectedIndex = -1;
-    }
 
-    // Open on trigger click
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.search-trigger')) {
-            e.preventDefault();
-            openSearch();
-        }
-    });
-
-    // Close
-    if (closeBtn) closeBtn.addEventListener('click', closeSearch);
-
-    // Close on overlay bg click
-    if (overlay) {
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) closeSearch();
+        window.Popup.open({
+            content: '#searchTemplate',
+            variant: 'spotlight',
+            size: 'narrow',
+            showClose: false
         });
+
+        var input = document.querySelector('.js-popup-content .search-input');
+        if (input) {
+            input.addEventListener('input', onSearchInput);
+            setTimeout(function() { input.focus(); }, 30);
+        }
     }
 
-    // Keyboard: Escape to close, Ctrl+K / Cmd+K to open, arrows to navigate
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && overlay && overlay.classList.contains('is-active')) {
-            closeSearch();
+    function onSearchInput() {
+        var content = popupContent();
+        if (!content) return;
+        var input = content.querySelector('.search-input');
+        var results = content.querySelector('.search-results');
+        if (!input || !results) return;
+
+        var q = input.value.trim();
+        selectedIndex = -1;
+
+        if (debounceTimer) clearTimeout(debounceTimer);
+
+        if (q.length < 2) {
+            results.innerHTML = '<div class="search-hint">Start typing a note title or text</div>';
+            return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            if (overlay.classList.contains('is-active')) {
-                closeSearch();
-            } else {
-                openSearch();
-            }
-        }
-        if (overlay && overlay.classList.contains('is-active')) {
-            var items = results.querySelectorAll('.search-result-item');
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                updateSelected(items);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedIndex = Math.max(selectedIndex - 1, -1);
-                updateSelected(items);
-            } else if (e.key === 'Enter' && selectedIndex >= 0 && items[selectedIndex]) {
-                e.preventDefault();
-                items[selectedIndex].click();
-            }
-        }
-    });
+
+        results.innerHTML = '<div class="search-hint">Searching...</div>';
+
+        debounceTimer = setTimeout(function() {
+            fetch(homeUrl + 'api/search/?q=' + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.length) {
+                        results.innerHTML = '<div class="search-no-results">No results found</div>';
+                        return;
+                    }
+                    var html = '';
+                    data.forEach(function(item) {
+                        html += '<a href="' + item.url + '" class="search-result-item">';
+                        var iconContent = item.icon
+                            ? (item.icon.indexOf('data:') === 0 ? '<img src="' + item.icon + '" width="16" height="16" alt="">' : item.icon)
+                            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+                        html += '<span class="search-result-icon">' + iconContent + '</span>';
+                        html += '<div class="search-result-body">';
+                        html += '<span class="search-result-title">' + item.title + '</span>';
+                        if (item.snippet) {
+                            html += '<span class="search-result-snippet">' + item.snippet + '</span>';
+                        }
+                        if (item.path) {
+                            html += '<span class="search-result-meta">' + item.path + '</span>';
+                        }
+                        html += '</div>';
+                        html += '</a>';
+                    });
+                    results.innerHTML = html;
+                })
+                .catch(function() {
+                    results.innerHTML = '<div class="search-no-results">Search error</div>';
+                });
+        }, 300);
+    }
 
     function updateSelected(items) {
         items.forEach(function(el, i) {
@@ -232,55 +248,46 @@
         }
     }
 
-    // Debounced search
-    if (input) {
-        input.addEventListener('input', function() {
-            var q = input.value.trim();
-            selectedIndex = -1;
+    // Open on trigger click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.search-trigger')) {
+            e.preventDefault();
+            openSearch();
+        }
+    });
 
-            if (debounceTimer) clearTimeout(debounceTimer);
-
-            if (q.length < 2) {
-                results.innerHTML = '<div class="search-hint">Start typing a note title or text</div>';
-                return;
+    // Ctrl/Cmd+K toggles; arrows/Enter navigate results.
+    // Escape, backdrop click and the close button are handled by the popup engine.
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (isSearchOpen()) {
+                window.Popup.close(false);
+            } else {
+                openSearch();
             }
+            return;
+        }
 
-            results.innerHTML = '<div class="search-hint">Searching...</div>';
+        if (!isSearchOpen()) return;
 
-            debounceTimer = setTimeout(function() {
-                fetch(homeUrl + 'api/search/?q=' + encodeURIComponent(q))
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        if (!data.length) {
-                            results.innerHTML = '<div class="search-no-results">No results found</div>';
-                            return;
-                        }
-                        var html = '';
-                        data.forEach(function(item) {
-                            html += '<a href="' + item.url + '" class="search-result-item">';
-                            var iconContent = item.icon
-                                ? (item.icon.startsWith('data:') ? '<img src="' + item.icon + '" width="16" height="16" alt="">' : item.icon)
-                                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
-                            html += '<span class="search-result-icon">' + iconContent + '</span>';
-                            html += '<div class="search-result-body">';
-                            html += '<span class="search-result-title">' + item.title + '</span>';
-                            if (item.snippet) {
-                                html += '<span class="search-result-snippet">' + item.snippet + '</span>';
-                            }
-                            if (item.path) {
-                                html += '<span class="search-result-meta">' + item.path + '</span>';
-                            }
-                            html += '</div>';
-                            html += '</a>';
-                        });
-                        results.innerHTML = html;
-                    })
-                    .catch(function() {
-                        results.innerHTML = '<div class="search-no-results">Search error</div>';
-                    });
-            }, 300);
-        });
-    }
+        var results = document.querySelector('.js-popup-content .search-results');
+        if (!results) return;
+        var items = results.querySelectorAll('.search-result-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelected(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelected(items);
+        } else if (e.key === 'Enter' && selectedIndex >= 0 && items[selectedIndex]) {
+            e.preventDefault();
+            items[selectedIndex].click();
+        }
+    });
 })();
 </script>
 {% endif %}
@@ -471,6 +478,9 @@ window.showToast = function(message) {
 {% if authenticated %}
 <script src="{{ assets_url }}js/sidebar.js{{ asset_ver('js/sidebar.js') }}"></script>
 {% endif %}
+
+{% include 'overall/popup.twig' %}
+<script src="{{ assets_url }}js/popup.js{{ asset_ver('js/popup.js') }}"></script>
 
 {% block scripts %}{% endblock %}
 
