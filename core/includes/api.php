@@ -7,8 +7,7 @@ if(!defined('ABSPATH')){exit;}
 // ============================================================
 
 function api_auth(): bool {
-    $env = get_env();
-    $token = $env['API_TOKEN'] ?? '';
+    $token = get_option('API_TOKEN', '');
 
     if (empty($token)) return false;
 
@@ -265,7 +264,7 @@ function api_create_note(): void {
     // Unique slug
     $base_slug = $slug;
     $counter = 1;
-    while (file_exists(get_notes_path() . DS . str_replace('/', DS, $relative))) {
+    while (note_exists($relative)) {
         $slug = $base_slug . '-' . $counter;
         $relative = $dir_prefix . $slug . '.json';
         $counter++;
@@ -398,7 +397,7 @@ function api_patch_note(string $path): void {
 function api_delete_note(string $path): void {
     $relative = str_replace('/', DS, $path) . '.json';
 
-    if (!file_exists(get_notes_path() . DS . $relative)) {
+    if (!note_exists($relative)) {
         api_error(404, 'Note not found');
     }
 

@@ -2,14 +2,14 @@
 
 ## Project
 
-Self-hosted notes on PHP 8.5 / Twig 3 / Editor.js. No framework and no database; JSON files are the storage layer.
+Self-hosted notes on PHP 8.5 / Twig 3 / Editor.js. No framework and no ORM; notes and settings live in a MySQL/MariaDB database (utf8mb4), accessed with plain PDO.
 
 The product UI is English. Notes may contain any language. Ukrainian transliteration remains part of slug generation.
 
 ## Architecture
 
 - Entry point: `index.php` -> `core/init.php` -> includes -> router
-- Procedural PHP
+- Procedural PHP; storage is MySQL/MariaDB via plain PDO (`get_db()` in `core/includes/db.php`)
 - Functions use `snake_case`
 - Constants use `UPPER_CASE`
 - Twig 3 templates live in `views/*.twig`
@@ -20,7 +20,8 @@ The product UI is English. Notes may contain any language. Ukrainian translitera
 
 ```text
 core/includes/router.php   Routing and all internal routes
-core/includes/notes.php    Note CRUD, tree scanning, slug generation, uploads
+core/includes/db.php       PDO connection, schema (db_init_schema), options + remember-me tokens
+core/includes/notes.php    Note CRUD (MySQL), tree build, slug generation, image uploads
 core/includes/auth.php     Sessions, login, remember-me tokens, config loader (get_env)
 core/includes/ai.php       AI module for Claude/OpenAI/Gemini tool calling
 core/includes/api.php      REST API v1
@@ -38,16 +39,19 @@ assets/js/page-tool.js     Editor.js page-link tool
 
 ## Configuration
 
-- Config lives in `config.php` (gitignored, returns an array) and is read via `get_env()` from `core/includes/auth.php`; copy `config.example.php` -> `config.php` to set up
-- Do not use `getenv()` or `$_ENV`
-- `config.php` is served as PHP so it never leaks as plaintext (the old `.env` was directly web-servable)
-- Important constants: `ABSPATH`, `HOME_URL`, `NOTES_DIR` (`.notes`), `SITE_NAME`
+- `config.php` (gitignored, returns an array, read via `get_env()`) holds ONLY the DB connection (`DB_HOST/PORT/NAME/USER/PASS/CHARSET`); copy `config.example.php` -> `config.php` to set up
+- Every other setting — admin login (`AUTH_USER/AUTH_PASS`), API token, CAPTCHA, AI provider/key, Redis socket — lives in the DB `options` table; read/write with `get_option()` / `set_option()` from `core/includes/db.php`, never `get_env()`
+- `AUTH_PASS` is a bcrypt hash (`password_hash`/`password_verify`); set it via `auth_set_password($plain)` in `auth.php`. A plaintext value is accepted once and auto-upgraded to a hash on first login
+- Do not use `getenv()` or `$_ENV`; `config.php` is served as PHP so it never leaks as plaintext
+- Important constants: `ABSPATH`, `HOME_URL`, `SITE_NAME`
 - Timezone: `Europe/Kyiv`
 
 ## Conventions
 
-- Root notes are stored as `.notes/{slug}.json`
-- Nested notes are stored as `.notes/{parent}/{child}.json`
+- Notes live in the `notes` table as an adjacency list (`parent_id` + a unique `path`); `path` (e.g. `parent/child`, no `.json`) is the URL identifier and the stable key used across the app
+- The Editor.js document is stored in the `content` column (JSON); meta fields (title, icon, cover, color, pinned, visibility, graph_x/y) are columns; SVG/emoji icons are stored inline in `icon`
+- Settings live in the `options` table (key/value); remember-me tokens live in `remember_tokens` (sha256 token hash + user + expiry)
+- The schema self-creates on the first DB connect (`db_init_schema()` is called from `get_db()`)
 - Slugs use Ukrainian transliteration through `ukr_to_lat()`
 - Upload/image URLs are stored host-relative (`/file/...`) via `normalize_upload_url()` / `upload_url_to_relative_path()`; never bake `HOME_URL` into stored note data, so notes stay portable across hosts
 - Each PHP include starts with `if(!defined('ABSPATH')){exit;}`
@@ -58,16 +62,18 @@ assets/js/page-tool.js     Editor.js page-link tool
 ## Commands
 
 - Requires PHP 8.5 — pinned in `composer.json` (`require.php` = `8.5.*` and `config.platform.php` = `8.5`)
-- On Laravel Herd, isolate the site to 8.5: `herd isolate 8.5`; run Composer on that version via `herd composer ...`
-- Install dependencies: `composer install`
+- Dependencies are committed in `vendor/` (no `composer install` needed); update them with `herd composer update`
+- On Laravel Herd, isolate the site to 8.5: `herd isolate 8.5`
 - Web server: Apache, Nginx, or Laravel Herd pointing to `index.php`
+- Needs a MySQL/MariaDB database (utf8mb4); the schema self-creates on first run
 - Required PHP extension for image conversion: Imagick
 
 ## Notes For Agents
 
-- Avoid introducing a framework or database.
-- Preserve existing JSON note format: `meta` plus Editor.js `content`.
-- Clear note/tree cache after note mutations.
+- No ORM or framework: use plain PDO via `get_db()`; keep the schema in `db_init_schema()` (`core/includes/db.php`).
+- Preserve the note shape returned by `get_note()` / `db_row_to_note()` (`meta` + Editor.js `content` + `_file`/`_slug`/`_url`/`_title`) so router/api/ai/templates keep working.
+- Clear note/tree cache after note mutations (`cache_delete('note:'.$path)`, `cache_delete('tree')`).
+- Notes live in the DB, not the filesystem — there is no `.notes/` store anymore.
 - Keep public UI text in English.
 - Do not remove the Ukrainian transliteration table in `core/includes/notes.php`; it is part of slug compatibility.
 - Store upload/image URLs host-relative (`/file/...`); `get_note()` normalizes any absolute host on read. Do not reintroduce `HOME_URL`-prefixed image URLs.

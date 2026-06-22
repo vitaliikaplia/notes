@@ -74,9 +74,8 @@ function router($url_segments = []): array {
             exit;
         }
 
-        $env = get_env();
-        $captcha_site_key = $env['CAPTCHA_SITE_KEY'] ?? '';
-        $captcha_secret_key = $env['CAPTCHA_SECRET_KEY'] ?? '';
+        $captcha_site_key = get_option('CAPTCHA_SITE_KEY', '');
+        $captcha_secret_key = get_option('CAPTCHA_SECRET_KEY', '');
         $context['captcha_site_key'] = $captcha_site_key;
         $context['error'] = '';
 
@@ -159,10 +158,9 @@ function router($url_segments = []): array {
                 if(!empty($note['content']['blocks'])) {
                     foreach($note['content']['blocks'] as &$block) {
                         if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
-                            $child_file = get_notes_path() . DS . $block['data']['pagePath'];
-                            if(file_exists($child_file)) {
-                                $child_data = json_decode(file_get_contents($child_file), true);
-                                $block['data']['icon'] = $child_data['meta']['icon'] ?? '';
+                            $child_note = get_note($block['data']['pagePath']);
+                            if($child_note) {
+                                $block['data']['icon'] = $child_note['meta']['icon'] ?? '';
                             }
                         }
                     }
@@ -178,41 +176,18 @@ function router($url_segments = []): array {
                 }
                 $context['breadcrumbs'] = get_breadcrumbs($note['_file']);
 
-                // Collect direct child notes
-                $child_dir = get_notes_path() . DS . preg_replace('/\.json$/', '', $note['_file']);
+                // Collect direct child notes (ordered)
                 $context['children'] = [];
-                if(is_dir($child_dir)) {
-                    $child_items = [];
-                    foreach(scandir($child_dir) as $item) {
-                        if($item[0] !== '.' && str_ends_with($item, '.json')) {
-                            $child_items[] = $item;
-                        }
-                    }
-                    // Apply sort order
-                    $sort_order = get_sort_order($child_dir);
-                    if($sort_order) {
-                        usort($child_items, function($a, $b) use ($sort_order) {
-                            $sa = basename($a, '.json');
-                            $sb = basename($b, '.json');
-                            $ia = array_search($sa, $sort_order);
-                            $ib = array_search($sb, $sort_order);
-                            if($ia === false) $ia = PHP_INT_MAX;
-                            if($ib === false) $ib = PHP_INT_MAX;
-                            return $ia - $ib;
-                        });
-                    }
-                    foreach($child_items as $item) {
-                        $child_rel = preg_replace('/\.json$/', '', $note['_file']) . DS . $item;
-                        $child_note = get_note($child_rel);
-                        if($child_note) {
-                            $context['children'][] = [
-                                'title' => $child_note['_title'],
-                                'icon'  => $child_note['meta']['icon'] ?? '',
-                                'path'  => $child_rel,
-                                'url'   => 'note/' . $child_note['_url'],
-                            ];
-                        }
-                    }
+                $child_stmt = get_db()->prepare("SELECT * FROM notes WHERE parent_id = ? ORDER BY sort_order ASC, updated_at DESC");
+                $child_stmt->execute([$note['_id']]);
+                foreach($child_stmt as $crow) {
+                    $child_note = db_row_to_note($crow);
+                    $context['children'][] = [
+                        'title' => $child_note['_title'],
+                        'icon'  => $child_note['meta']['icon'] ?? '',
+                        'path'  => $child_note['_file'],
+                        'url'   => 'note/' . $child_note['_url'],
+                    ];
                 }
                 $context['children_count'] = count($context['children']);
 
@@ -223,10 +198,9 @@ function router($url_segments = []): array {
                 if(!empty($note['content']['blocks'])) {
                     foreach($note['content']['blocks'] as &$block) {
                         if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
-                            $child_file = get_notes_path() . DS . $block['data']['pagePath'];
-                            if(file_exists($child_file)) {
-                                $child_data = json_decode(file_get_contents($child_file), true);
-                                $block['data']['icon'] = $child_data['meta']['icon'] ?? '';
+                            $child_note = get_note($block['data']['pagePath']);
+                            if($child_note) {
+                                $block['data']['icon'] = $child_note['meta']['icon'] ?? '';
                             }
                         }
                     }
@@ -325,38 +299,38 @@ function router($url_segments = []): array {
 
             $title = strip_tags($input['title'] ?? 'Untitled');
             $folder = trim($input['folder'] ?? '', '/ ');
-            $old_path = $input['old_path'] ?? '';
+            $old_path_raw = $input['old_path'] ?? '';
             $content = $input['content'] ?? ['blocks' => []];
             $cover = $input['cover'] ?? null;
             $cover_position = isset($input['cover_position']) ? intval($input['cover_position']) : null;
             $color = $input['color'] ?? null;
             $pinned = isset($input['pinned']) ? (bool)$input['pinned'] : null;
 
-            // Collect old image URLs for orphan cleanup (blocks + cover)
+            // Existing note (for preserving fields and orphan-image cleanup)
+            $old_path  = $old_path_raw ? note_path_from_relative($old_path_raw) : '';
+            $old_note  = $old_path !== '' ? get_note($old_path) : null;
             $old_image_urls = [];
-            if($old_path) {
-                $old_file = get_notes_path() . DS . $old_path;
-                if(file_exists($old_file)) {
-                    $old_data = json_decode(file_get_contents($old_file), true);
-                    $old_image_urls = extract_image_urls($old_data['content']['blocks'] ?? []);
-                    if(!empty($old_data['meta']['cover'])) {
-                        $old_image_urls[] = $old_data['meta']['cover'];
-                    }
+            if($old_note) {
+                $old_image_urls = extract_image_urls($old_note['content']['blocks'] ?? []);
+                if(!empty($old_note['meta']['cover'])) {
+                    $old_image_urls[] = $old_note['meta']['cover'];
                 }
             }
 
             $slug = generate_slug($title);
-            $relative_path = ($folder ? $folder . '/' : '') . $slug . '.json';
+            $new_path = ($folder ? $folder . '/' : '') . $slug;
+            $relative_path = $new_path . '.json';
 
             $now = date('c');
 
-            // Preserve existing visibility and cover when re-saving
-            $existing_visibility = isset($old_data) ? ($old_data['meta']['visibility'] ?? 'private') : 'private';
-            $existing_icon = isset($old_data) ? ($old_data['meta']['icon'] ?? '') : '';
-            $existing_cover = isset($old_data) ? ($old_data['meta']['cover'] ?? '') : '';
-            $existing_cover_pos = isset($old_data) ? ($old_data['meta']['cover_position'] ?? 50) : 50;
-            $existing_color = isset($old_data) ? ($old_data['meta']['color'] ?? '') : '';
-            $existing_pinned = isset($old_data) ? ($old_data['meta']['pinned'] ?? false) : false;
+            // Preserve existing fields when re-saving
+            $existing_visibility = $old_note['meta']['visibility'] ?? 'private';
+            $existing_icon       = $old_note['meta']['icon'] ?? '';
+            $existing_cover      = $old_note['meta']['cover'] ?? '';
+            $existing_cover_pos  = $old_note['meta']['cover_position'] ?? 50;
+            $existing_color      = $old_note['meta']['color'] ?? '';
+            $existing_pinned     = $old_note['meta']['pinned'] ?? false;
+            $existing_created    = $old_note['meta']['created_at'] ?? null;
             $icon = resolve_note_icon_value($input, $existing_icon);
 
             $note_data = [
@@ -368,28 +342,17 @@ function router($url_segments = []): array {
                     'color' => $color !== null ? $color : $existing_color,
                     'pinned' => $pinned !== null ? $pinned : $existing_pinned,
                     'visibility' => $existing_visibility,
-                    'created_at' => $input['created_at'] ?? $now,
+                    'created_at' => $input['created_at'] ?? ($existing_created ?? $now),
                     'updated_at' => $now,
                 ],
                 'content' => $content,
             ];
 
-            // if slug changed, rename child folder and update page block references
-            if($old_path && $old_path !== $relative_path) {
-                $old_slug = basename($old_path, '.json');
-                $new_slug = basename($relative_path, '.json');
-                $old_dir = dirname(get_notes_path() . DS . $old_path);
-                $old_child_dir = $old_dir . DS . $old_slug;
-                $new_child_dir = $old_dir . DS . $new_slug;
-
-                // Rename child folder if exists
-                if(is_dir($old_child_dir) && !is_dir($new_child_dir)) {
-                    rename($old_child_dir, $new_child_dir);
-                }
-
-                // Update page block references in content
-                $old_prefix = ($folder ? $folder . '/' : '') . $old_slug . '/';
-                $new_prefix = ($folder ? $folder . '/' : '') . $new_slug . '/';
+            // Slug/path changed -> rename in place (keeps child rows + their parent links)
+            if($old_path !== '' && $old_path !== $new_path && note_exists($old_path)) {
+                // Update page-link blocks inside this note that point at its own children
+                $old_prefix = $old_path . '/';
+                $new_prefix = $new_path . '/';
                 if(!empty($note_data['content']['blocks'])) {
                     foreach($note_data['content']['blocks'] as &$block) {
                         if($block['type'] === 'page' && !empty($block['data']['pagePath'])) {
@@ -400,64 +363,48 @@ function router($url_segments = []): array {
                     unset($block);
                 }
 
-                // Update parent note's page blocks that reference this child
-                $parent_dir = dirname($old_path);
-                if($parent_dir !== '.') {
-                    // child is inside a subfolder — parent note is one level up
-                    $parent_note_path = $parent_dir . '.json';
-                    $parent_full = get_notes_path() . DS . $parent_note_path;
-                    if(file_exists($parent_full)) {
-                        $parent_data = json_decode(file_get_contents($parent_full), true);
-                        if(!empty($parent_data['content']['blocks'])) {
-                            $changed = false;
-                            foreach($parent_data['content']['blocks'] as &$pblock) {
-                                if($pblock['type'] === 'page' && !empty($pblock['data']['pagePath']) && $pblock['data']['pagePath'] === $old_path) {
-                                    $pblock['data']['pagePath'] = $relative_path;
-                                    $pblock['data']['pageUrl'] = 'note/' . preg_replace('/\.json$/', '', $relative_path);
-                                    $pblock['data']['title'] = $title;
-                                    $changed = true;
-                                }
-                            }
-                            unset($pblock);
-                            if($changed) {
-                                file_put_contents($parent_full, json_encode($parent_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                // Update the parent note's page block that referenced the old path
+                $parent_dir = strpos($old_path, '/') !== false ? substr($old_path, 0, strrpos($old_path, '/')) : '';
+                if($parent_dir !== '') {
+                    $parent_note = get_note($parent_dir);
+                    if($parent_note && !empty($parent_note['content']['blocks'])) {
+                        $changed = false;
+                        foreach($parent_note['content']['blocks'] as &$pblock) {
+                            if($pblock['type'] === 'page' && ($pblock['data']['pagePath'] ?? '') === $old_path . '.json') {
+                                $pblock['data']['pagePath'] = $relative_path;
+                                $pblock['data']['pageUrl'] = 'note/' . $new_path;
+                                $pblock['data']['title'] = $title;
+                                $changed = true;
                             }
                         }
+                        unset($pblock);
+                        if($changed) update_note_content_blocks($parent_dir, $parent_note['content']['blocks']);
                     }
                 }
 
-                // Delete old note file (without cascading to children)
-                $old_file = get_notes_path() . DS . $old_path;
-                if(file_exists($old_file)) {
-                    unlink($old_file);
-                }
+                // Move the row (and its descendants) to the new path in place
+                rename_note($old_path, $new_path);
             }
 
             $success = save_note($relative_path, $note_data);
 
             // Always sync parent's page block with current title/icon
-            $current_dir = dirname($relative_path);
-            if($current_dir !== '.') {
-                $parent_note_path = $current_dir . '.json';
-                $parent_full = get_notes_path() . DS . $parent_note_path;
-                if(file_exists($parent_full)) {
-                    $parent_data = json_decode(file_get_contents($parent_full), true);
-                    if(!empty($parent_data['content']['blocks'])) {
-                        $synced = false;
-                        foreach($parent_data['content']['blocks'] as &$pblock) {
-                            if($pblock['type'] === 'page' && !empty($pblock['data']['pagePath']) && $pblock['data']['pagePath'] === $relative_path) {
-                                if(($pblock['data']['title'] ?? '') !== $title || ($pblock['data']['icon'] ?? '') !== $icon) {
-                                    $pblock['data']['title'] = $title;
-                                    $pblock['data']['icon'] = $icon;
-                                    $synced = true;
-                                }
+            $current_dir = strpos($new_path, '/') !== false ? substr($new_path, 0, strrpos($new_path, '/')) : '';
+            if($current_dir !== '') {
+                $parent_note = get_note($current_dir);
+                if($parent_note && !empty($parent_note['content']['blocks'])) {
+                    $synced = false;
+                    foreach($parent_note['content']['blocks'] as &$pblock) {
+                        if($pblock['type'] === 'page' && ($pblock['data']['pagePath'] ?? '') === $relative_path) {
+                            if(($pblock['data']['title'] ?? '') !== $title || ($pblock['data']['icon'] ?? '') !== $icon) {
+                                $pblock['data']['title'] = $title;
+                                $pblock['data']['icon'] = $icon;
+                                $synced = true;
                             }
                         }
-                        unset($pblock);
-                        if($synced) {
-                            file_put_contents($parent_full, json_encode($parent_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-                        }
                     }
+                    unset($pblock);
+                    if($synced) update_note_content_blocks($current_dir, $parent_note['content']['blocks']);
                 }
             }
 
@@ -558,7 +505,7 @@ function router($url_segments = []): array {
 
             $base_slug = $child_slug;
             $counter = 1;
-            while(file_exists(get_notes_path() . DS . $child_relative_path)) {
+            while(note_exists($child_relative_path)) {
                 $child_slug = $base_slug . '-' . $counter;
                 $child_relative_path = $child_folder . '/' . $child_slug . '.json';
                 $counter++;
@@ -615,21 +562,13 @@ function router($url_segments = []): array {
             $folder = trim($input['folder'] ?? '');
             $order = $input['order'];
 
-            $base = get_notes_path();
-            $dir = $folder ? $base . DS . str_replace('/', DS, $folder) : $base;
-
-            if(!is_dir($dir)) {
-                echo json_encode(['success' => false, 'error' => 'Directory not found']);
-                exit;
-            }
-
             // Sanitize slugs
             $clean_order = array_map(function($slug) {
                 return preg_replace('/[^a-z0-9\-]/', '', $slug);
             }, $order);
             $clean_order = array_filter($clean_order);
 
-            $success = save_sort_order($dir, array_values($clean_order));
+            $success = save_sort_order($folder, array_values($clean_order));
             echo json_encode(['success' => $success], JSON_UNESCAPED_UNICODE);
             exit;
 
@@ -655,9 +594,7 @@ function router($url_segments = []): array {
 
             // After successful move, insert into sort order at the right position
             if($result['success'] && $position !== null) {
-                $base = get_notes_path();
-                $target_dir = $target_folder ? $base . DS . str_replace('/', DS, $target_folder) : $base;
-                $order = get_sort_order($target_dir);
+                $order = get_sort_order($target_folder);
                 $new_slug = $result['new_slug'];
 
                 // Remove if already present (safety)
@@ -681,7 +618,7 @@ function router($url_segments = []): array {
                     $order[] = $new_slug;
                 }
 
-                save_sort_order($target_dir, $order);
+                save_sort_order($target_folder, $order);
             }
 
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
@@ -747,14 +684,9 @@ function router($url_segments = []): array {
                         $labels = [];
                         foreach($parts as $part) {
                             // Try to find parent note title
-                            $pjson = (count($labels) ? implode('/', array_slice($parts, 0, array_search($part, $parts))) . '/' : '') . $part . '.json';
-                            $pfile = get_notes_path() . DS . str_replace('/', DS, $pjson);
-                            if(file_exists($pfile)) {
-                                $pdata = json_decode(file_get_contents($pfile), true);
-                                $labels[] = $pdata['meta']['title'] ?? $part;
-                            } else {
-                                $labels[] = $part;
-                            }
+                            $ppath = (count($labels) ? implode('/', array_slice($parts, 0, array_search($part, $parts))) . '/' : '') . $part;
+                            $pnote = get_note($ppath);
+                            $labels[] = $pnote ? $pnote['_title'] : $part;
                         }
                         $path_label = implode(' / ', $labels);
                     }
@@ -854,36 +786,20 @@ function router($url_segments = []): array {
                 exit;
             }
 
-            $note = get_note($id);
-            if(!$note) {
+            if(!note_exists($id)) {
                 http_response_code(404);
                 echo json_encode(['success' => 0, 'error' => 'Note not found']);
                 exit;
             }
 
-            // Update meta with graph coordinates
-            $note['meta']['graph_x'] = round((float)$x, 2);
-            $note['meta']['graph_y'] = round((float)$y, 2);
-
-            // Save only original data (strip internal _* keys)
-            $save_data = array_filter($note, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
-            $ok = save_note($id, $save_data);
+            $ok = update_note_graph_position($id, $x, $y);
 
             echo json_encode(['success' => $ok ? 1 : 0]);
             exit;
 
         } elseif($action === 'graph' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
             // Reset all saved node positions
-            $all_notes = collect_all_notes();
-            $count = 0;
-            foreach($all_notes as $note) {
-                if(isset($note['meta']['graph_x']) || isset($note['meta']['graph_y'])) {
-                    unset($note['meta']['graph_x'], $note['meta']['graph_y']);
-                    $save_data = array_filter($note, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
-                    save_note($note['_file'], $save_data);
-                    $count++;
-                }
-            }
+            $count = reset_graph_positions();
             echo json_encode(['success' => 1, 'reset' => $count]);
             exit;
 
@@ -1162,19 +1078,12 @@ function router($url_segments = []): array {
         } elseif($action === 'toggle-pin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
             $url = $input['url'] ?? '';
-            // url is like "parent/child" — convert to relative file path
-            $relative = str_replace('/', DS, $url) . '.json';
-            $file = get_notes_path() . DS . $relative;
-            if(!file_exists($file)) {
+            $pinned = toggle_note_pinned($url);
+            if($pinned === null) {
                 echo json_encode(['success' => false, 'error' => 'Note not found']);
                 exit;
             }
-            $data = json_decode(file_get_contents($file), true);
-            $data['meta']['pinned'] = empty($data['meta']['pinned']);
-            file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-            cache_delete('note:' . $relative);
-            cache_delete('tree');
-            echo json_encode(['success' => true, 'pinned' => $data['meta']['pinned']]);
+            echo json_encode(['success' => true, 'pinned' => $pinned]);
             exit;
 
         } elseif($action === 'chat' && $_SERVER['REQUEST_METHOD'] === 'POST') {

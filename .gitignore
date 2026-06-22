@@ -3,10 +3,6 @@ config.php
 .idea
 .DS_Store
 debug.log
-.notes/*.json
-.notes/**/*.json
-.notes/.sort-order.json
-.remember_tokens/
 .twig-cache/
 uploads/*
 !uploads/.htaccess

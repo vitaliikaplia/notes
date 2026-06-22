@@ -17,10 +17,9 @@ const AI_DEFAULT_MODELS = [
 // ============================================================
 
 function ai_get_config(): array {
-    $env = get_env();
-    $provider = strtolower(trim($env['AI_PROVIDER'] ?? ''));
-    $api_key  = trim($env['AI_API_KEY'] ?? '');
-    $model    = trim($env['AI_MODEL'] ?? '');
+    $provider = strtolower(trim(get_option('AI_PROVIDER', '')));
+    $api_key  = trim(get_option('AI_API_KEY', ''));
+    $model    = trim(get_option('AI_MODEL', ''));
 
     if(empty($provider) || empty($api_key)) {
         return ['error' => 'AI is not configured: AI_PROVIDER or AI_API_KEY is missing in .env'];
@@ -38,8 +37,7 @@ function ai_get_config(): array {
 }
 
 function ai_is_configured(): bool {
-    $env = get_env();
-    return !empty($env['AI_PROVIDER']) && !empty($env['AI_API_KEY']);
+    return !empty(get_option('AI_PROVIDER')) && !empty(get_option('AI_API_KEY'));
 }
 
 // ============================================================
@@ -308,7 +306,7 @@ function ai_tool_notes_create(array $args): array {
 
     $base_slug = $slug;
     $counter = 1;
-    while(file_exists(get_notes_path() . DS . str_replace('/', DS, $relative))) {
+    while(note_exists($relative)) {
         $slug = $base_slug . '-' . $counter;
         $relative = $dir_prefix . $slug . '.json';
         $counter++;
@@ -408,8 +406,7 @@ function ai_chat(array $messages): array {
     $tools    = ai_get_tools();
 
     // Trim history to configured limit
-    $env = get_env();
-    $history_limit = intval($env['AI_HISTORY_LIMIT'] ?? 20);
+    $history_limit = intval(get_option('AI_HISTORY_LIMIT', 20));
     if($history_limit > 0 && count($messages) > $history_limit) {
         $messages = array_slice($messages, -$history_limit);
         // Ensure we start with a genuine user message, not an orphaned tool result

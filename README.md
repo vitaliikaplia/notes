@@ -1,6 +1,6 @@
 # Notes
 
-Self-hosted notes with full control over your data: no framework, no database, no subscriptions. The app is built with PHP, Twig, Editor.js, and JSON files, with a built-in AI assistant that can search, read, create, and update notes from chat.
+Self-hosted notes with full control over your data: no framework, no ORM, no subscriptions. The app is built with PHP, Twig, Editor.js, and a MySQL/MariaDB database, with a built-in AI assistant that can search, read, create, and update notes from chat.
 
 The interface is in English. Notes can still use any language, and slugs keep Ukrainian transliteration support through `ukr_to_lat()`.
 
@@ -36,7 +36,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 
 ### Navigation
 
-- Nested notes through parent/child JSON paths
+- Nested notes through a parent/child hierarchy
 - Tree sidebar with drag-and-drop sorting and cross-level moves
 - Breadcrumbs
 - Emoji and SVG note icons
@@ -63,12 +63,12 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 
 ### Security
 
-- Login/password authentication
-- Remember-me tokens stored as hashed files
+- Login/password authentication; the admin password is stored as a bcrypt hash
+- Remember-me tokens stored hashed in the database
 - Optional Cloudflare Turnstile CAPTCHA
 - Uploaded files are served through `/file/` and are only available to authenticated users or when referenced from a public/unlisted note
 - REST API v1 uses bearer-token authentication
-- Configuration and secrets live in `config.php`, which is served as PHP and never exposed as plaintext (unlike a web-served `.env`)
+- The DB connection lives in `config.php` (served as PHP, never exposed as plaintext); all other settings and secrets live in the DB `options` table
 
 ## AI Assistant
 
@@ -96,7 +96,7 @@ The tool loop supports up to 5 tool iterations per request. The assistant is ins
 - Backend: PHP 8.5 (Composer platform pinned to 8.5)
 - Templates: Twig 3
 - Editor: Editor.js from CDN with plugins
-- Storage: JSON files in `.notes`
+- Storage: MySQL/MariaDB (utf8mb4) via plain PDO — `notes`, `options`, and `remember_tokens` tables
 - Frontend: Vanilla JavaScript and CSS custom properties
 - Optional cache: Redis through a Unix socket
 - Image processing: Imagick
@@ -109,8 +109,7 @@ views/          Twig templates
 assets/css/     Styles
 assets/js/      Client-side behavior
 uploads/        Uploaded images organized by year/month
-.notes/         JSON note storage
-config.php      Local configuration (gitignored)
+config.php      DB connection (gitignored)
 ```
 
 Important files:
@@ -119,7 +118,8 @@ Important files:
 index.php                    Entry point
 core/init.php                Bootstrap, constants, includes
 core/includes/router.php     Routes and internal session API
-core/includes/notes.php      Note CRUD, tree scanning, uploads, block rendering
+core/includes/db.php         PDO connection, schema, options + remember-me tokens
+core/includes/notes.php      Note CRUD (MySQL), tree, uploads, block rendering
 core/includes/auth.php       Sessions, login, remember-me tokens
 core/includes/ai.php         AI provider integrations and tool calling
 core/includes/api.php        REST API v1
@@ -140,51 +140,52 @@ assets/css/style.css         Styles
 Requirements:
 
 - PHP 8.5
-- Composer
-- Twig dependency from Composer
+- MySQL or MariaDB (a utf8mb4 database)
 - Imagick PHP extension for image conversion
 - Apache, Nginx, Laravel Herd, or another web server pointing to `index.php`
 
-Install dependencies:
+PHP dependencies are committed in `vendor/`, so there is no install step.
 
-```bash
-composer install
-```
-
-Copy the example config and fill it in:
+Create a database (utf8mb4) and copy the example config:
 
 ```bash
 cp config.example.php config.php
 ```
 
-Example `config.php`:
+Example `config.php` — only the database connection lives here:
 
 ```php
 <?php
 
 return [
-    'AUTH_USER' => 'admin',
-    'AUTH_PASS' => 'yourpassword',
-
-    // Cloudflare Turnstile, leave empty to disable
-    'CAPTCHA_SITE_KEY'   => '',
-    'CAPTCHA_SECRET_KEY' => '',
-
-    // REST API, leave empty to disable API access
-    'API_TOKEN' => 'your-secret-token',
-
-    // AI assistant: claude / openai / gemini
-    'AI_PROVIDER'      => 'openai',
-    'AI_API_KEY'       => 'sk-proj-...',
-    'AI_MODEL'         => '',
-    'AI_HISTORY_LIMIT' => '20',
-
-    // Optional Redis Unix socket
-    'REDIS_SOCKET' => '',
+    'DB_HOST'    => '127.0.0.1',
+    'DB_PORT'    => '3306',
+    'DB_NAME'    => 'notes',
+    'DB_USER'    => 'root',
+    'DB_PASS'    => '',
+    'DB_CHARSET' => 'utf8mb4',
 ];
 ```
 
-`config.php` is gitignored and is served as PHP (a direct request executes it to nothing), so it never leaks as plaintext the way a web-served `.env` would. The app reads configuration through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
+`config.php` is gitignored and is served as PHP (a direct request executes it to nothing), so it never leaks as plaintext the way a web-served `.env` would. The app reads it through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
+
+The database schema is created automatically on the first run.
+
+Every other setting lives in the DB `options` table (key/value), read via `get_option()`. Set your admin login there. `AUTH_PASS` is stored as a bcrypt hash (`password_hash` / `password_verify`, like modern WordPress) — generate one and insert it:
+
+```bash
+php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
+```
+
+```sql
+INSERT INTO options (name, value) VALUES
+  ('AUTH_USER', 'admin'),
+  ('AUTH_PASS', '$2y$12$...the-hash-from-above...');
+```
+
+(If you insert a plaintext password instead, it is accepted once and transparently re-saved as a hash on first login.)
+
+The same table holds the REST API token (`API_TOKEN`), Cloudflare Turnstile CAPTCHA (`CAPTCHA_SITE_KEY` / `CAPTCHA_SECRET_KEY`), the AI assistant (`AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` / `AI_HISTORY_LIMIT`), and an optional `REDIS_SOCKET`; leaving a setting unset disables that feature.
 
 ## REST API
 

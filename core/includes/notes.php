@@ -2,6 +2,9 @@
 
 if(!defined('ABSPATH')){exit;}
 
+// Sort value for notes without an explicit custom order; they tie-break by updated_at.
+const NOTE_DEFAULT_SORT = 9999;
+
 function get_notes_path(): string {
     return ABSPATH . DS . NOTES_DIR;
 }
@@ -60,179 +63,141 @@ function generate_slug($title): string {
     return $slug ?: 'untitled-' . time();
 }
 
-function get_sort_order($dir): array {
-    $file = $dir . DS . '.sort-order.json';
-    if(!file_exists($file)) return [];
-    $data = json_decode(file_get_contents($file), true);
-    return is_array($data) ? $data : [];
+// ============================================================
+// Path / row helpers
+// ============================================================
+
+/** Normalize a caller-supplied identifier ("parent/child.json", DS or /) to a clean path. */
+function note_path_from_relative($relative): string {
+    $p = str_replace(DS, '/', (string)$relative);
+    $p = preg_replace('#\.json$#', '', $p);
+    return trim($p, '/');
 }
 
-function save_sort_order($dir, array $slugs): bool {
-    $file = $dir . DS . '.sort-order.json';
-    $result = file_put_contents($file, json_encode($slugs, JSON_UNESCAPED_UNICODE)) !== false;
-    if($result) {
-        cache_delete('tree');
-    }
-    return $result;
+function to_db_datetime($value): string {
+    $ts = is_numeric($value) ? (int)$value : strtotime((string)$value);
+    return date('Y-m-d H:i:s', $ts ?: time());
 }
+
+/** DATETIME -> ISO 8601 (preserves the previous meta.created_at/updated_at contract). */
+function note_iso(?string $datetime): string {
+    if(!$datetime) return '';
+    $ts = strtotime($datetime);
+    return $ts ? date('c', $ts) : '';
+}
+
+function note_id_by_path(string $path): ?int {
+    $stmt = get_db()->prepare("SELECT id FROM notes WHERE path = ? LIMIT 1");
+    $stmt->execute([$path]);
+    $id = $stmt->fetchColumn();
+    return $id !== false ? (int)$id : null;
+}
+
+function note_exists($path_or_relative): bool {
+    return note_id_by_path(note_path_from_relative($path_or_relative)) !== null;
+}
+
+/** Map a DB row to the note array shape the rest of the app expects. */
+function db_row_to_note(array $row): array {
+    $path = $row['path'];
+
+    $content = json_decode($row['content'] ?? '', true);
+    if(!is_array($content)) $content = ['blocks' => []];
+
+    $meta = [
+        'title'      => $row['title'],
+        'icon'       => $row['icon'] ?? '',
+        'visibility' => $row['visibility'],
+        'pinned'     => (bool)$row['pinned'],
+        'created_at' => note_iso($row['created_at']),
+        'updated_at' => note_iso($row['updated_at']),
+    ];
+    if(($row['cover'] ?? '') !== '' && $row['cover'] !== null)         $meta['cover'] = $row['cover'];
+    if($row['cover_position'] !== null)                                $meta['cover_position'] = (int)$row['cover_position'];
+    if(($row['color'] ?? '') !== '' && $row['color'] !== null)         $meta['color'] = $row['color'];
+    if($row['graph_x'] !== null)                                       $meta['graph_x'] = (float)$row['graph_x'];
+    if($row['graph_y'] !== null)                                       $meta['graph_y'] = (float)$row['graph_y'];
+
+    return [
+        'meta'    => $meta,
+        'content' => $content,
+        '_file'   => str_replace('/', DS, $path) . '.json',
+        '_slug'   => $row['slug'],
+        '_url'    => $path,
+        '_title'  => $row['title'],
+        '_id'     => (int)$row['id'],
+    ];
+}
+
+// ============================================================
+// Tree / listing
+// ============================================================
 
 function scan_notes($dir = null): array {
-    $base = get_notes_path();
-    $is_root = ($dir === null);
-    $dir = $dir ?? $base;
+    $cached = cache_get('tree');
+    if($cached !== null) return $cached;
 
-    // Cache only the root tree
-    if($is_root) {
-        $cached = cache_get('tree');
-        if($cached !== null) return $cached;
-    }
-
-    $tree = _scan_notes_uncached($dir);
-
-    if($is_root) {
-        cache_set('tree', $tree);
-    }
-
+    $tree = build_note_tree();
+    cache_set('tree', $tree);
     return $tree;
 }
 
-function _scan_notes_uncached($dir): array {
-    $base = get_notes_path();
-    $tree = ['folders' => [], 'notes' => []];
+function build_note_tree(): array {
+    $rows = get_db()->query("SELECT * FROM notes ORDER BY sort_order ASC, updated_at DESC")->fetchAll();
 
-    if(!is_dir($dir)) return $tree;
-
-    $items = scandir($dir);
-    $dir_names = [];
-    $note_slugs = [];
-
-    // First pass: collect folder names and note slugs
-    foreach($items as $item) {
-        if($item === '.' || $item === '..' || $item === '.sort-order.json') continue;
-        $path = $dir . DS . $item;
-        if(is_dir($path)) {
-            $dir_names[] = $item;
-        } elseif(str_ends_with($item, '.json')) {
-            $note_slugs[] = basename($item, '.json');
-        }
+    $byParent = [];
+    foreach($rows as $r) {
+        $byParent[$r['parent_id'] ?? 0][] = $r;
     }
 
-    // Find folders that are child-page containers (matching a note slug)
-    $child_folders = array_intersect($dir_names, $note_slugs);
-
-    foreach($items as $item) {
-        if($item === '.' || $item === '..' || $item === '.sort-order.json') continue;
-
-        $path = $dir . DS . $item;
-        $relative = ltrim(str_replace($base, '', $path), DS . '/');
-
-        if(is_dir($path)) {
-            if(in_array($item, $child_folders)) {
-                // Skip — will be attached as children of the matching note
-                continue;
+    $build = function($parentId) use (&$build, $byParent) {
+        $node = ['folders' => [], 'notes' => []];
+        foreach(($byParent[$parentId ?? 0] ?? []) as $r) {
+            $n = db_row_to_note($r);
+            $children = $build($r['id']);
+            if(!empty($children['notes'])) {
+                $n['_children'] = $children;
             }
-            $tree['folders'][] = [
-                'name' => $item,
-                'path' => $relative,
-                'children' => _scan_notes_uncached($path),
-            ];
-        } elseif(str_ends_with($item, '.json')) {
-            $note = get_note($relative);
-            if($note) {
-                // Attach child pages if a matching folder exists
-                $slug = basename($item, '.json');
-                if(in_array($slug, $child_folders)) {
-                    $note['_children'] = _scan_notes_uncached($dir . DS . $slug);
-                }
-                $tree['notes'][] = $note;
-            }
+            $node['notes'][] = $n;
         }
-    }
+        return $node;
+    };
 
-    // sort folders alphabetically
-    usort($tree['folders'], fn($a, $b) => strcasecmp($a['name'], $b['name']));
-
-    // sort notes by custom order, then by updated_at descending
-    $order = get_sort_order($dir);
-    if(!empty($order)) {
-        $order_map = array_flip($order);
-        $max = count($order);
-        usort($tree['notes'], function($a, $b) use ($order_map, $max) {
-            $posA = $order_map[$a['_slug']] ?? $max;
-            $posB = $order_map[$b['_slug']] ?? $max;
-            if($posA !== $posB) return $posA <=> $posB;
-            return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
-        });
-    } else {
-        usort($tree['notes'], function($a, $b) {
-            return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
-        });
-    }
-
-    return $tree;
+    return $build(null);
 }
+
+function collect_all_notes($dir = null): array {
+    $rows = get_db()->query("SELECT * FROM notes")->fetchAll();
+    return array_map('db_row_to_note', $rows);
+}
+
+function get_recent_notes($limit = 20): array {
+    $stmt = get_db()->prepare("SELECT * FROM notes ORDER BY updated_at DESC LIMIT ?");
+    $stmt->bindValue(1, (int)$limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return array_map('db_row_to_note', $stmt->fetchAll());
+}
+
+// ============================================================
+// Single note read
+// ============================================================
 
 function get_note($relative_path): ?array {
-    $cache_key = 'note:' . $relative_path;
+    $path = note_path_from_relative($relative_path);
+    if($path === '') return null;
+
+    $cache_key = 'note:' . $path;
     $cached = cache_get($cache_key);
     if($cached !== null) return $cached;
 
-    $file = get_notes_path() . DS . $relative_path;
-    if(!file_exists($file)) return null;
+    $stmt = get_db()->prepare("SELECT * FROM notes WHERE path = ? LIMIT 1");
+    $stmt->execute([$path]);
+    $row = $stmt->fetch();
+    if(!$row) return null;
 
-    $json = file_get_contents($file);
-    $data = json_decode($json, true);
-    if(!$data) return null;
-
-    $data['_file'] = $relative_path;
-    $data['_slug'] = basename($relative_path, '.json');
-
-    // build URL path from file path
-    $url_path = str_replace(DS, '/', $relative_path);
-    $url_path = preg_replace('/\.json$/', '', $url_path);
-    $data['_url'] = $url_path;
-
-    // extract title
-    $data['_title'] = get_note_title($data);
-
-    // Convert legacy raw SVG icons to base64 data URI
-    $need_save = false;
-    if(!empty($data['meta']['icon']) && str_starts_with($data['meta']['icon'], '<svg')) {
-        $data['meta']['icon'] = 'data:image/svg+xml;base64,' . base64_encode($data['meta']['icon']);
-        $need_save = true;
-    }
-
-    // Normalize image URLs to host-relative /file/ paths so notes stay portable
-    // across hosts. Covers legacy /uploads/ URLs and any absolute host baked in by
-    // another copy (e.g. notes moved from production into a local instance).
-    if(!empty($data['meta']['cover'])) {
-        $normalized = normalize_upload_url($data['meta']['cover']);
-        if($normalized !== $data['meta']['cover']) {
-            $data['meta']['cover'] = $normalized;
-            $need_save = true;
-        }
-    }
-    if(!empty($data['content']['blocks'])) {
-        foreach($data['content']['blocks'] as &$block) {
-            if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url'])) {
-                $normalized = normalize_upload_url($block['data']['file']['url']);
-                if($normalized !== $block['data']['file']['url']) {
-                    $block['data']['file']['url'] = $normalized;
-                    $need_save = true;
-                }
-            }
-        }
-        unset($block);
-    }
-
-    if($need_save) {
-        $save_data = array_filter($data, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
-        file_put_contents($file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    }
-
-    cache_set($cache_key, $data);
-
-    return $data;
+    $note = db_row_to_note($row);
+    cache_set($cache_key, $note);
+    return $note;
 }
 
 function get_note_title($note_data): string {
@@ -240,7 +205,6 @@ function get_note_title($note_data): string {
         return $note_data['meta']['title'];
     }
 
-    // extract from first header block
     if(!empty($note_data['content']['blocks'])) {
         foreach($note_data['content']['blocks'] as $block) {
             if($block['type'] === 'header' && !empty($block['data']['text'])) {
@@ -253,304 +217,283 @@ function get_note_title($note_data): string {
 }
 
 function get_breadcrumbs($relative_path): array {
+    $path = note_path_from_relative($relative_path);
     $crumbs = [];
-    $base = get_notes_path();
 
-    // Split path: e.g. "projects/my-project/sub-task.json"
-    // → segments: ["projects", "my-project", "sub-task.json"]
-    $parts = explode('/', str_replace(DS, '/', $relative_path));
-    $current_slug = basename(end($parts), '.json');
+    $parts = explode('/', $path);
+    array_pop($parts); // drop the note itself
 
-    // Walk path segments (excluding the file itself)
-    $accumulated = '';
-    for($i = 0; $i < count($parts) - 1; $i++) {
-        $segment = $parts[$i];
-        $accumulated .= ($accumulated ? '/' : '') . $segment;
-
-        // Check if this segment is a parent note (has matching .json)
-        $parent_json = ($i > 0 ? implode('/', array_slice($parts, 0, $i)) . '/' : '') . $segment . '.json';
-        $parent_file = $base . DS . str_replace('/', DS, $parent_json);
-
-        if(file_exists($parent_file)) {
-            $parent_note = get_note($parent_json);
-            $crumbs[] = [
-                'title' => $parent_note ? $parent_note['_title'] : $segment,
-                'url' => 'note/' . preg_replace('/\.json$/', '', $parent_json),
-            ];
-        } else {
-            $crumbs[] = [
-                'title' => $segment,
-                'url' => '',
-            ];
-        }
+    $accum = '';
+    foreach($parts as $seg) {
+        $accum = $accum === '' ? $seg : $accum . '/' . $seg;
+        $parent = get_note($accum);
+        $crumbs[] = [
+            'title' => $parent ? $parent['_title'] : $seg,
+            'url'   => $parent ? 'note/' . $accum : '',
+        ];
     }
 
     return $crumbs;
 }
 
+// ============================================================
+// Mutations
+// ============================================================
+
 function save_note($relative_path, $data): bool {
-    $file = get_notes_path() . DS . $relative_path;
-    $dir = dirname($file);
+    $path = note_path_from_relative($relative_path);
+    if($path === '') return false;
 
-    if(!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+    $slug        = basename($path);
+    $parent_path = strpos($path, '/') !== false ? substr($path, 0, strrpos($path, '/')) : '';
+    $parent_id   = $parent_path !== '' ? note_id_by_path($parent_path) : null;
+
+    $meta    = $data['meta'] ?? [];
+    $content = $data['content'] ?? ['blocks' => []];
+    $now     = date('Y-m-d H:i:s');
+
+    $visibility = $meta['visibility'] ?? 'private';
+    if(!in_array($visibility, ['private', 'unlisted', 'public'], true)) $visibility = 'private';
+
+    $params = [
+        'parent_id'      => $parent_id,
+        'slug'           => $slug,
+        'title'          => (string)($meta['title'] ?? 'Untitled'),
+        'icon'           => (isset($meta['icon']) && $meta['icon'] !== '') ? $meta['icon'] : null,
+        'cover'          => !empty($meta['cover']) ? $meta['cover'] : null,
+        'cover_position' => isset($meta['cover_position']) ? (int)$meta['cover_position'] : null,
+        'color'          => !empty($meta['color']) ? $meta['color'] : null,
+        'pinned'         => !empty($meta['pinned']) ? 1 : 0,
+        'visibility'     => $visibility,
+        'content'        => json_encode($content, JSON_UNESCAPED_UNICODE),
+        'graph_x'        => isset($meta['graph_x']) ? (float)$meta['graph_x'] : null,
+        'graph_y'        => isset($meta['graph_y']) ? (float)$meta['graph_y'] : null,
+        'updated_at'     => isset($meta['updated_at']) ? to_db_datetime($meta['updated_at']) : $now,
+    ];
+
+    $db = get_db();
+    $existing_id = note_id_by_path($path);
+
+    if($existing_id) {
+        $params['id'] = $existing_id;
+        $ok = $db->prepare(
+            "UPDATE notes SET parent_id=:parent_id, slug=:slug, title=:title, icon=:icon, cover=:cover,
+             cover_position=:cover_position, color=:color, pinned=:pinned, visibility=:visibility,
+             content=:content, graph_x=:graph_x, graph_y=:graph_y, updated_at=:updated_at WHERE id=:id"
+        )->execute($params);
+    } else {
+        $params['path']       = $path;
+        $params['created_at'] = isset($meta['created_at']) ? to_db_datetime($meta['created_at']) : $now;
+        $params['sort_order'] = NOTE_DEFAULT_SORT;
+        $ok = $db->prepare(
+            "INSERT INTO notes (parent_id, slug, path, title, icon, cover, cover_position, color, pinned,
+             visibility, content, graph_x, graph_y, sort_order, created_at, updated_at)
+             VALUES (:parent_id,:slug,:path,:title,:icon,:cover,:cover_position,:color,:pinned,
+             :visibility,:content,:graph_x,:graph_y,:sort_order,:created_at,:updated_at)"
+        )->execute($params);
     }
 
-    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    $result = file_put_contents($file, $json) !== false;
-
-    if($result) {
-        cache_delete('note:' . $relative_path);
+    if($ok) {
+        cache_delete('note:' . $path);
         cache_delete('tree');
     }
 
-    return $result;
+    return (bool)$ok;
 }
 
-function delete_note($relative_path): bool {
-    $base = get_notes_path();
-    $file = $base . DS . $relative_path;
-    if(!file_exists($file)) return false;
+/**
+ * Rename/move a note in place: updates its slug, path and parent, plus the path
+ * prefix of every descendant. Uses the same row ids so child links (parent_id) and
+ * FK cascades stay intact — never delete+insert.
+ */
+function rename_note(string $old_path, string $new_path): bool {
+    $db = get_db();
+    $id = note_id_by_path($old_path);
+    if(!$id) return false;
 
-    // Delete child folder if exists (e.g. notes/my-note.json → notes/my-note/)
-    $slug = basename($relative_path, '.json');
-    $child_dir = dirname($file) . DS . $slug;
-    if(is_dir($child_dir)) {
-        delete_directory($child_dir);
+    $new_slug        = basename($new_path);
+    $new_parent_path = strpos($new_path, '/') !== false ? substr($new_path, 0, strrpos($new_path, '/')) : '';
+    $new_parent_id   = $new_parent_path !== '' ? note_id_by_path($new_parent_path) : null;
+
+    $db->prepare("UPDATE notes SET slug=?, path=?, parent_id=? WHERE id=?")
+        ->execute([$new_slug, $new_path, $new_parent_id, $id]);
+
+    // Re-path descendants (slug stays, only the path prefix changes)
+    $stmt = $db->prepare("SELECT id, path FROM notes WHERE path LIKE ?");
+    $stmt->execute([$old_path . '/%']);
+    $upd = $db->prepare("UPDATE notes SET path=? WHERE id=?");
+    foreach($stmt as $r) {
+        $upd->execute([$new_path . substr($r['path'], strlen($old_path)), $r['id']]);
     }
 
-    $result = unlink($file);
-
-    // Remove slug from .sort-order.json in current directory
-    if($result) {
-        $dir = dirname($file);
-        $sort_file = $dir . DS . '.sort-order.json';
-        if(file_exists($sort_file)) {
-            $order = json_decode(file_get_contents($sort_file), true);
-            if(is_array($order)) {
-                $order = array_values(array_filter($order, fn($s) => $s !== $slug));
-                if(empty($order)) {
-                    unlink($sort_file);
-                } else {
-                    file_put_contents($sort_file, json_encode($order, JSON_UNESCAPED_UNICODE));
-                }
-            }
-        }
-    }
-
-    // Clean up empty parent folder (if it's not the notes root)
-    $parent_dir = dirname($file);
-    if($result && $parent_dir !== $base) {
-        $items = array_diff(scandir($parent_dir), ['.', '..', '.sort-order.json']);
-        if(empty($items)) {
-            // Remove leftover .sort-order.json before rmdir
-            $sort_file = $parent_dir . DS . '.sort-order.json';
-            if(file_exists($sort_file)) unlink($sort_file);
-            rmdir($parent_dir);
-        }
-    }
-
-    // Clean up root .sort-order.json if notes root is empty
-    if($result) {
-        $root_items = array_diff(scandir($base), ['.', '..', '.htaccess', '.sort-order.json']);
-        if(empty($root_items)) {
-            $root_sort = $base . DS . '.sort-order.json';
-            if(file_exists($root_sort)) unlink($root_sort);
-        }
-    }
-
-    if($result) {
-        cache_delete('note:' . $relative_path);
-        cache_delete('tree');
-    }
-
-    return $result;
-}
-
-function move_note(string $source_path, string $target_folder): array {
-    $base = get_notes_path();
-    $source_path = str_replace('/', DS, $source_path);
-    $source_file = $base . DS . $source_path;
-
-    // 1. Validate source exists
-    if(!file_exists($source_file)) {
-        return ['success' => false, 'error' => 'Source not found'];
-    }
-
-    // 2. Determine source folder
-    $source_dir = dirname($source_path);
-    if($source_dir === '.') $source_dir = '';
-
-    $target_folder = trim(str_replace('/', DS, $target_folder), DS . ' ');
-
-    // 3. Not moving to same folder
-    if($source_dir === $target_folder) {
-        return ['success' => false, 'error' => 'Already in target folder'];
-    }
-
-    // 4. Prevent circular nesting
-    $slug = basename($source_path, '.json');
-    $source_slug_path = $source_dir ? $source_dir . DS . $slug : $slug;
-    if($target_folder === $source_slug_path || str_starts_with($target_folder, $source_slug_path . DS)) {
-        return ['success' => false, 'error' => 'Cannot move note into itself'];
-    }
-
-    // 5. Create target directory if needed
-    $target_dir = $target_folder ? $base . DS . $target_folder : $base;
-    if(!is_dir($target_dir)) {
-        mkdir($target_dir, 0755, true);
-    }
-
-    // 6. Resolve slug conflict in target
-    $final_slug = $slug;
-    $dest_file = $target_dir . DS . $final_slug . '.json';
-    $counter = 1;
-    while(file_exists($dest_file)) {
-        $final_slug = $slug . '-' . $counter;
-        $dest_file = $target_dir . DS . $final_slug . '.json';
-        $counter++;
-    }
-
-    // 7. Move JSON file
-    if(!rename($source_file, $dest_file)) {
-        return ['success' => false, 'error' => 'Failed to move file'];
-    }
-
-    // 8. Move children folder if exists
-    $source_children_dir = dirname($source_file) . DS . $slug;
-    if(is_dir($source_children_dir)) {
-        $dest_children_dir = $target_dir . DS . $final_slug;
-        rename($source_children_dir, $dest_children_dir);
-    }
-
-    // 9. Remove slug from source sort order
-    $source_abs_dir = dirname($source_file);
-    $sort_file = $source_abs_dir . DS . '.sort-order.json';
-    if(file_exists($sort_file)) {
-        $order = json_decode(file_get_contents($sort_file), true);
-        if(is_array($order)) {
-            $order = array_values(array_filter($order, fn($s) => $s !== $slug));
-            if(empty($order)) {
-                unlink($sort_file);
-            } else {
-                file_put_contents($sort_file, json_encode($order, JSON_UNESCAPED_UNICODE));
-            }
-        }
-    }
-
-    // 10. Clean up empty source folder (if not root)
-    if($source_abs_dir !== $base) {
-        $remaining = array_diff(scandir($source_abs_dir), ['.', '..', '.sort-order.json']);
-        if(empty($remaining)) {
-            $leftover_sort = $source_abs_dir . DS . '.sort-order.json';
-            if(file_exists($leftover_sort)) unlink($leftover_sort);
-            if(is_dir($source_abs_dir)) rmdir($source_abs_dir);
-        }
-    }
-
-    // 11. Clear caches
-    $new_relative = $target_folder ? $target_folder . DS . $final_slug . '.json' : $final_slug . '.json';
-    cache_delete('note:' . $source_path);
-    cache_delete('note:' . $new_relative);
+    cache_delete('note:' . $old_path);
+    cache_delete('note:' . $new_path);
     cache_delete('tree');
-
-    // Return with forward slashes for consistency
-    $new_path = str_replace(DS, '/', $new_relative);
-    return ['success' => true, 'new_path' => $new_path, 'new_slug' => $final_slug];
-}
-
-function delete_directory($dir): bool {
-    if(!is_dir($dir)) return false;
-
-    $items = scandir($dir);
-    foreach($items as $item) {
-        if($item === '.' || $item === '..') continue;
-        $path = $dir . DS . $item;
-        if(is_dir($path)) {
-            delete_directory($path);
-        } else {
-            unlink($path);
-        }
-    }
-
-    return rmdir($dir);
-}
-
-function create_folder($relative_path): bool {
-    $dir = get_notes_path() . DS . $relative_path;
-    if(!is_dir($dir)) {
-        return mkdir($dir, 0755, true);
-    }
     return true;
 }
 
-function delete_folder($relative_path): bool {
-    $dir = get_notes_path() . DS . $relative_path;
-    if(is_dir($dir)) {
-        // only delete if empty
-        $items = array_diff(scandir($dir), ['.', '..']);
-        if(empty($items)) {
-            return rmdir($dir);
-        }
+/** Update only the content blocks of a note (used to keep parent page-link blocks in sync). */
+function update_note_content_blocks(string $relative_path, array $blocks): bool {
+    $path = note_path_from_relative($relative_path);
+    $note = get_note($path);
+    if(!$note) return false;
+
+    $content = $note['content'];
+    $content['blocks'] = $blocks;
+
+    $ok = get_db()->prepare("UPDATE notes SET content = ? WHERE path = ?")
+        ->execute([json_encode($content, JSON_UNESCAPED_UNICODE), $path]);
+
+    if($ok) {
+        cache_delete('note:' . $path);
+        cache_delete('tree');
     }
-    return false;
+    return (bool)$ok;
 }
 
-function get_recent_notes($limit = 20): array {
-    $all = collect_all_notes();
-    usort($all, function($a, $b) {
-        return ($b['meta']['updated_at'] ?? '') <=> ($a['meta']['updated_at'] ?? '');
-    });
-    return array_slice($all, 0, $limit);
+function delete_note($relative_path): bool {
+    $path = note_path_from_relative($relative_path);
+    $id = note_id_by_path($path);
+    if(!$id) return false;
+
+    // Children are removed by the ON DELETE CASCADE foreign key.
+    $ok = get_db()->prepare("DELETE FROM notes WHERE id = ?")->execute([$id]);
+
+    if($ok) {
+        cache_delete('note:' . $path);
+        cache_delete('tree');
+    }
+    return (bool)$ok;
 }
 
-function collect_all_notes($dir = null): array {
-    $base = get_notes_path();
-    $dir = $dir ?? $base;
-    $notes = [];
-
-    if(!is_dir($dir)) return $notes;
-
-    $items = scandir($dir);
-    foreach($items as $item) {
-        if($item === '.' || $item === '..' || $item[0] === '.') continue;
-
-        $path = $dir . DS . $item;
-
-        if(is_dir($path)) {
-            $notes = array_merge($notes, collect_all_notes($path));
-        } elseif(str_ends_with($item, '.json')) {
-            $relative = ltrim(str_replace($base, '', $path), DS . '/');
-            $note = get_note($relative);
-            if($note) {
-                $notes[] = $note;
-            }
-        }
+function move_note(string $source_path, string $target_folder): array {
+    $src_path = note_path_from_relative($source_path);
+    if(note_id_by_path($src_path) === null) {
+        return ['success' => false, 'error' => 'Source not found'];
     }
 
-    return $notes;
+    $slug       = basename($src_path);
+    $src_parent = strpos($src_path, '/') !== false ? substr($src_path, 0, strrpos($src_path, '/')) : '';
+    $target     = trim(str_replace(DS, '/', $target_folder), '/ ');
+
+    if($src_parent === $target) {
+        return ['success' => false, 'error' => 'Already in target folder'];
+    }
+
+    // Prevent moving a note into itself or one of its descendants
+    if($target === $src_path || str_starts_with($target, $src_path . '/')) {
+        return ['success' => false, 'error' => 'Cannot move note into itself'];
+    }
+
+    if($target !== '' && note_id_by_path($target) === null) {
+        return ['success' => false, 'error' => 'Target folder not found'];
+    }
+
+    // Resolve slug conflict in the target folder
+    $final_slug = $slug;
+    $new_path   = $target !== '' ? $target . '/' . $final_slug : $final_slug;
+    $counter    = 1;
+    while(note_id_by_path($new_path) !== null) {
+        $final_slug = $slug . '-' . $counter;
+        $new_path   = $target !== '' ? $target . '/' . $final_slug : $final_slug;
+        $counter++;
+    }
+
+    rename_note($src_path, $new_path);
+
+    return ['success' => true, 'new_path' => $new_path, 'new_slug' => $final_slug];
 }
 
 function update_note_visibility(string $relative_path, string $visibility): bool {
-    $file = get_notes_path() . DS . $relative_path;
-    if(!file_exists($file)) return false;
+    if(!in_array($visibility, ['private', 'unlisted', 'public'], true)) return false;
+    $path = note_path_from_relative($relative_path);
 
-    $json = file_get_contents($file);
-    $data = json_decode($json, true);
-    if(!$data) return false;
+    $ok = get_db()->prepare("UPDATE notes SET visibility = ?, updated_at = ? WHERE path = ?")
+        ->execute([$visibility, date('Y-m-d H:i:s'), $path]);
 
-    $data['meta']['visibility'] = $visibility;
-    $data['meta']['updated_at'] = date('c');
-    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    $result = file_put_contents($file, $json) !== false;
-
-    if($result) {
-        cache_delete('note:' . $relative_path);
+    if($ok) {
+        cache_delete('note:' . $path);
         cache_delete('tree');
     }
-
-    return $result;
+    return (bool)$ok;
 }
+
+/** Toggle pinned state; returns the new state, or null if the note is missing. */
+function toggle_note_pinned($relative_path): ?bool {
+    $path = note_path_from_relative($relative_path);
+    $id = note_id_by_path($path);
+    if(!$id) return null;
+
+    $db = get_db();
+    $cur = (int)$db->query("SELECT pinned FROM notes WHERE id = " . (int)$id)->fetchColumn();
+    $new = $cur ? 0 : 1;
+    $db->prepare("UPDATE notes SET pinned = ? WHERE id = ?")->execute([$new, $id]);
+
+    cache_delete('note:' . $path);
+    cache_delete('tree');
+    return (bool)$new;
+}
+
+function update_note_graph_position($relative_path, $x, $y): bool {
+    $path = note_path_from_relative($relative_path);
+    $ok = get_db()->prepare("UPDATE notes SET graph_x = ?, graph_y = ? WHERE path = ?")
+        ->execute([round((float)$x, 2), round((float)$y, 2), $path]);
+    if($ok) {
+        cache_delete('note:' . $path);
+        cache_delete('tree');
+    }
+    return (bool)$ok;
+}
+
+/** Reset all saved graph positions; returns how many notes were reset. */
+function reset_graph_positions(): int {
+    $db = get_db();
+    $count = (int)$db->query("SELECT COUNT(*) FROM notes WHERE graph_x IS NOT NULL OR graph_y IS NOT NULL")->fetchColumn();
+    $db->exec("UPDATE notes SET graph_x = NULL, graph_y = NULL WHERE graph_x IS NOT NULL OR graph_y IS NOT NULL");
+    cache_delete('tree');
+    return $count;
+}
+
+// ============================================================
+// Custom ordering (replaces .sort-order.json)
+// ============================================================
+
+/** Ordered list of slugs in a folder (relative path; '' = root). */
+function get_sort_order($folder): array {
+    $folder = trim(str_replace(DS, '/', (string)$folder), '/');
+    $parent_id = $folder !== '' ? note_id_by_path($folder) : null;
+
+    if($parent_id === null && $folder !== '') return [];
+
+    $where = $parent_id === null ? 'parent_id IS NULL' : 'parent_id = ' . (int)$parent_id;
+    return get_db()->query("SELECT slug FROM notes WHERE $where ORDER BY sort_order ASC, updated_at DESC")
+        ->fetchAll(PDO::FETCH_COLUMN);
+}
+
+function save_sort_order($folder, array $slugs): bool {
+    $folder = trim(str_replace(DS, '/', (string)$folder), '/');
+    $parent_id = $folder !== '' ? note_id_by_path($folder) : null;
+    if($parent_id === null && $folder !== '') return false;
+
+    $db = get_db();
+    if($parent_id === null) {
+        $upd = $db->prepare("UPDATE notes SET sort_order = ? WHERE slug = ? AND parent_id IS NULL");
+        foreach(array_values($slugs) as $i => $slug) $upd->execute([$i, $slug]);
+    } else {
+        $upd = $db->prepare("UPDATE notes SET sort_order = ? WHERE slug = ? AND parent_id = ?");
+        foreach(array_values($slugs) as $i => $slug) $upd->execute([$i, $slug, $parent_id]);
+    }
+
+    cache_delete('tree');
+    return true;
+}
+
+// ============================================================
+// Folders — no-op in the DB model (every node is a note; no bare folders)
+// ============================================================
+
+function create_folder($relative_path): bool { return true; }
+function delete_folder($relative_path): bool { return true; }
 
 function resolve_note_icon_value(array $input, string $existing_icon = ''): string {
     if(!array_key_exists('icon', $input)) {
@@ -569,6 +512,10 @@ function resolve_note_icon_value(array $input, string $existing_icon = ''): stri
 
     return $icon;
 }
+
+// ============================================================
+// Uploads (filesystem) and image-reference scanning (DB)
+// ============================================================
 
 function save_uploaded_image(string $source_path, string $mime): ?string {
     $uploads_dir = ABSPATH . DS . 'uploads';
@@ -593,14 +540,9 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
 
     try {
         $imagick = new \Imagick($source_path);
-
-        // Auto-orient based on EXIF
         $imagick->autoOrient();
-
-        // Strip metadata
         $imagick->stripImage();
 
-        // Reject images larger than 10240x10240
         $w = $imagick->getImageWidth();
         $h = $imagick->getImageHeight();
         if($w > 10240 || $h > 10240) {
@@ -608,11 +550,9 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
             return null;
         }
 
-        // Convert to WebP
         $imagick->setImageFormat('webp');
         $imagick->setImageCompressionQuality(80);
 
-        // Resize so the shorter side is max 1024px (longer side scales proportionally)
         $minSide = min($w, $h);
         if($minSide > 1024) {
             $ratio = 1024 / $minSide;
@@ -629,32 +569,23 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
 }
 
 function minify_svg(string $svg): ?string {
-    // Strip XML declaration
     $svg = preg_replace('/<\?xml[^?]*\?>\s*/i', '', $svg);
-    // Strip DOCTYPE
     $svg = preg_replace('/<!DOCTYPE[^>]*>\s*/i', '', $svg);
-    // Strip comments
     $svg = preg_replace('/<!--.*?-->/s', '', $svg);
 
-    // Extract <svg>...</svg>
     if(!preg_match('/<svg[\s\S]*<\/svg>/i', $svg, $m)) {
         return null;
     }
     $svg = $m[0];
 
-    // Remove unnecessary attributes from <svg> tag
     $svg = preg_replace_callback('/<svg([^>]*)>/', function($match) {
         $attrs = $match[1];
-        // Remove class, version, xmlns:xlink, xml:space, style
         $attrs = preg_replace('/\s*(class|version|xmlns:xlink|xml:space|style)\s*=\s*"[^"]*"/i', '', $attrs);
-        // Remove "px" from width/height
         $attrs = preg_replace('/(width|height)\s*=\s*"([\d.]+)px"/i', '$1="$2"', $attrs);
         return '<svg' . $attrs . '>';
     }, $svg, 1);
 
-    // Collapse whitespace between tags
     $svg = preg_replace('/>\s+</', '><', $svg);
-    // Trim whitespace inside tags
     $svg = preg_replace('/\s{2,}/', ' ', $svg);
 
     return trim($svg);
@@ -717,65 +648,30 @@ function delete_upload_by_url(string $url): bool {
     return false;
 }
 
+/** All image URLs referenced by a note and its descendants (blocks + covers). */
 function collect_note_image_urls(string $relative_path): array {
-    $base = get_notes_path();
-    $file = $base . DS . $relative_path;
-    if(!file_exists($file)) return [];
+    $path = note_path_from_relative($relative_path);
+    $stmt = get_db()->prepare("SELECT content, cover FROM notes WHERE path = ? OR path LIKE ?");
+    $stmt->execute([$path, $path . '/%']);
 
-    $data = json_decode(file_get_contents($file), true);
-    $urls = extract_image_urls($data['content']['blocks'] ?? []);
-
-    // Collect from child notes recursively
-    $slug = basename($relative_path, '.json');
-    $child_dir = dirname($file) . DS . $slug;
-    if(is_dir($child_dir)) {
-        $urls = array_merge($urls, _collect_images_recursive($child_dir));
-    }
-
-    return $urls;
-}
-
-function _collect_images_recursive(string $dir): array {
     $urls = [];
-    $base = get_notes_path();
-
-    foreach(scandir($dir) as $item) {
-        if($item === '.' || $item === '..' || $item === '.sort-order.json') continue;
-        $path = $dir . DS . $item;
-        if(is_dir($path)) {
-            $urls = array_merge($urls, _collect_images_recursive($path));
-        } elseif(str_ends_with($item, '.json')) {
-            $json = file_get_contents($path);
-            $data = json_decode($json, true);
-            if($data) {
-                $urls = array_merge($urls, extract_image_urls($data['content']['blocks'] ?? []));
-            }
-        }
+    foreach($stmt as $r) {
+        $data = json_decode($r['content'], true);
+        $urls = array_merge($urls, extract_image_urls($data['blocks'] ?? $data['content']['blocks'] ?? []));
+        if(!empty($r['cover'])) $urls[] = $r['cover'];
     }
-
     return $urls;
 }
 
+/** True if the upload filename is referenced by any public/unlisted note. */
 function is_upload_referenced_in_public_note(string $filename): bool {
-    return _search_upload_in_notes(get_notes_path(), $filename);
-}
-
-function _search_upload_in_notes(string $dir, string $filename): bool {
-    foreach(scandir($dir) as $item) {
-        if($item === '.' || $item === '..' || $item[0] === '.') continue;
-        $path = $dir . DS . $item;
-        if(is_dir($path)) {
-            if(_search_upload_in_notes($path, $filename)) return true;
-        } elseif(str_ends_with($item, '.json')) {
-            $raw = file_get_contents($path);
-            if(str_contains($raw, $filename)) {
-                $data = json_decode($raw, true);
-                $vis = $data['meta']['visibility'] ?? 'private';
-                if($vis === 'public' || $vis === 'unlisted') return true;
-            }
-        }
-    }
-    return false;
+    $like = '%' . $filename . '%';
+    $stmt = get_db()->prepare(
+        "SELECT 1 FROM notes WHERE visibility IN ('public', 'unlisted')
+         AND (content LIKE ? OR cover LIKE ?) LIMIT 1"
+    );
+    $stmt->execute([$like, $like]);
+    return (bool)$stmt->fetchColumn();
 }
 
 function get_note_excerpt(array $note, int $max_length = 160): string {
@@ -922,7 +818,6 @@ function render_blocks_to_html($blocks): string {
                 break;
 
             default:
-                // unknown block — render as paragraph
                 if(!empty($data['text'])) {
                     $html .= "<p>{$data['text']}</p>\n";
                 }

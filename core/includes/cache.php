@@ -16,8 +16,7 @@ function get_redis(): ?Redis {
     if($tried) return $redis;
     $tried = true;
 
-    $env = get_env();
-    $socket = $env['REDIS_SOCKET'] ?? '';
+    $socket = get_option('REDIS_SOCKET', '');
     if(empty($socket)) return null;
 
     // Parse unix:///path/to/socket → /path/to/socket

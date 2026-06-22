@@ -16,26 +16,22 @@ function get_env() {
 
 // --- Remember me ---
 
-define('REMEMBER_DIR', ABSPATH . DS . '.remember_tokens');
 define('REMEMBER_COOKIE', 'remember_token');
 define('REMEMBER_DAYS', 30);
 
 function remember_generate_token(string $user): void {
-    if(!is_dir(REMEMBER_DIR)) {
-        mkdir(REMEMBER_DIR, 0700, true);
-    }
+    $token   = bin2hex(random_bytes(32));
+    $hash    = hash('sha256', $token);
+    $expires = time() + (REMEMBER_DAYS * 86400);
 
-    $token = bin2hex(random_bytes(32));
-    $hash  = hash('sha256', $token);
-    $file  = REMEMBER_DIR . DS . $hash . '.json';
-
-    file_put_contents($file, json_encode([
-        'user'    => $user,
-        'expires' => time() + (REMEMBER_DAYS * 86400),
-    ]));
+    // Store only the token hash, never the raw token.
+    get_db()->prepare(
+        "INSERT INTO remember_tokens (token_hash, user, expires) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE user = VALUES(user), expires = VALUES(expires)"
+    )->execute([$hash, $user, $expires]);
 
     setcookie(REMEMBER_COOKIE, $token, [
-        'expires'  => time() + (REMEMBER_DAYS * 86400),
+        'expires'  => $expires,
         'path'     => '/',
         'secure'   => true,
         'httponly'  => true,
@@ -48,20 +44,20 @@ function remember_validate(): bool {
     if(!$token) return false;
 
     $hash = hash('sha256', $token);
-    $file = REMEMBER_DIR . DS . $hash . '.json';
+    $stmt = get_db()->prepare("SELECT user, expires FROM remember_tokens WHERE token_hash = ?");
+    $stmt->execute([$hash]);
+    $row = $stmt->fetch();
 
-    if(!file_exists($file)) return false;
+    if(!$row) return false;
 
-    $data = json_decode(file_get_contents($file), true);
-    if(!$data || ($data['expires'] ?? 0) < time()) {
-        // Expired - delete it
-        @unlink($file);
+    if((int)$row['expires'] < time()) {
+        get_db()->prepare("DELETE FROM remember_tokens WHERE token_hash = ?")->execute([$hash]);
         remember_clear_cookie();
         return false;
     }
 
     $_SESSION['authenticated'] = true;
-    $_SESSION['user'] = $data['user'];
+    $_SESSION['user'] = $row['user'];
     return true;
 }
 
@@ -69,10 +65,7 @@ function remember_clear(): void {
     $token = $_COOKIE[REMEMBER_COOKIE] ?? '';
     if($token) {
         $hash = hash('sha256', $token);
-        $file = REMEMBER_DIR . DS . $hash . '.json';
-        if(file_exists($file)) {
-            @unlink($file);
-        }
+        get_db()->prepare("DELETE FROM remember_tokens WHERE token_hash = ?")->execute([$hash]);
     }
     remember_clear_cookie();
 }
@@ -96,12 +89,51 @@ function auth_check(): bool {
     return remember_validate();
 }
 
-function auth_login(string $user, string $pass, bool $remember = false): bool {
-    $env = get_env();
-    $valid_user = $env['AUTH_USER'] ?? '';
-    $valid_pass = $env['AUTH_PASS'] ?? '';
+/** Hash a plaintext admin password for storage (bcrypt, like modern WordPress). */
+function auth_hash_password(string $plain): string {
+    return password_hash($plain, PASSWORD_DEFAULT);
+}
 
-    if($user === $valid_user && $pass === $valid_pass) {
+/** Persist a new admin password (hashed) into the options table. */
+function auth_set_password(string $plain): bool {
+    return set_option('AUTH_PASS', auth_hash_password($plain));
+}
+
+/**
+ * Verify a password against the stored AUTH_PASS option.
+ * Transparent upgrade: a legacy/plaintext value is accepted once and immediately
+ * re-saved as a hash, and an outdated hash is rehashed on a successful login.
+ */
+function auth_verify_password(string $pass, string $stored): bool {
+    if($stored === '') return false;
+
+    $is_hash = (password_get_info($stored)['algoName'] ?? 'unknown') !== 'unknown';
+
+    if($is_hash) {
+        if(!password_verify($pass, $stored)) return false;
+        if(password_needs_rehash($stored, PASSWORD_DEFAULT)) {
+            set_option('AUTH_PASS', auth_hash_password($pass));
+        }
+        return true;
+    }
+
+    // Legacy plaintext value — accept once, then upgrade to a hash
+    if(hash_equals($stored, $pass)) {
+        set_option('AUTH_PASS', auth_hash_password($pass));
+        return true;
+    }
+
+    return false;
+}
+
+function auth_login(string $user, string $pass, bool $remember = false): bool {
+    $valid_user = get_option('AUTH_USER', '');
+    $valid_hash = get_option('AUTH_PASS', '');
+
+    if($valid_user === '' || $valid_hash === '') return false;
+
+    // hash_equals on the username avoids leaking it via timing; password is verified with bcrypt
+    if(hash_equals($valid_user, $user) && auth_verify_password($pass, $valid_hash)) {
         $_SESSION['authenticated'] = true;
         $_SESSION['user'] = $user;
 
