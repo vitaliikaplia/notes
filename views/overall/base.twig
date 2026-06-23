@@ -168,6 +168,28 @@
     var debounceTimer = null;
     var selectedIndex = -1;
 
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Escape the text, then wrap each query token (case-insensitive) in a <mark>.
+    function highlightMatches(text, query) {
+        var escaped = escapeHtml(text);
+        var tokens = String(query || '').trim().split(/\s+/).filter(function(t) { return t.length >= 2; });
+        if (!tokens.length) return escaped;
+        tokens.sort(function(a, b) { return b.length - a.length; });
+        var pattern = tokens.map(function(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|');
+        try {
+            return escaped.replace(new RegExp('(' + pattern + ')', 'gi'), '<mark class="search-hl">$1</mark>');
+        } catch (e) {
+            return escaped;
+        }
+    }
+
     function popupContent() {
         return document.querySelector('.js-popup-content');
     }
@@ -230,12 +252,12 @@
                             : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
                         html += '<span class="search-result-icon">' + iconContent + '</span>';
                         html += '<div class="search-result-body">';
-                        html += '<span class="search-result-title">' + item.title + '</span>';
+                        html += '<span class="search-result-title">' + highlightMatches(item.title, q) + '</span>';
                         if (item.snippet) {
-                            html += '<span class="search-result-snippet">' + item.snippet + '</span>';
+                            html += '<span class="search-result-snippet">' + highlightMatches(item.snippet, q) + '</span>';
                         }
                         if (item.path) {
-                            html += '<span class="search-result-meta">' + item.path + '</span>';
+                            html += '<span class="search-result-meta">' + escapeHtml(item.path) + '</span>';
                         }
                         html += '</div>';
                         html += '</a>';

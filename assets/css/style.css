@@ -4255,6 +4255,14 @@ a.breadcrumb-item:hover {
     opacity: 0.7;
 }
 
+mark.search-hl {
+    background: color-mix(in srgb, var(--primary) 26%, transparent);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 0 1px;
+    font-weight: 700;
+}
+
 .search-hint,
 .search-no-results {
     text-align: center;
