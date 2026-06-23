@@ -8,6 +8,12 @@ Authorization: Bearer <API_TOKEN>
 
 `API_TOKEN` is stored in the database `options` table (manage it under Settings → System) and read through `get_option()`.
 
+## Cloudflare
+
+In production the site is fronted by Cloudflare with bot protection enabled. API requests sent with a non-browser `User-Agent` (for example `Python-urllib` or other default HTTP-library agents) can be blocked by Cloudflare with `HTTP 403, error code 1010` ("banned based on browser signature") **before the request reaches the app** — this is a Cloudflare block, not an API error (API errors use the JSON shape documented under [Errors](#errors)).
+
+To call the API from scripts or integrations, either send a browser-like `User-Agent` header, or add a Cloudflare WAF **Skip** rule for the `/api/*` path (recommended).
+
 ## Endpoints
 
 | Method | URL | Description |

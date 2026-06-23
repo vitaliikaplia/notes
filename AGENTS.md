@@ -78,3 +78,4 @@ assets/js/page-tool.js     Editor.js page-link tool
 - Do not remove the Ukrainian transliteration table in `core/includes/notes.php`; it is part of slug compatibility.
 - Store upload/image URLs host-relative (`/file/...`); `get_note()` normalizes any absolute host on read. Do not reintroduce `HOME_URL`-prefixed image URLs.
 - `.htaccess` is honored on Apache but ignored on nginx/Herd; never rely on it to protect `config.php`, `.notes/`, or `uploads/`. The durable protection is moving the docroot to a `public/` dir.
+- Production sits behind Cloudflare with bot protection on: REST API calls from non-browser clients can be blocked with `HTTP 403, Cloudflare error 1010` ("banned based on browser signature") before reaching the app — this is a Cloudflare block, not an API error. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/api/*`. See `API.md`.
