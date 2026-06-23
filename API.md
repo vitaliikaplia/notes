@@ -6,7 +6,7 @@ The REST API uses bearer-token authentication and exchanges note content as Mark
 Authorization: Bearer <API_TOKEN>
 ```
 
-`API_TOKEN` is read from `.env` through `get_env()`.
+`API_TOKEN` is stored in the database `options` table (manage it under Settings → System) and read through `get_option()`.
 
 ## Endpoints
 
@@ -40,7 +40,7 @@ recipes/classic-borsch
 projects/client-a/kickoff
 ```
 
-Internally, notes are stored as `.notes/{path}.json`.
+Internally, notes are stored in the database (the `notes` table), keyed by their `path`.
 
 ## Create Note
 
@@ -208,7 +208,7 @@ Response:
 }
 ```
 
-Deleting a parent note also deletes its child-note directory.
+Deleting a parent note also deletes all of its child notes (the database cascades the delete).
 
 ## Search
 
