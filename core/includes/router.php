@@ -1232,6 +1232,11 @@ function router($url_segments = []): array {
 }
 
 // --- Main execution ---
+// Before rendering anything, make sure the database is reachable. If it isn't
+// (missing config.php, wrong credentials, server down) show a human-readable
+// error page instead of silently falling through to the login form.
+app_require_database();
+
 if ($url_segments = get_url_segments()) {
 
     // trailing slash enforcement (skip for API and static)
