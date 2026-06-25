@@ -320,10 +320,13 @@ function api_update_note(string $path): void {
         api_error(400, 'Invalid JSON body');
     }
 
+    $existing_meta = is_array($existing['meta'] ?? null) ? $existing['meta'] : [];
+    $existing_content = is_array($existing['content'] ?? null) ? $existing['content'] : [];
+
     $title      = isset($input['title']) ? strip_tags(trim($input['title'])) : $existing['_title'];
     $markdown   = $input['markdown'] ?? null;
-    $icon       = resolve_note_icon_value($input, $existing['meta']['icon'] ?? '');
-    $visibility = $input['visibility'] ?? ($existing['meta']['visibility'] ?? 'private');
+    $icon       = resolve_note_icon_value($input, $existing_meta['icon'] ?? '');
+    $visibility = $input['visibility'] ?? ($existing_meta['visibility'] ?? 'private');
 
     if (!in_array($visibility, ['private', 'unlisted', 'public'], true)) {
         api_error(400, 'Invalid visibility. Must be: private, unlisted, public');
@@ -335,18 +338,18 @@ function api_update_note(string $path): void {
         : ($existing['content']['blocks'] ?? []);
 
     $note_data = [
-        'meta' => [
+        'meta' => array_merge($existing_meta, [
             'title'      => $title,
             'icon'       => $icon,
             'visibility' => $visibility,
-            'created_at' => $existing['meta']['created_at'] ?? '',
+            'created_at' => $existing_meta['created_at'] ?? '',
             'updated_at' => $now,
-        ],
-        'content' => [
+        ]),
+        'content' => array_merge($existing_content, [
             'time'    => round(microtime(true) * 1000),
             'blocks'  => $blocks,
-            'version' => $existing['content']['version'] ?? '2.31.0-rc.7',
-        ],
+            'version' => $existing_content['version'] ?? '2.31.0-rc.7',
+        ]),
     ];
 
     if (!save_note($relative, $note_data)) {
