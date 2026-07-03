@@ -2774,9 +2774,12 @@ body.ai-chat-active .index-header {
     background: var(--bg-hover);
 }
 
-/* Auto-rendered tiles of the current note's child notes, shown below its body */
+/* Auto-rendered tiles of the current note's child notes, shown below its body.
+   A subtle rule (inset to match the note content) separates them from the body. */
 .note-children-section {
-    padding: 28px 70px 44px;
+    margin: 10px 70px 0;
+    padding: 24px 0 44px;
+    border-top: 1px solid var(--border);
 }
 
 .note-children-section-title {
@@ -2804,13 +2807,18 @@ body.ai-chat-active .index-header {
     padding: 0;
 }
 
-/* Let the tiles sit right under the note body (small gap), while the empty
-   slack that keeps the sticky footer at the bottom falls below the tiles. */
-.editor-page:has(.note-children-section) #editorjs {
+/* When child tiles are shown: trim Editor.js's tall default bottom padding (its
+   ~300px click-below area) so the tiles sit right under the note body, and let
+   the tiles section absorb the flex slack so the sticky footer stays at the bottom. */
+.editor-page.has-child-tiles #editorjs {
     flex: 0 0 auto;
 }
 
-.editor-page:has(.note-children-section) .note-children-section {
+.editor-page.has-child-tiles .codex-editor__redactor {
+    padding-bottom: 20px !important;
+}
+
+.editor-page.has-child-tiles .note-children-section {
     flex: 1 0 auto;
 }
 
@@ -4042,7 +4050,8 @@ a.breadcrumb-item:hover {
     }
 
     .note-children-section {
-        padding: 20px 16px 32px;
+        margin: 8px 16px 0;
+        padding: 20px 0 32px;
     }
 
     .note-children-grid {

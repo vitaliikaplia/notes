@@ -1,7 +1,7 @@
 {% extends 'overall/base.twig' %}
 
 {% block content %}
-<div class="editor-page">
+<div class="editor-page{% if children is defined and children %} has-child-tiles{% endif %}">
     <div class="editor-cover" id="editor-cover" style="display:none">
         <img id="editor-cover-img" src="" alt="">
         <div class="editor-cover-actions" id="cover-actions">
