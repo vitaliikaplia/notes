@@ -2774,6 +2774,46 @@ body.ai-chat-active .index-header {
     background: var(--bg-hover);
 }
 
+/* Auto-rendered tiles of the current note's child notes, shown below its body */
+.note-children-section {
+    padding: 28px 70px 44px;
+}
+
+.note-children-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+.note-children-section-title svg {
+    opacity: 0.7;
+}
+
+/* Reuse the dashboard .note-card look, but lay the tiles out with a plain CSS
+   grid so they render without the dashboard's JS masonry. */
+.note-children-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    padding: 0;
+}
+
+/* Let the tiles sit right under the note body (small gap), while the empty
+   slack that keeps the sticky footer at the bottom falls below the tiles. */
+.editor-page:has(.note-children-section) #editorjs {
+    flex: 0 0 auto;
+}
+
+.editor-page:has(.note-children-section) .note-children-section {
+    flex: 1 0 auto;
+}
+
 /* Public note cover */
 .public-note-cover {
     width: 100%;
@@ -3999,6 +4039,17 @@ a.breadcrumb-item:hover {
         padding: 8px 16px;
         gap: 8px;
         grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .note-children-section {
+        padding: 20px 16px 32px;
+    }
+
+    .note-children-grid {
+        padding: 0;
+        gap: 8px;
+        /* override the .notes-grid mobile rule (which sets repeat(2, 1fr) !important) */
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 
     .notes-list {

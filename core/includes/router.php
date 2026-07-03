@@ -176,17 +176,34 @@ function router($url_segments = []): array {
                 }
                 $context['breadcrumbs'] = get_breadcrumbs($note['_file']);
 
-                // Collect direct child notes (ordered)
+                // Collect direct child notes (ordered) — used both for the
+                // "link child" popup and for the auto-rendered tiles below the note.
                 $context['children'] = [];
                 $child_stmt = get_db()->prepare("SELECT * FROM notes WHERE parent_id = ? ORDER BY sort_order ASC, updated_at DESC");
                 $child_stmt->execute([$note['_id']]);
                 foreach($child_stmt as $crow) {
                     $child_note = db_row_to_note($crow);
+
+                    // Short text preview from the first paragraph blocks (mirrors the dashboard cards)
+                    $preview = '';
+                    if(!empty($child_note['content']['blocks'])) {
+                        foreach(array_slice($child_note['content']['blocks'], 0, 2) as $block) {
+                            if(($block['type'] ?? '') === 'paragraph') {
+                                $preview .= mb_substr(strip_tags($block['data']['text'] ?? ''), 0, 100);
+                            }
+                        }
+                    }
+
                     $context['children'][] = [
-                        'title' => $child_note['_title'],
-                        'icon'  => $child_note['meta']['icon'] ?? '',
-                        'path'  => $child_note['_file'],
-                        'url'   => 'note/' . $child_note['_url'],
+                        'title'          => $child_note['_title'],
+                        'icon'           => $child_note['meta']['icon'] ?? '',
+                        'path'           => $child_note['_file'],
+                        'url'            => 'note/' . $child_note['_url'],
+                        'cover'          => $child_note['meta']['cover'] ?? '',
+                        'cover_position' => $child_note['meta']['cover_position'] ?? 50,
+                        'color'          => $child_note['meta']['color'] ?? '',
+                        'date'           => $child_note['meta']['updated_at'] ?? '',
+                        'preview'        => $preview,
                     ];
                 }
                 $context['children_count'] = count($context['children']);
