@@ -37,10 +37,11 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 ### Navigation
 
 - Nested notes through a parent/child hierarchy
+- Child-note tiles rendered below a note for quick access to its sub-pages
 - Tree sidebar with drag-and-drop sorting and cross-level moves
 - Breadcrumbs
 - Emoji and SVG note icons
-- Quick search by title and content with `Ctrl+K`
+- Quick search by title and content with `Ctrl+K`, with matching terms highlighted in the results
 - Private, unlisted, and public note visibility
 
 ### Dashboard
@@ -213,6 +214,8 @@ Authorization: Bearer <API_TOKEN>
 ```
 
 Markdown is converted to Editor.js blocks automatically.
+
+> In production behind Cloudflare, non-browser API clients may be blocked with `HTTP 403, Cloudflare error 1010` before reaching the app. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/api/*` (see [API.md](API.md)).
 
 | Method | URL | Description |
 | --- | --- | --- |
