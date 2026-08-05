@@ -6,7 +6,7 @@ The REST API uses bearer-token authentication and exchanges note content as Mark
 Authorization: Bearer <API_TOKEN>
 ```
 
-`API_TOKEN` is stored in the database `options` table (manage it under Settings → System) and read through `get_option()`.
+`API_TOKEN` is stored in the database `options` table (manage it under Options -> System) and read through `get_option()`.
 
 ## Cloudflare
 
@@ -267,3 +267,9 @@ Errors use this shape:
     }
 }
 ```
+
+## Internal Browser API
+
+The app also exposes session-authenticated `/api/*` routes from `core/includes/router.php` for the web UI. They require the regular logged-in browser session, not a bearer token, and are intentionally separate from `/api/v1/*`.
+
+Important internal routes include note autosave/delete/move/reorder, image upload/fetch, graph positions, AI chat, Markdown import/export, Options load/save, and cache clearing. External integrations should use `/api/v1/*` unless they intentionally run inside an authenticated browser session.

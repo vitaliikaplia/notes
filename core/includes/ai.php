@@ -22,7 +22,7 @@ function ai_get_config(): array {
     $model    = trim(get_option('AI_MODEL', ''));
 
     if(empty($provider) || empty($api_key)) {
-        return ['error' => 'AI is not configured: AI_PROVIDER or AI_API_KEY is missing in .env'];
+        return ['error' => 'AI is not configured: AI_PROVIDER or AI_API_KEY is missing in Options'];
     }
 
     if(!in_array($provider, ['claude', 'openai', 'gemini'], true)) {

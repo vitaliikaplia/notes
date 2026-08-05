@@ -53,6 +53,8 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Timeline with date-range filtering
 - Interactive graph view powered by force-graph / d3-force
 - AI chat tab when AI is configured
+- Options popup for admin login/password, Redis, REST API token, Cloudflare Turnstile, and AI settings
+- Clear-cache control that flushes app caches and bumps the browser asset version
 
 ### Public View
 
@@ -69,6 +71,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Uploaded files are served through `/file/` and are only available to authenticated users or when referenced from a public/unlisted note
 - REST API v1 uses bearer-token authentication
 - The DB connection lives in `config.php` (served as PHP, never exposed as plaintext); all other settings and secrets live in the DB `options` table
+- Login and setup/database error pages are marked `noindex`
 
 ## AI Assistant
 
@@ -110,6 +113,7 @@ assets/css/     Styles
 assets/js/      Client-side behavior
 uploads/        Uploaded images organized by year/month
 config.php      DB connection (gitignored)
+vendor/         Committed Composer dependencies
 ```
 
 Important files:
@@ -129,8 +133,12 @@ core/includes/cache.php      Redis cache and Twig cache adapter
 views/index.twig             Dashboard
 views/editor.twig            Editor
 views/overall/base.twig      Base layout and sidebar shell
+views/overall/options.twig   Options popup template
+views/overall/popup.twig     Shared popup shell
 assets/js/app.js             Editor and dashboard client logic
 assets/js/page-tool.js       Editor.js page-link tool
+assets/js/options.js         Options popup behavior
+assets/js/popup.js           Shared popup engine
 assets/js/sidebar.js         Sidebar interactions and theme switching
 assets/css/style.css         Styles
 ```
@@ -169,7 +177,7 @@ return [
 
 `config.php` is gitignored and is served as PHP (a direct request executes it to nothing), so it never leaks as plaintext the way a web-served `.env` would. The app reads it through `get_env()` from `core/includes/auth.php`; do not rely on `getenv()` or `$_ENV`.
 
-The database schema is created automatically on the first run.
+The database schema is created automatically on the first successful DB connection. If `config.php` is missing or the database cannot be reached, the app returns a self-contained `503` setup/error page (`noindex`) instead of falling through to the login form.
 
 Every other setting lives in the DB `options` table (key/value), read via `get_option()`. Set your admin login there. `AUTH_PASS` is stored as a bcrypt hash (`password_hash` / `password_verify`, like modern WordPress) — generate one and insert it:
 
@@ -185,7 +193,16 @@ INSERT INTO options (name, value) VALUES
 
 (If you insert a plaintext password instead, it is accepted once and transparently re-saved as a hash on first login.)
 
-The same table holds the REST API token (`API_TOKEN`), Cloudflare Turnstile CAPTCHA (`CAPTCHA_SITE_KEY` / `CAPTCHA_SECRET_KEY`), the AI assistant (`AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` / `AI_HISTORY_LIMIT`), and an optional `REDIS_SOCKET`; leaving a setting unset disables that feature.
+The same table holds the REST API token (`API_TOKEN`), Cloudflare Turnstile CAPTCHA (`CAPTCHA_SITE_KEY` / `CAPTCHA_SECRET_KEY`), the AI assistant (`AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` / `AI_HISTORY_LIMIT`), an optional `REDIS_SOCKET`, and `assets_version`; leaving a setting unset disables that feature.
+
+After the first login, these values can be managed from the footer Options popup:
+
+- System: Redis socket and REST API token
+- Cloudflare: Turnstile site and secret keys
+- AI: provider, API key, model, and history limit
+- Account: login and password change
+
+The footer clear-cache button calls the internal session API to flush Redis/Twig/OPcache where available and increments `assets_version`, which is appended to static assets as a cache-busting query string.
 
 ## REST API
 
@@ -208,6 +225,21 @@ Markdown is converted to Editor.js blocks automatically.
 | `GET` | `/api/v1/search/?q=` | Search notes |
 
 See [API.md](API.md) for request and response examples.
+
+## Internal Session API
+
+Authenticated browser sessions use `/api/*` routes from `core/includes/router.php` for editor and dashboard actions. These are not the bearer-token REST API:
+
+- `POST /api/save/`, `/api/delete/`, `/api/create-page/`, `/api/visibility/`
+- `POST /api/reorder/`, `/api/move/`, `/api/toggle-pin/`
+- `GET /api/search/`, `/api/graph/`, `/api/notes-page/`
+- `POST /api/graph/`, `DELETE /api/graph/`
+- `GET /api/fetch-url/`
+- `POST /api/export-md/`, `/api/import-md/`
+- `POST /api/process-svg/`, `/api/upload-image/`, `/api/fetch-image/`
+- `POST /api/chat/`
+- `GET /api/options/`, `POST /api/save-options/`
+- `POST /api/clear-cache/`
 
 ## License
 
