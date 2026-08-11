@@ -3,7 +3,7 @@
         'name' => 'vitaliikaplia/notes',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'dd27ba5787330a1db73e08d0db61cffd2855a0f3',
+        'reference' => '557f2ad32aeeea5292b146e767744726960e8dd4',
         'type' => 'application',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'symfony/deprecation-contracts' => array(
-            'pretty_version' => 'v3.7.0',
-            'version' => '3.7.0.0',
-            'reference' => '50f59d1f3ca46d41ac911f97a78626b6756af35b',
+            'pretty_version' => 'v3.7.1',
+            'version' => '3.7.1.0',
+            'reference' => 'f3202fa1b5097b0af062dc978b32ecf63404e31d',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/deprecation-contracts',
             'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'twig/twig' => array(
-            'pretty_version' => 'v3.27.1',
-            'version' => '3.27.1.0',
-            'reference' => 'ae2071bffb38f04847fc0864d730c94b9cb8ab74',
+            'pretty_version' => 'v3.28.0',
+            'version' => '3.28.0.0',
+            'reference' => '597c12ed286fb9d1701a36684ce6e0cbe28ebc8b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../twig/twig',
             'aliases' => array(),
@@ -49,7 +49,7 @@
         'vitaliikaplia/notes' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'dd27ba5787330a1db73e08d0db61cffd2855a0f3',
+            'reference' => '557f2ad32aeeea5292b146e767744726960e8dd4',
             'type' => 'application',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
