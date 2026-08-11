@@ -19,7 +19,7 @@ function initEditor(config) {
     function updateIconButton() {
         if (!iconBtnEl) return;
         if (currentIcon && currentIcon.startsWith('data:')) {
-            // SVG as base64 data URI
+            // Custom SVG or website favicon as a data URI
             iconBtnEl.innerHTML = '<img src="' + currentIcon + '" width="34" height="34" alt="">';
             iconBtnEl.classList.add('has-icon');
         } else if (currentIcon && !currentIcon.startsWith('<')) {
@@ -811,8 +811,14 @@ function initEditor(config) {
             svgTab.className = 'note-icon-picker-tab';
             svgTab.textContent = 'SVG';
 
+            const websiteTab = document.createElement('button');
+            websiteTab.type = 'button';
+            websiteTab.className = 'note-icon-picker-tab';
+            websiteTab.textContent = 'Website Favicon';
+
             tabs.appendChild(emojiTab);
             tabs.appendChild(svgTab);
+            tabs.appendChild(websiteTab);
             picker.appendChild(tabs);
 
             // Emoji panel
@@ -941,19 +947,196 @@ function initEditor(config) {
             svgPanel.appendChild(uploadLabel);
             picker.appendChild(svgPanel);
 
+            // Website favicon panel
+            const websitePanel = document.createElement('div');
+            websitePanel.className = 'note-icon-panel note-icon-website-panel';
+            websitePanel.style.display = 'none';
+
+            const websiteInput = document.createElement('input');
+            websiteInput.type = 'url';
+            websiteInput.inputMode = 'url';
+            websiteInput.autocomplete = 'url';
+            websiteInput.spellcheck = false;
+            websiteInput.className = 'note-icon-website-input';
+            websiteInput.placeholder = 'https://example.com';
+            websiteInput.setAttribute('aria-label', 'Website URL');
+
+            const faviconStatus = document.createElement('div');
+            faviconStatus.className = 'note-icon-favicon-status';
+            faviconStatus.setAttribute('aria-live', 'polite');
+            faviconStatus.textContent = 'Paste a website URL to find its favicon.';
+
+            const faviconPreview = document.createElement('div');
+            faviconPreview.className = 'note-icon-favicon-preview';
+            faviconPreview.hidden = true;
+
+            const faviconImageWrap = document.createElement('div');
+            faviconImageWrap.className = 'note-icon-favicon-image';
+
+            const faviconImage = document.createElement('img');
+            faviconImage.width = 48;
+            faviconImage.height = 48;
+            faviconImage.alt = 'Website favicon preview';
+            faviconImageWrap.appendChild(faviconImage);
+
+            const faviconActions = document.createElement('div');
+            faviconActions.className = 'note-icon-favicon-actions';
+
+            const useFaviconBtn = document.createElement('button');
+            useFaviconBtn.type = 'button';
+            useFaviconBtn.className = 'note-icon-favicon-use';
+            useFaviconBtn.textContent = 'Use this icon';
+
+            const clearWebsiteBtn = document.createElement('button');
+            clearWebsiteBtn.type = 'button';
+            clearWebsiteBtn.className = 'note-icon-favicon-clear';
+            clearWebsiteBtn.textContent = 'Clear website';
+
+            faviconActions.appendChild(useFaviconBtn);
+            faviconActions.appendChild(clearWebsiteBtn);
+            faviconPreview.appendChild(faviconImageWrap);
+            faviconPreview.appendChild(faviconActions);
+
+            websitePanel.appendChild(websiteInput);
+            websitePanel.appendChild(faviconStatus);
+            websitePanel.appendChild(faviconPreview);
+            picker.appendChild(websitePanel);
+
+            let faviconLookupTimeout = null;
+            let faviconRequest = null;
+            let faviconRequestId = 0;
+            let faviconDataUri = '';
+
+            function cancelFaviconLookup() {
+                faviconRequestId++;
+                if (faviconLookupTimeout) {
+                    clearTimeout(faviconLookupTimeout);
+                    faviconLookupTimeout = null;
+                }
+                if (faviconRequest) {
+                    faviconRequest.abort();
+                    faviconRequest = null;
+                }
+            }
+
+            function resetFaviconPreview(message, state) {
+                faviconDataUri = '';
+                faviconImage.removeAttribute('src');
+                faviconImage.removeAttribute('title');
+                faviconPreview.hidden = true;
+                faviconStatus.textContent = message || '';
+                faviconStatus.className = 'note-icon-favicon-status' + (state ? ' is-' + state : '');
+            }
+
+            function websiteUrlLooksValid(value) {
+                let candidate = value.trim();
+                if (!candidate) return false;
+                if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
+                    candidate = 'https://' + candidate;
+                }
+                try {
+                    const parsed = new URL(candidate);
+                    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function lookupFavicon(value) {
+                cancelFaviconLookup();
+                const requestId = faviconRequestId;
+                faviconRequest = new AbortController();
+                resetFaviconPreview('Finding favicon...', 'loading');
+
+                fetch(homeUrl + 'api/fetch-favicon/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: value }),
+                    signal: faviconRequest.signal
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (requestId !== faviconRequestId || websiteInput.value.trim() !== value) return;
+                    faviconRequest = null;
+
+                    if (!data.success || !data.data_uri) {
+                        resetFaviconPreview(data.error || 'No favicon was found for this website.', 'error');
+                        return;
+                    }
+
+                    faviconDataUri = data.data_uri;
+                    faviconImage.src = faviconDataUri;
+                    if (data.source_url) faviconImage.title = data.source_url;
+                    faviconPreview.hidden = false;
+                    faviconStatus.textContent = 'Favicon found.';
+                    faviconStatus.className = 'note-icon-favicon-status is-success';
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError' || requestId !== faviconRequestId) return;
+                    faviconRequest = null;
+                    resetFaviconPreview('Could not load the website favicon.', 'error');
+                });
+            }
+
+            function scheduleFaviconLookup() {
+                cancelFaviconLookup();
+                const value = websiteInput.value.trim();
+
+                if (!value) {
+                    resetFaviconPreview('Paste a website URL to find its favicon.');
+                    return;
+                }
+                if (!websiteUrlLooksValid(value)) {
+                    resetFaviconPreview('Enter a valid website URL.', 'error');
+                    return;
+                }
+
+                resetFaviconPreview('Waiting for the website URL...', 'loading');
+                faviconLookupTimeout = setTimeout(() => lookupFavicon(value), 600);
+            }
+
+            websiteInput.addEventListener('input', scheduleFaviconLookup);
+            websiteInput.addEventListener('keydown', event => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                const value = websiteInput.value.trim();
+                if (!websiteUrlLooksValid(value)) {
+                    cancelFaviconLookup();
+                    resetFaviconPreview('Enter a valid website URL.', 'error');
+                    return;
+                }
+                lookupFavicon(value);
+            });
+
+            clearWebsiteBtn.addEventListener('click', () => {
+                cancelFaviconLookup();
+                websiteInput.value = '';
+                resetFaviconPreview('Paste a website URL to find its favicon.');
+                websiteInput.focus();
+            });
+
+            useFaviconBtn.addEventListener('click', () => {
+                if (!faviconDataUri) return;
+                currentIcon = faviconDataUri;
+                updateIconButton();
+                closePicker();
+                scheduleSave();
+            });
+
+            picker._cleanup = cancelFaviconLookup;
+
             // Tab switching
-            emojiTab.addEventListener('click', () => {
-                emojiTab.classList.add('active');
-                svgTab.classList.remove('active');
-                emojiPanel.style.display = '';
-                svgPanel.style.display = 'none';
-            });
-            svgTab.addEventListener('click', () => {
-                svgTab.classList.add('active');
-                emojiTab.classList.remove('active');
-                svgPanel.style.display = '';
-                emojiPanel.style.display = 'none';
-            });
+            function activateIconTab(activeTab, activePanel) {
+                [emojiTab, svgTab, websiteTab].forEach(tab => tab.classList.toggle('active', tab === activeTab));
+                [emojiPanel, svgPanel, websitePanel].forEach(panel => {
+                    panel.style.display = panel === activePanel ? '' : 'none';
+                });
+                if (activeTab === websiteTab) setTimeout(() => websiteInput.focus(), 0);
+            }
+
+            emojiTab.addEventListener('click', () => activateIconTab(emojiTab, emojiPanel));
+            svgTab.addEventListener('click', () => activateIconTab(svgTab, svgPanel));
+            websiteTab.addEventListener('click', () => activateIconTab(websiteTab, websitePanel));
 
             // Reset button (only when icon is set)
             if (currentIcon) {
@@ -975,6 +1158,7 @@ function initEditor(config) {
 
         function closePicker() {
             if (pickerEl) {
+                if (typeof pickerEl._cleanup === 'function') pickerEl._cleanup();
                 pickerEl.remove();
                 pickerEl = null;
             }

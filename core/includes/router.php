@@ -959,6 +959,15 @@ function router($url_segments = []): array {
             echo json_encode(['success' => true, 'data_uri' => $data_uri]);
             exit;
 
+        } elseif($action === 'fetch-favicon' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $website_url = is_array($input) ? (string)($input['url'] ?? '') : '';
+            echo json_encode(
+                fetch_website_favicon($website_url),
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+            exit;
+
         } elseif($action === 'emoji-search' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $q = trim($_GET['q'] ?? '');
             if(mb_strlen($q, 'UTF-8') < 1) {

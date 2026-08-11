@@ -2279,6 +2279,115 @@ body.ai-chat-active .index-header {
     color: var(--text);
 }
 
+.note-icon-website-panel {
+    padding: 2px 0;
+}
+
+.note-icon-website-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.note-icon-website-input:focus {
+    border-color: var(--primary);
+}
+
+.note-icon-favicon-status {
+    min-height: 17px;
+    margin-top: 7px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.note-icon-favicon-status.is-error {
+    color: #e57373;
+}
+
+.note-icon-favicon-status.is-success {
+    color: var(--saved-color);
+}
+
+.note-icon-favicon-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+}
+
+.note-icon-favicon-preview[hidden] {
+    display: none;
+}
+
+.note-icon-favicon-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+}
+
+.note-icon-favicon-image img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
+.note-icon-favicon-actions {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.note-icon-favicon-use,
+.note-icon-favicon-clear {
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.note-icon-favicon-use {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
+.note-icon-favicon-use:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.note-icon-favicon-clear {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+}
+
+.note-icon-favicon-clear:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
 .note-icon-reset {
     display: flex;
     align-items: center;

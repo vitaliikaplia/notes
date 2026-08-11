@@ -34,6 +34,7 @@ $includes = [
     'db',
     'cache',
     'emoji',
+    'favicon',
     'notes',
     'markdown',
     'api',

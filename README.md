@@ -29,7 +29,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Upload images, paste from clipboard, drag and drop, or fetch from URL
 - Raster images are converted to WebP with Imagick
 - Images are resized so the shorter side is at most 1024px
-- SVG images are stored as-is after validation/minification when used as icons
+- SVG note icons are sanitized, minified, and stored inline as Base64 data URIs
 - Image files are cleaned up when removed from notes or covers
 - Image references are stored as host-relative URLs (`/file/...`), so notes stay portable across hosts (local, production, backups) and never break when moved
 - YouTube and Vimeo embeds are detected from standalone URLs
@@ -40,7 +40,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Child-note tiles rendered below a note for quick access to its sub-pages
 - Tree sidebar with drag-and-drop sorting and cross-level moves
 - Breadcrumbs
-- Emoji and SVG note icons
+- Emoji, SVG, and website favicon note icons
 - Quick search by title and content with `Ctrl+K`, with matching terms highlighted in the results
 - Private, unlisted, and public note visibility
 
@@ -239,7 +239,7 @@ Authenticated browser sessions use `/api/*` routes from `core/includes/router.ph
 - `POST /api/graph/`, `DELETE /api/graph/`
 - `GET /api/fetch-url/`
 - `POST /api/export-md/`, `/api/import-md/`
-- `POST /api/process-svg/`, `/api/upload-image/`, `/api/fetch-image/`
+- `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`
 - `POST /api/chat/`
 - `GET /api/options/`, `POST /api/save-options/`
 - `POST /api/clear-cache/`

@@ -569,26 +569,7 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
 }
 
 function minify_svg(string $svg): ?string {
-    $svg = preg_replace('/<\?xml[^?]*\?>\s*/i', '', $svg);
-    $svg = preg_replace('/<!DOCTYPE[^>]*>\s*/i', '', $svg);
-    $svg = preg_replace('/<!--.*?-->/s', '', $svg);
-
-    if(!preg_match('/<svg[\s\S]*<\/svg>/i', $svg, $m)) {
-        return null;
-    }
-    $svg = $m[0];
-
-    $svg = preg_replace_callback('/<svg([^>]*)>/', function($match) {
-        $attrs = $match[1];
-        $attrs = preg_replace('/\s*(class|version|xmlns:xlink|xml:space|style)\s*=\s*"[^"]*"/i', '', $attrs);
-        $attrs = preg_replace('/(width|height)\s*=\s*"([\d.]+)px"/i', '$1="$2"', $attrs);
-        return '<svg' . $attrs . '>';
-    }, $svg, 1);
-
-    $svg = preg_replace('/>\s+</', '><', $svg);
-    $svg = preg_replace('/\s{2,}/', ' ', $svg);
-
-    return trim($svg);
+    return sanitize_svg_icon($svg);
 }
 
 function extract_image_urls(array $blocks): array {
