@@ -395,6 +395,7 @@ a:hover {
 .sidebar-note-parent {
     flex: 1;
     min-width: 0;
+    margin-left: 4px;
     font-size: 14px;
     color: var(--text);
     text-decoration: none;
