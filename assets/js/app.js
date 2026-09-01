@@ -1660,25 +1660,44 @@ function initEditor(config) {
     const key = 'page-scroll:' + window.location.pathname;
     try { history.scrollRestoration = 'manual'; } catch (e) {}
 
+    const write = (value) => {
+        try { sessionStorage.setItem(key, String(Math.round(value))); } catch (e) {}
+    };
+
     const saved = parseInt(sessionStorage.getItem(key) || '0', 10);
+    let restoring = false;
+
     if (saved > 0 && !window.location.hash) {
+        restoring = true;
         const started = Date.now();
         let cancelled = false;
-        const cancel = () => { cancelled = true; };
-        // A deliberate user scroll during restore wins over the saved position
+        const cancel = () => { cancelled = true; restoring = false; };
+        // A deliberate user action during restore wins over the saved position
         window.addEventListener('wheel', cancel, { passive: true, once: true });
         window.addEventListener('touchstart', cancel, { passive: true, once: true });
         window.addEventListener('keydown', cancel, { once: true });
+        window.addEventListener('mousedown', cancel, { once: true });
+
+        // After the first successful restore, keep watching briefly: late editor
+        // initialization can snap the page back to the top — re-apply if it does.
+        const watchdog = (until) => {
+            if (cancelled) { restoring = false; return; }
+            if (Date.now() > until) { restoring = false; return; }
+            if (window.scrollY === 0 && saved > 50) window.scrollTo(0, saved);
+            requestAnimationFrame(() => watchdog(until));
+        };
 
         const tryRestore = () => {
-            if (cancelled) return;
+            if (cancelled) { restoring = false; return; }
             const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
             if (maxScroll >= saved) {
                 window.scrollTo(0, saved);
+                watchdog(Date.now() + 1500);
                 return;
             }
             if (Date.now() - started > 4000) {
                 window.scrollTo(0, Math.max(0, maxScroll));
+                restoring = false;
                 return;
             }
             requestAnimationFrame(tryRestore);
@@ -1686,15 +1705,24 @@ function initEditor(config) {
         requestAnimationFrame(tryRestore);
     }
 
+    // Save on scroll: rate-limited immediate writes plus a trailing one, so the
+    // stored value is fresh even if the page is reloaded mid-scroll.
+    let lastWrite = 0;
     let saveTimer;
     window.addEventListener('scroll', () => {
+        if (restoring) return;
+        const now = Date.now();
+        if (now - lastWrite > 100) {
+            lastWrite = now;
+            write(window.scrollY);
+        }
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-            try { sessionStorage.setItem(key, String(Math.round(window.scrollY))); } catch (e) {}
-        }, 150);
+        saveTimer = setTimeout(() => write(window.scrollY), 120);
     }, { passive: true });
 
+    // On teardown some browsers reset the viewport to the top before firing
+    // pagehide — never let that overwrite a real position with zero.
     window.addEventListener('pagehide', () => {
-        try { sessionStorage.setItem(key, String(Math.round(window.scrollY))); } catch (e) {}
+        if (window.scrollY > 0) write(window.scrollY);
     });
 })();
