@@ -97,7 +97,7 @@
             {% if note %}
                 <span class="breadcrumb-sep"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
                 <span class="breadcrumb-current">{{ note._title }}</span>
-                <button type="button" class="breadcrumb-export" id="export-md" title="Download as Markdown">
+                <button type="button" class="breadcrumb-export" id="export-note" title="Download note">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
             {% endif %}
@@ -105,28 +105,41 @@
         <span id="save-status" class="save-status"></span>
     </div>
 </div>
+
+<div id="exportTemplate" hidden>
+    <div class="export-options">
+        <button type="button" class="export-option js-export-md">
+            <span class="export-option-title">Markdown</span>
+            <span class="export-option-desc">Plain .md file with the note content</span>
+        </button>
+        <button type="button" class="export-option js-export-pdf">
+            <span class="export-option-title">PDF</span>
+            <span class="export-option-desc">Formatted .pdf document, ready to print or share</span>
+        </button>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.8/dist/editorjs.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.8/dist/header.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.8/dist/editorjs-list.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0/dist/checklist.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@calumk/editorjs-codecup@1.3.0/dist/editorjs-codeCup.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.6/dist/quote.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.1/dist/inline-code.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0/dist/marker.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/link@2.6.2/dist/link.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.5/dist/table.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@1.2.1/dist/underline.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@sotaproject/strikethrough@1.0.1/dist/bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/editorjs-alert@1.1.4/dist/bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/editorjs-toggle-block@0.3.16/dist/bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/image@2.10.1/dist/image.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.6/dist/embed.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/editorjs-drag-drop@1.1.16/dist/bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/editorjs-undo@2.0.28/dist/bundle.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-2.31.6.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-header-2.8.9.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-list-2.0.9.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-checklist-1.6.0.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-codecup-1.3.0.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-quote-2.7.6.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-delimiter-1.4.2.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-inline-code-1.5.2.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-marker-1.4.0.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-link-2.6.2.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-table-2.4.6.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-underline-1.2.1.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-strikethrough-1.0.1.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-alert-1.1.4.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-toggle-block-0.3.16.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-image-2.10.3.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-embed-2.8.0.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-drag-drop-1.1.16.js"></script>
+<script src="{{ assets_url }}vendor/editorjs-undo-2.0.28.js"></script>
 <script src="{{ assets_url }}js/page-tool.js{{ asset_ver('js/page-tool.js') }}"></script>
 <script src="{{ assets_url }}js/app.js{{ asset_ver('js/app.js') }}"></script>
 <script>

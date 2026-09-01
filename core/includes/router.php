@@ -901,6 +901,26 @@ function router($url_segments = []): array {
             echo json_encode(['markdown' => $md], JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'export-pdf' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $blocks = $input['blocks'] ?? [];
+            $title = strip_tags(trim($input['title'] ?? '')) ?: 'Untitled';
+
+            try {
+                $pdf = note_export_pdf($title, is_array($blocks) ? $blocks : []);
+            } catch(\Throwable $e) {
+                write_log('PDF export failed: ' . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'PDF export failed']);
+                exit;
+            }
+
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="note.pdf"');
+            header('Content-Length: ' . strlen($pdf));
+            echo $pdf;
+            exit;
+
         } elseif($action === 'import-md' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
             $title = strip_tags(trim($input['title'] ?? ''));

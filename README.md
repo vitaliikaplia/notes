@@ -21,7 +21,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Undo/redo
 - Autosave
 - Child-note sync popup for adding missing page links and removing broken child links
-- Export to Markdown
+- Export via a format picker popup: Markdown or PDF (Dompdf, DejaVu fonts with full Cyrillic support)
 - Drag-and-drop Markdown import
 
 ### Media
@@ -99,11 +99,12 @@ The tool loop supports up to 5 tool iterations per request. The assistant is ins
 
 - Backend: PHP 8.5 (Composer platform pinned to 8.5)
 - Templates: Twig 3
-- Editor: Editor.js from CDN with plugins
+- Editor: Editor.js with plugins, self-hosted in `assets/vendor/` (no CDN dependency; only the Cloudflare Turnstile script loads externally)
 - Storage: MySQL/MariaDB (utf8mb4) via plain PDO — `notes`, `options`, and `remember_tokens` tables
 - Frontend: Vanilla JavaScript and CSS custom properties
 - Optional cache: Redis through a Unix socket
 - Image processing: Imagick
+- PDF export: Dompdf (bundled DejaVu fonts)
 
 ## Project Structure
 
@@ -112,6 +113,7 @@ core/           Core includes: router, auth, notes, AI, MCP, rendering, cache
 views/          Twig templates
 assets/css/     Styles
 assets/js/      Client-side behavior
+assets/vendor/  Self-hosted third-party JS/CSS (Editor.js + plugins, force-graph, air-datepicker)
 uploads/        Uploaded images organized by year/month
 config.php      DB connection (gitignored)
 vendor/         Committed Composer dependencies
@@ -130,6 +132,7 @@ core/includes/ai.php         AI provider integrations and tool calling
 core/includes/mcp.php        MCP server (Streamable HTTP) and token management
 core/includes/render.php     Twig setup and global template context
 core/includes/markdown.php   Markdown <-> Editor.js conversion
+core/includes/pdf.php        PDF export via Dompdf
 core/includes/cache.php      Redis cache and Twig cache adapter
 views/index.twig             Dashboard
 views/editor.twig            Editor
@@ -245,7 +248,7 @@ Authenticated browser sessions use `/api/*` routes from `core/includes/router.ph
 - `GET /api/search/`, `/api/graph/`, `/api/notes-page/`
 - `POST /api/graph/`, `DELETE /api/graph/`
 - `GET /api/fetch-url/`
-- `POST /api/export-md/`, `/api/import-md/`
+- `POST /api/export-md/`, `/api/export-pdf/`, `/api/import-md/`
 - `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`
 - `POST /api/chat/`
 - `GET /api/options/`, `POST /api/save-options/`, `POST /api/mcp-token/`

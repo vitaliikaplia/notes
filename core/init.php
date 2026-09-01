@@ -37,6 +37,7 @@ $includes = [
     'favicon',
     'notes',
     'markdown',
+    'pdf',
     'ai',
     'mcp',
     'render',

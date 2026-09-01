@@ -1536,10 +1536,21 @@ function initEditor(config) {
         });
     }
 
-    // Export as Markdown
-    const exportBtn = document.getElementById('export-md');
+    // Export note — format picker popup (Markdown / PDF)
+    const exportBtn = document.getElementById('export-note');
     if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
+        const exportFilename = (title, ext) => title.replace(/[\/\\:*?"<>|]/g, '-') + ext;
+
+        const downloadBlob = (blob, filename) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        const exportMarkdown = async () => {
             const data = await editor.save();
             const title = titleEl.textContent.trim() || 'untitled';
 
@@ -1552,12 +1563,52 @@ function initEditor(config) {
             if (!result.markdown) return;
 
             const blob = new Blob([result.markdown], { type: 'text/markdown;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = title.replace(/[\/\\:*?"<>|]/g, '-') + '.md';
-            a.click();
-            URL.revokeObjectURL(url);
+            downloadBlob(blob, exportFilename(title, '.md'));
+        };
+
+        const exportPdf = async () => {
+            const data = await editor.save();
+            const title = titleEl.textContent.trim() || 'untitled';
+            if (window.showToast) window.showToast('Generating PDF...');
+
+            const resp = await fetch(homeUrl + 'api/export-pdf/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, blocks: data.blocks })
+            });
+            if (!resp.ok) {
+                if (window.showToast) window.showToast('PDF export failed');
+                return;
+            }
+
+            const blob = await resp.blob();
+            downloadBlob(blob, exportFilename(title, '.pdf'));
+        };
+
+        exportBtn.addEventListener('click', () => {
+            if (!window.Popup) {
+                exportMarkdown();
+                return;
+            }
+            window.Popup.open({
+                title: 'Download note',
+                content: '#exportTemplate',
+                size: 'narrow',
+                showClose: true,
+                buttons: []
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.js-popup-content')) return;
+
+            if (e.target.closest('.js-export-md')) {
+                window.Popup.close(true);
+                exportMarkdown();
+            } else if (e.target.closest('.js-export-pdf')) {
+                window.Popup.close(true);
+                exportPdf();
+            }
         });
     }
 

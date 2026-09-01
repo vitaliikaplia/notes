@@ -27,6 +27,7 @@ core/includes/ai.php       AI module for Claude/OpenAI/Gemini tool calling
 core/includes/mcp.php      MCP server (Streamable HTTP, /mcp) + hashed token management
 core/includes/render.php   Twig rendering and shared context
 core/includes/markdown.php Markdown <-> Editor.js conversion
+core/includes/pdf.php      PDF export (Dompdf, reuses render_blocks_to_html)
 core/includes/cache.php    Redis cache with graceful fallback
 views/index.twig           Dashboard tabs and page-level JS
 views/editor.twig          Note editor
@@ -63,7 +64,7 @@ assets/js/page-tool.js     Editor.js page-link tool
 - Each PHP include starts with `if(!defined('ABSPATH')){exit;}`
 - Light/dark themes use custom properties such as `var(--bg)` and `var(--text)`
 - JavaScript is IIFE-style, without modules or a bundler
-- Editor.js and plugins are loaded from CDN
+- Editor.js, its plugins, force-graph, and air-datepicker are self-hosted in `assets/vendor/` with the version in the filename (update = download new file + change the template reference); the only external script is Cloudflare Turnstile, which cannot be self-hosted
 
 ## Commands
 
