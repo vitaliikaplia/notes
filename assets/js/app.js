@@ -1650,3 +1650,51 @@ function initEditor(config) {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 })();
+
+// Restore note scroll position after reload.
+// Editor.js renders content asynchronously, so the page is short at load time and
+// the browser's native restoration lands at the top; retry until the height allows it.
+(function() {
+    if (!document.body.classList.contains('page-editor')) return;
+
+    const key = 'page-scroll:' + window.location.pathname;
+    try { history.scrollRestoration = 'manual'; } catch (e) {}
+
+    const saved = parseInt(sessionStorage.getItem(key) || '0', 10);
+    if (saved > 0 && !window.location.hash) {
+        const started = Date.now();
+        let cancelled = false;
+        const cancel = () => { cancelled = true; };
+        // A deliberate user scroll during restore wins over the saved position
+        window.addEventListener('wheel', cancel, { passive: true, once: true });
+        window.addEventListener('touchstart', cancel, { passive: true, once: true });
+        window.addEventListener('keydown', cancel, { once: true });
+
+        const tryRestore = () => {
+            if (cancelled) return;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            if (maxScroll >= saved) {
+                window.scrollTo(0, saved);
+                return;
+            }
+            if (Date.now() - started > 4000) {
+                window.scrollTo(0, Math.max(0, maxScroll));
+                return;
+            }
+            requestAnimationFrame(tryRestore);
+        };
+        requestAnimationFrame(tryRestore);
+    }
+
+    let saveTimer;
+    window.addEventListener('scroll', () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            try { sessionStorage.setItem(key, String(Math.round(window.scrollY))); } catch (e) {}
+        }, 150);
+    }, { passive: true });
+
+    window.addEventListener('pagehide', () => {
+        try { sessionStorage.setItem(key, String(Math.round(window.scrollY))); } catch (e) {}
+    });
+})();

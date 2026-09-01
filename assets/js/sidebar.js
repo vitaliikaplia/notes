@@ -116,6 +116,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Preserve sidebar scroll position across page loads.
+    // Runs after collapsed state and active-note auto-expand, so heights are final.
+    const sidebarScroller = document.querySelector('.sidebar-nav');
+    if (sidebarScroller) {
+        const scrollKey = 'sidebar-scroll';
+        const savedScroll = parseInt(sessionStorage.getItem(scrollKey) || '0', 10);
+        if (savedScroll > 0) sidebarScroller.scrollTop = savedScroll;
+
+        let scrollSaveTimer;
+        sidebarScroller.addEventListener('scroll', () => {
+            clearTimeout(scrollSaveTimer);
+            scrollSaveTimer = setTimeout(() => {
+                try { sessionStorage.setItem(scrollKey, String(Math.round(sidebarScroller.scrollTop))); } catch (e) {}
+            }, 100);
+        }, { passive: true });
+
+        window.addEventListener('pagehide', () => {
+            try { sessionStorage.setItem(scrollKey, String(Math.round(sidebarScroller.scrollTop))); } catch (e) {}
+        });
+    }
+
     function saveCollapsedState() {
         const slugs = [];
         document.querySelectorAll('.sidebar-folder.collapsed[data-slug]').forEach(f => {
