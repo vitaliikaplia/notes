@@ -65,34 +65,35 @@ function pdf_render_note_html(string $title, array $blocks): string {
 
     $css = <<<CSS
         * { margin: 0; padding: 0; }
-        body { font-family: "DejaVu Sans", sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; }
-        h1 { font-size: 20pt; margin: 0 0 14pt; }
-        h2 { font-size: 15pt; margin: 16pt 0 8pt; }
-        h3 { font-size: 13pt; margin: 14pt 0 6pt; }
-        h4, h5, h6 { font-size: 11.5pt; margin: 12pt 0 6pt; }
-        p { margin: 0 0 8pt; }
-        ul, ol { margin: 0 0 8pt 18pt; }
-        li { margin: 0 0 3pt; }
+        /* This dompdf build ignores @page rules; body margin is what sets the page margins */
+        body { margin: 22mm 18mm 20mm; font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; line-height: 1.45; color: #1a1a1a; }
+        h1 { font-size: 15pt; margin: 0 0 12pt; }
+        h2 { font-size: 12pt; margin: 14pt 0 7pt; }
+        h3 { font-size: 10.5pt; margin: 12pt 0 5pt; }
+        h4, h5, h6 { font-size: 9.5pt; margin: 10pt 0 5pt; }
+        p { margin: 0 0 7pt; }
+        ul, ol { margin: 0 0 7pt 16pt; }
+        li { margin: 0 0 2.5pt; }
         a { color: #1a6fb0; text-decoration: none; }
         mark { background: #fff3a3; }
-        code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f2f2f2; padding: 1pt 3pt; }
-        pre { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f5f5f5; border: 0.5pt solid #ddd; padding: 8pt; margin: 0 0 10pt; white-space: pre-wrap; word-wrap: break-word; }
+        code { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; background: #f2f2f2; padding: 1pt 3pt; }
+        pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; background: #f5f5f5; border: 0.5pt solid #ddd; padding: 7pt; margin: 0 0 9pt; white-space: pre-wrap; word-wrap: break-word; }
         pre code { background: none; padding: 0; }
-        blockquote { border-left: 2pt solid #ccc; padding: 4pt 0 4pt 10pt; margin: 0 0 10pt; color: #444; }
-        blockquote cite { display: block; margin-top: 4pt; font-size: 9pt; color: #888; }
-        table { border-collapse: collapse; width: 100%; margin: 0 0 10pt; }
-        th, td { border: 0.5pt solid #bbb; padding: 4pt 6pt; font-size: 10pt; text-align: left; }
+        blockquote { border-left: 2pt solid #ccc; padding: 3pt 0 3pt 9pt; margin: 0 0 9pt; color: #444; }
+        blockquote cite { display: block; margin-top: 3pt; font-size: 8pt; color: #888; }
+        table { border-collapse: collapse; width: 100%; margin: 0 0 9pt; }
+        th, td { border: 0.5pt solid #bbb; padding: 3pt 5pt; font-size: 8.5pt; text-align: left; }
         th { background: #f2f2f2; }
-        hr { border: none; border-top: 0.5pt solid #ccc; margin: 12pt 0; }
-        figure { margin: 0 0 10pt; }
+        hr { border: none; border-top: 0.5pt solid #ccc; margin: 10pt 0; }
+        figure { margin: 0 0 9pt; }
         img { max-width: 100%; }
-        figcaption { font-size: 9pt; color: #888; margin-top: 3pt; }
-        .checklist { margin: 0 0 8pt; }
-        .checklist-item { margin: 0 0 3pt; }
+        figcaption { font-size: 8pt; color: #888; margin-top: 3pt; }
+        .checklist { margin: 0 0 7pt; }
+        .checklist-item { margin: 0 0 2.5pt; }
         .cb { font-family: "DejaVu Sans", sans-serif; }
-        .cdx-page-link { margin: 0 0 8pt; padding: 5pt 8pt; border: 0.5pt solid #ddd; background: #fafafa; }
-        .embed-link { font-size: 9pt; word-wrap: break-word; }
-        .note-footer { margin-top: 20pt; padding-top: 6pt; border-top: 0.5pt solid #ddd; font-size: 8pt; color: #999; }
+        .cdx-page-link { margin: 0 0 7pt; padding: 4pt 7pt; border: 0.5pt solid #ddd; background: #fafafa; }
+        .embed-link { font-size: 8pt; word-wrap: break-word; }
+        .note-footer { margin-top: 18pt; padding-top: 5pt; border-top: 0.5pt solid #ddd; font-size: 7.5pt; color: #999; }
     CSS;
 
     return "<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><style>{$css}</style></head><body>"
