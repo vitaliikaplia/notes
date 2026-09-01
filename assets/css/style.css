@@ -29,8 +29,10 @@ html {
     --saved-color: #2f7a44;
     --selection-bg: #d7eef7;
     --selection-text: #12202a;
-    --toast-bg: rgba(38, 31, 24, 0.92);
-    --toast-border: rgba(255, 255, 255, 0.12);
+    --toast-bg: rgba(255, 253, 248, 0.95);
+    --toast-border: rgba(121, 100, 69, 0.22);
+    --toast-text: #302b25;
+    --toast-shadow: rgba(67, 49, 24, 0.18);
     --overlay-scrim: rgba(33, 25, 16, 0.34);
     --glass-bg: rgba(248, 244, 235, 0.76);
     --glass-bg-hover: rgba(238, 228, 210, 0.88);
@@ -65,6 +67,8 @@ html {
     --selection-text: #ffffff;
     --toast-bg: rgba(18, 18, 18, 0.92);
     --toast-border: rgba(255, 255, 255, 0.08);
+    --toast-text: #e0e0e0;
+    --toast-shadow: rgba(0, 0, 0, 0.4);
     --overlay-scrim: rgba(0, 0, 0, 0.75);
     --glass-bg: rgba(30, 30, 30, 0.75);
     --glass-bg-hover: rgba(255, 255, 255, 0.1);
@@ -547,12 +551,13 @@ a:hover {
     background: var(--toast-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    color: var(--text);
+    color: var(--toast-text);
     padding: 10px 20px;
     border-radius: 10px;
     font-size: 13px;
     font-family: var(--font);
     border: 1px solid var(--toast-border);
+    box-shadow: 0 4px 16px var(--toast-shadow);
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
