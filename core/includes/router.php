@@ -292,13 +292,12 @@ function router($url_segments = []): array {
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         exit;
 
-    } elseif($url_segments[0] === 'api') {
+    } elseif($url_segments[0] === 'mcp') {
 
-        // REST API v1 — token auth
-        if (isset($url_segments[1]) && $url_segments[1] === 'v1') {
-            api_dispatch(array_slice($url_segments, 2));
-            exit;
-        }
+        // MCP server — bearer-token auth (Streamable HTTP)
+        mcp_dispatch();
+
+    } elseif($url_segments[0] === 'api') {
 
         // Internal API — session auth
         auth_require();
@@ -1119,6 +1118,22 @@ function router($url_segments = []): array {
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
             exit;
 
+        } elseif($action === 'mcp-token' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            $op = $input['op'] ?? '';
+
+            if($op === 'generate') {
+                // The plaintext token is returned exactly once; only its hash is stored
+                $token = mcp_generate_token();
+                echo json_encode(['success' => true, 'token' => $token, 'status' => mcp_token_status()]);
+            } elseif($op === 'revoke') {
+                mcp_revoke_token();
+                echo json_encode(['success' => true, 'status' => mcp_token_status()]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Unknown operation']);
+            }
+            exit;
+
         } elseif($action === 'clear-cache' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = bump_assets_version();
             $result = clear_app_cache();
@@ -1128,7 +1143,7 @@ function router($url_segments = []): array {
         } elseif($action === 'options' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode([
                 'REDIS_SOCKET'       => get_option('REDIS_SOCKET', ''),
-                'API_TOKEN'          => get_option('API_TOKEN', ''),
+                'mcp_token'          => mcp_token_status(),
                 'CAPTCHA_SITE_KEY'   => get_option('CAPTCHA_SITE_KEY', ''),
                 'CAPTCHA_SECRET_KEY' => get_option('CAPTCHA_SECRET_KEY', ''),
                 'AI_PROVIDER'        => get_option('AI_PROVIDER', ''),
@@ -1176,7 +1191,7 @@ function router($url_segments = []): array {
             }
 
             // Plain settings (whitelisted)
-            $allowed = ['REDIS_SOCKET', 'API_TOKEN', 'CAPTCHA_SITE_KEY', 'CAPTCHA_SECRET_KEY', 'AI_API_KEY', 'AI_MODEL', 'AI_HISTORY_LIMIT'];
+            $allowed = ['REDIS_SOCKET', 'CAPTCHA_SITE_KEY', 'CAPTCHA_SECRET_KEY', 'AI_API_KEY', 'AI_MODEL', 'AI_HISTORY_LIMIT'];
             foreach($allowed as $key) {
                 if(array_key_exists($key, $input)) {
                     set_option($key, (string)$input[$key]);
@@ -1269,6 +1284,7 @@ if ($url_segments = get_url_segments()) {
     if(
         !empty($url_segments[0])
         && $url_segments[0] !== 'api'
+        && $url_segments[0] !== 'mcp'
         && $url_segments[0] !== 'file'
         && $url_segments[0] !== 'manifest.json'
         && empty($_GET)

@@ -14,11 +14,21 @@
                     <input type="text" name="REDIS_SOCKET" placeholder="unix:///path/to/redis.sock" autocomplete="off" spellcheck="false">
                     <small>Leave empty to disable Redis caching.</small>
                 </label>
-                <label class="options-field">
-                    <span>REST API token</span>
-                    <input type="text" name="API_TOKEN" placeholder="Bearer token for /api/v1" autocomplete="off" spellcheck="false">
-                    <small>Leave empty to disable the REST API.</small>
-                </label>
+                <div class="options-field">
+                    <span>MCP server</span>
+                    <div class="options-mcp">
+                        <div class="options-mcp-status js-mcp-status">Loading…</div>
+                        <div class="options-mcp-token js-mcp-token" hidden>
+                            <code class="js-mcp-token-value"></code>
+                            <button type="button" class="btn js-mcp-copy">Copy</button>
+                        </div>
+                        <div class="options-mcp-actions">
+                            <button type="button" class="btn js-mcp-generate">Generate token</button>
+                            <button type="button" class="btn btn-danger js-mcp-revoke" hidden>Revoke</button>
+                        </div>
+                    </div>
+                    <small>Streamable HTTP endpoint at <code>{{ home_url }}mcp</code> with <code>Authorization: Bearer &lt;token&gt;</code>. The token is shown only once after generation; only its hash is stored. No token means the MCP server is disabled.</small>
+                </div>
             </div>
 
             <div class="options-panel" data-panel="cloudflare">

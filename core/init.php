@@ -37,8 +37,8 @@ $includes = [
     'favicon',
     'notes',
     'markdown',
-    'api',
     'ai',
+    'mcp',
     'render',
     'router',
 ];

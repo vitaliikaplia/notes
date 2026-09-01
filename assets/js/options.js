@@ -38,6 +38,90 @@
         });
     }
 
+    // --- MCP token management ---
+
+    function renderMcpStatus(status, plainToken) {
+        var c = content();
+        if (!c) return;
+
+        var statusBox = c.querySelector('.js-mcp-status');
+        var tokenBox = c.querySelector('.js-mcp-token');
+        var tokenValue = c.querySelector('.js-mcp-token-value');
+        var generateBtn = c.querySelector('.js-mcp-generate');
+        var revokeBtn = c.querySelector('.js-mcp-revoke');
+        if (!statusBox || !generateBtn) return;
+
+        var configured = !!(status && status.configured);
+
+        if (configured) {
+            var text = 'Token active';
+            if (status.hint) text += ': ' + status.hint;
+            if (status.created_at) text += ' (created ' + status.created_at.slice(0, 10) + ')';
+            statusBox.textContent = text;
+        } else {
+            statusBox.textContent = 'No token — MCP server is disabled.';
+        }
+
+        generateBtn.textContent = configured ? 'Regenerate token' : 'Generate token';
+        if (revokeBtn) revokeBtn.hidden = !configured;
+
+        if (tokenBox && tokenValue) {
+            if (plainToken) {
+                tokenValue.textContent = plainToken;
+                tokenBox.hidden = false;
+            } else {
+                tokenValue.textContent = '';
+                tokenBox.hidden = true;
+            }
+        }
+    }
+
+    function mcpTokenRequest(op) {
+        showError('');
+        fetch(homeUrl + 'api/mcp-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ op: op })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data || !data.success) {
+                    showError((data && data.error) || 'Could not update the MCP token');
+                    return;
+                }
+                renderMcpStatus(data.status, data.token || null);
+                if (window.showToast) {
+                    window.showToast(op === 'revoke' ? 'MCP token revoked' : 'MCP token generated — copy it now');
+                }
+            })
+            .catch(function () {
+                showError('Could not update the MCP token');
+            });
+    }
+
+    function copyMcpToken() {
+        var c = content();
+        var value = c && c.querySelector('.js-mcp-token-value');
+        var token = value ? value.textContent : '';
+        if (!token) return;
+
+        var done = function () {
+            if (window.showToast) window.showToast('Token copied');
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(token).then(done).catch(function () {});
+        } else {
+            var range = document.createRange();
+            range.selectNodeContents(value);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try { document.execCommand('copy'); done(); } catch (e) {}
+            selection.removeAllRanges();
+        }
+    }
+
     function saveOptions() {
         var c = content();
         if (!c) return;
@@ -100,6 +184,7 @@
                     var field = c.querySelector('[name="' + name + '"]');
                     if (field) field.value = data[name];
                 });
+                renderMcpStatus(data.mcp_token || null, null);
                 applyAiVisibility();
             })
             .catch(function () {});
@@ -131,6 +216,29 @@
         if (tab && tab.closest('.js-popup-content')) {
             event.preventDefault();
             switchTab(tab.dataset.tab);
+            return;
+        }
+
+        if (event.target.closest('.js-popup-content')) {
+            if (event.target.closest('.js-mcp-generate')) {
+                event.preventDefault();
+                var configured = !content().querySelector('.js-mcp-revoke').hidden;
+                if (!configured || window.confirm('Generating a new token invalidates the current one. Continue?')) {
+                    mcpTokenRequest('generate');
+                }
+                return;
+            }
+            if (event.target.closest('.js-mcp-revoke')) {
+                event.preventDefault();
+                if (window.confirm('Revoke the MCP token? Connected clients will lose access.')) {
+                    mcpTokenRequest('revoke');
+                }
+                return;
+            }
+            if (event.target.closest('.js-mcp-copy')) {
+                event.preventDefault();
+                copyMcpToken();
+            }
         }
     });
 

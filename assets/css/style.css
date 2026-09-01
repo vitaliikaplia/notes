@@ -4792,6 +4792,46 @@ body.popup-open {
     margin: 2px 0;
 }
 
+.options-mcp {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.options-mcp-status {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.options-mcp-token {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+}
+
+.options-mcp-token code {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    word-break: break-all;
+    user-select: all;
+    color: var(--text);
+}
+
+.options-mcp-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.options-field small code {
+    font-size: 11px;
+    word-break: break-all;
+}
+
 .options-error {
     margin-top: 16px;
     padding: 10px 12px;

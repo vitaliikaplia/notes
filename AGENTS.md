@@ -24,7 +24,7 @@ core/includes/db.php       PDO connection, schema (db_init_schema), options + re
 core/includes/notes.php    Note CRUD (MySQL), tree build, slug generation, image uploads
 core/includes/auth.php     Sessions, login, remember-me tokens, config loader (get_env)
 core/includes/ai.php       AI module for Claude/OpenAI/Gemini tool calling
-core/includes/api.php      REST API v1
+core/includes/mcp.php      MCP server (Streamable HTTP, /mcp) + hashed token management
 core/includes/render.php   Twig rendering and shared context
 core/includes/markdown.php Markdown <-> Editor.js conversion
 core/includes/cache.php    Redis cache with graceful fallback
@@ -44,7 +44,7 @@ assets/js/page-tool.js     Editor.js page-link tool
 ## Configuration
 
 - `config.php` (gitignored, returns an array, read via `get_env()`) holds ONLY the DB connection (`DB_HOST/PORT/NAME/USER/PASS/CHARSET`); copy `config.example.php` -> `config.php` to set up
-- Every other setting — admin login (`AUTH_USER/AUTH_PASS`), API token, CAPTCHA, AI provider/key, Redis socket — lives in the DB `options` table; read/write with `get_option()` / `set_option()` from `core/includes/db.php`, never `get_env()`
+- Every other setting — admin login (`AUTH_USER/AUTH_PASS`), MCP token hash (`MCP_TOKEN_HASH`, SHA-256, plaintext never stored), CAPTCHA, AI provider/key, Redis socket — lives in the DB `options` table; read/write with `get_option()` / `set_option()` from `core/includes/db.php`, never `get_env()`
 - `AUTH_PASS` is a bcrypt hash (`password_hash`/`password_verify`); set it via `auth_set_password($plain)` in `auth.php`. A plaintext value is accepted once and auto-upgraded to a hash on first login
 - Do not use `getenv()` or `$_ENV`; `config.php` is served as PHP so it never leaks as plaintext
 - Important constants: `ABSPATH`, `HOME_URL`, `SITE_NAME`
@@ -84,4 +84,5 @@ assets/js/page-tool.js     Editor.js page-link tool
 - Do not remove the Ukrainian transliteration table in `core/includes/notes.php`; it is part of slug compatibility.
 - Store upload/image URLs host-relative (`/file/...`); `get_note()` normalizes any absolute host on read. Do not reintroduce `HOME_URL`-prefixed image URLs.
 - `.htaccess` is honored on Apache but ignored on nginx/Herd; never rely on it to protect `config.php`, `.notes/`, or `uploads/`. The durable protection is moving the docroot to a `public/` dir.
-- Production sits behind Cloudflare with bot protection on: REST API calls from non-browser clients can be blocked with `HTTP 403, Cloudflare error 1010` ("banned based on browser signature") before reaching the app — this is a Cloudflare block, not an API error. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/api/*`. See `API.md`.
+- The external integration surface is the MCP server at `/mcp` (`core/includes/mcp.php`, stateless Streamable HTTP, JSON-RPC 2.0); its tools are shared with the AI assistant (`ai_get_tools()` / `ai_execute_tool()`). REST API v1 was removed. A legacy plaintext `API_TOKEN` option is auto-migrated to `MCP_TOKEN_HASH` on first use.
+- Production sits behind Cloudflare with bot protection on: MCP requests from non-browser clients can be blocked with `HTTP 403, Cloudflare error 1010` ("banned based on browser signature") before reaching the app — this is a Cloudflare block, not an MCP error. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/mcp`. See `MCP.md`.
