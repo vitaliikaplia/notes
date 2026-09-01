@@ -1660,6 +1660,12 @@ function initEditor(config) {
     const key = 'page-scroll:' + window.location.pathname;
     try { history.scrollRestoration = 'manual'; } catch (e) {}
 
+    // The editor layout scrolls inside <main class="content">, not the window
+    const scroller = document.querySelector('main.content') || document.scrollingElement || document.documentElement;
+    const getY = () => scroller.scrollTop;
+    const setY = (y) => { scroller.scrollTop = y; };
+    const maxY = () => scroller.scrollHeight - scroller.clientHeight;
+
     const write = (value) => {
         try { sessionStorage.setItem(key, String(Math.round(value))); } catch (e) {}
     };
@@ -1683,20 +1689,19 @@ function initEditor(config) {
         const watchdog = (until) => {
             if (cancelled) { restoring = false; return; }
             if (Date.now() > until) { restoring = false; return; }
-            if (window.scrollY === 0 && saved > 50) window.scrollTo(0, saved);
+            if (getY() === 0 && saved > 50) setY(saved);
             requestAnimationFrame(() => watchdog(until));
         };
 
         const tryRestore = () => {
             if (cancelled) { restoring = false; return; }
-            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-            if (maxScroll >= saved) {
-                window.scrollTo(0, saved);
+            if (maxY() >= saved) {
+                setY(saved);
                 watchdog(Date.now() + 1500);
                 return;
             }
             if (Date.now() - started > 4000) {
-                window.scrollTo(0, Math.max(0, maxScroll));
+                setY(Math.max(0, maxY()));
                 restoring = false;
                 return;
             }
@@ -1709,20 +1714,21 @@ function initEditor(config) {
     // stored value is fresh even if the page is reloaded mid-scroll.
     let lastWrite = 0;
     let saveTimer;
-    window.addEventListener('scroll', () => {
+    const scrollSource = scroller === document.scrollingElement || scroller === document.documentElement ? window : scroller;
+    scrollSource.addEventListener('scroll', () => {
         if (restoring) return;
         const now = Date.now();
         if (now - lastWrite > 100) {
             lastWrite = now;
-            write(window.scrollY);
+            write(getY());
         }
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => write(window.scrollY), 120);
+        saveTimer = setTimeout(() => write(getY()), 120);
     }, { passive: true });
 
     // On teardown some browsers reset the viewport to the top before firing
     // pagehide — never let that overwrite a real position with zero.
     window.addEventListener('pagehide', () => {
-        if (window.scrollY > 0) write(window.scrollY);
+        if (getY() > 0) write(getY());
     });
 })();
