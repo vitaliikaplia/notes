@@ -270,16 +270,73 @@ function mcp_method_initialize(array $params): array {
 function mcp_tool_annotations(string $name): array {
     return match($name) {
         'notes_list', 'notes_search', 'notes_get' => ['readOnlyHint' => true],
-        'notes_create' => ['readOnlyHint' => false, 'destructiveHint' => false],
+        'notes_create', 'notes_upload_image' => ['readOnlyHint' => false, 'destructiveHint' => false],
         'notes_update' => ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         'notes_delete' => ['readOnlyHint' => false, 'destructiveHint' => true],
         default        => [],
     };
 }
 
+// Tools that exist only on the MCP surface (the AI chat has no use for them)
+function mcp_extra_tools(): array {
+    return [
+        [
+            'name' => 'notes_upload_image',
+            'description' => 'Upload an image to the notes media storage. Returns a host-relative URL (/file/...) and a ready Markdown image tag to paste into a note via notes_update. Raster images are converted to WebP.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'data' => ['type' => 'string', 'description' => 'Base64-encoded image bytes (JPEG, PNG, GIF, WebP or SVG), without a data: URI prefix'],
+                    'caption' => ['type' => 'string', 'description' => 'Optional caption used in the returned Markdown tag'],
+                ],
+                'required' => ['data'],
+            ],
+        ],
+    ];
+}
+
+function mcp_tool_upload_image(array $args): array {
+    $data = (string)($args['data'] ?? '');
+    // Tolerate a data: URI prefix even though the schema asks for bare base64
+    if(str_starts_with($data, 'data:') && ($comma = strpos($data, ',')) !== false) {
+        $data = substr($data, $comma + 1);
+    }
+    $bytes = base64_decode($data, true);
+    if($bytes === false || $bytes === '') {
+        throw new RuntimeException('Invalid base64 image data');
+    }
+
+    $tmp = tempnam(sys_get_temp_dir(), 'mcp-img-');
+    file_put_contents($tmp, $bytes);
+
+    try {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $tmp);
+        finfo_close($finfo);
+
+        $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if(!in_array($mime, $allowed, true)) {
+            throw new RuntimeException('Unsupported image type: ' . $mime);
+        }
+
+        $url = save_uploaded_image($tmp, $mime);
+        if(!$url) {
+            throw new RuntimeException('Failed to store image');
+        }
+    } finally {
+        @unlink($tmp);
+    }
+
+    $caption = trim((string)($args['caption'] ?? ''));
+    return [
+        'url'      => $url,
+        'markdown' => '![' . str_replace(['[', ']'], '', $caption) . '](' . $url . ')',
+    ];
+}
+
 function mcp_method_tools_list(): array {
     $tools = [];
-    foreach(ai_get_tools() as $tool) {
+    foreach(array_merge(ai_get_tools(), mcp_extra_tools()) as $tool) {
         $tools[] = [
             'name'        => $tool['name'],
             'description' => $tool['description'],
@@ -294,12 +351,23 @@ function mcp_method_tools_call(array $params): array {
     $name = (string)($params['name'] ?? '');
     $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
 
-    $known = array_column(ai_get_tools(), 'name');
+    $extra = array_column(mcp_extra_tools(), 'name');
+    $known = array_merge(array_column(ai_get_tools(), 'name'), $extra);
     if(!in_array($name, $known, true)) {
         return mcp_error_response(null, -32602, 'Unknown tool: ' . $name);
     }
 
-    $execution = ai_execute_tool($name, $args);
+    if(in_array($name, $extra, true)) {
+        try {
+            $execution = ['success' => true, 'result' => match($name) {
+                'notes_upload_image' => mcp_tool_upload_image($args),
+            }];
+        } catch(\Throwable $e) {
+            $execution = ['success' => false, 'result' => $e->getMessage()];
+        }
+    } else {
+        $execution = ai_execute_tool($name, $args);
+    }
 
     $text = is_string($execution['result'])
         ? $execution['result']

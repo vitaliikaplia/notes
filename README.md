@@ -230,6 +230,7 @@ Exposed tools:
 | `notes_create` | Create a note |
 | `notes_update` | Update a note |
 | `notes_delete` | Delete a note |
+| `notes_upload_image` | Upload a base64 image to media storage (MCP-only) |
 
 Connect from Claude Code:
 

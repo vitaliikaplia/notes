@@ -70,8 +70,9 @@ To connect from MCP clients, either send a browser-like `User-Agent` header, or 
 | `notes_create` | `title`, `markdown`, `icon?`, `folder?`, `visibility?` | Create a note (Markdown is converted to Editor.js blocks) |
 | `notes_update` | `path`, `title?`, `markdown?`, `icon?`, `visibility?`, `pinned?` | Update a note; omitted fields are preserved |
 | `notes_delete` | `path` | Delete a note (children are cascade-deleted) |
+| `notes_upload_image` | `data`, `caption?` | Upload a base64-encoded image (JPEG/PNG/GIF/WebP/SVG) to media storage; returns a host-relative `/file/...` URL and a ready Markdown image tag to paste into a note via `notes_update`. Raster images are converted to WebP. |
 
-Read-only tools carry `readOnlyHint: true` annotations; `notes_update` and `notes_delete` are marked destructive.
+Read-only tools carry `readOnlyHint: true` annotations; `notes_update` and `notes_delete` are marked destructive. `notes_upload_image` is MCP-only (the built-in AI assistant does not expose it); keep uploads under a few megabytes — the base64 payload must fit PHP's `post_max_size`.
 
 ### Paths
 
