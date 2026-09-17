@@ -116,6 +116,19 @@ function blocks_to_markdown(array $blocks): string {
                 }
                 break;
 
+            case 'gallery':
+                $items = array_filter($data['items'] ?? [], fn($i) => !empty($i['url']));
+                if ($items) {
+                    $cols = (int)($data['columns'] ?? 3);
+                    $lines[] = '::: gallery cols=' . (($cols >= 2 && $cols <= 4) ? $cols : 3);
+                    foreach ($items as $item) {
+                        $lines[] = '![' . str_replace(['[', ']'], '', $item['caption'] ?? '') . '](' . $item['url'] . ')';
+                    }
+                    $lines[] = ':::';
+                    $lines[] = '';
+                }
+                break;
+
             case 'embed':
                 $source = $data['source'] ?? '';
                 if ($source) {
@@ -234,6 +247,24 @@ function markdown_to_blocks(string $markdown): array {
                 'level' => strlen($m[1]),
             ]);
             $i++;
+            continue;
+        }
+
+        // Gallery: ::: gallery cols=N ... :::  (one ![caption](url) per line)
+        if (preg_match('/^:::\s*gallery(?:\s+cols=(\d))?\s*$/i', trim($line), $m)) {
+            $cols = !empty($m[1]) ? (int)$m[1] : 3;
+            $items = [];
+            $i++;
+            while ($i < $total && !preg_match('/^:::\s*$/', trim($lines[$i]))) {
+                if (preg_match('/^!\[([^\]]*)\]\(([^)]+)\)$/', trim($lines[$i]), $im)) {
+                    $items[] = ['url' => $im[2], 'caption' => $im[1]];
+                }
+                $i++;
+            }
+            $i++; // closing :::
+            if ($items) {
+                $blocks[] = make_block('gallery', ['items' => $items, 'columns' => (($cols >= 2 && $cols <= 4) ? $cols : 3)]);
+            }
             continue;
         }
 
@@ -544,6 +575,7 @@ function is_md_block_start(string $line): bool {
     if (preg_match('/^-\s*\[[ xX]\]/', $line)) return true;
     if (preg_match('/^\|.+\|$/', $line)) return true;
     if (preg_match('/^<details>/', $line)) return true;
+    if (preg_match('/^:::/', $line)) return true;
     if (preg_match('/^!\[/', $line)) return true;
     if (preg_match('/^https?:\/\/(?:www\.)?(?:youtube\.com\/watch|youtu\.be\/|vimeo\.com\/)/', $line)) return true;
     if (preg_match('/^\[.+\]\(note\/.+\)$/', $line)) return true;
@@ -611,7 +643,7 @@ function extract_items_text(array $items): string {
     $text = '';
     foreach ($items as $item) {
         if (is_array($item)) {
-            $text .= ' ' . strip_tags($item['content'] ?? $item['text'] ?? '');
+            $text .= ' ' . strip_tags($item['content'] ?? $item['text'] ?? $item['caption'] ?? '');
             if (!empty($item['items'])) {
                 $text .= ' ' . extract_items_text($item['items']);
             }

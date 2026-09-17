@@ -40,6 +40,8 @@ assets/js/sidebar.js       Sidebar interactions
 assets/js/options.js       Options popup behavior
 assets/js/popup.js         Shared popup engine
 assets/js/page-tool.js     Editor.js page-link tool
+assets/js/gallery-tool.js  Editor.js gallery tool (thumbnail grid, 2–4 per row)
+assets/js/lightbox.js      Global lightbox for gallery thumbnails (loaded from base.twig)
 ```
 
 ## Configuration
@@ -59,6 +61,7 @@ assets/js/page-tool.js     Editor.js page-link tool
 - The schema self-creates on the first DB connect (`db_init_schema()` is called from `get_db()`)
 - The setup/database fatal page is self-contained, returns `503`, and is marked `noindex`
 - Slugs use Ukrainian transliteration through `ukr_to_lat()`
+- Gallery block: type `gallery`, data `{items: [{url, caption}], columns}`; Markdown form is `::: gallery cols=N` … `:::` with one `![caption](url)` per line (markdown.php); rendered by `render_blocks_to_html()` as `.gallery.gallery-cols-N` and converted to a table for PDF in `pdf_adapt_html()`. Keep `extract_image_urls()` / `collect_media_from_notes()` aware of gallery items so uploads are not treated as orphans
 - Upload/image URLs are stored host-relative (`/file/...`) via `normalize_upload_url()` / `upload_url_to_relative_path()`; never bake `HOME_URL` into stored note data, so notes stay portable across hosts
 - Admin settings are edited from the Options popup (`/api/options`, `/api/save-options`) and cache clearing goes through `/api/clear-cache`, which bumps `assets_version`
 - Each PHP include starts with `if(!defined('ABSPATH')){exit;}`

@@ -56,6 +56,25 @@ function pdf_adapt_html(string $html): string {
     // Inline SVG icons (page links) are not worth the rendering trouble
     $html = preg_replace('/<svg\b[^>]*>.*?<\/svg>/s', '', $html);
 
+    // Galleries: Dompdf has no grid/flex, so lay the thumbnails out as a table
+    $html = preg_replace_callback('/<div class="gallery gallery-cols-(\d)">(.*?)<\/div>/s', function($m) {
+        $cols = max(2, min(4, (int)$m[1]));
+        preg_match_all('/<figure class="gallery-item">(.*?)<\/figure>/s', $m[2], $figs);
+        $cells = [];
+        foreach($figs[1] as $fig) {
+            $src = preg_match('/<img src="([^"]+)"/', $fig, $im) ? $im[1] : '';
+            $cap = preg_match('/<figcaption>(.*?)<\/figcaption>/s', $fig, $cm) ? $cm[1] : '';
+            if($src === '') continue;
+            $cells[] = '<td><img src="' . $src . '">' . ($cap !== '' ? '<div class="pdf-gallery-cap">' . $cap . '</div>' : '') . '</td>';
+        }
+        $rows = '';
+        foreach(array_chunk($cells, $cols) as $row) {
+            while(count($row) < $cols) $row[] = '<td></td>';
+            $rows .= '<tr>' . implode('', $row) . '</tr>';
+        }
+        return '<table class="pdf-gallery">' . $rows . '</table>';
+    }, $html);
+
     return pdf_embed_local_images($html);
 }
 
@@ -93,6 +112,10 @@ function pdf_render_note_html(string $title, array $blocks): string {
         .cb { font-family: "DejaVu Sans", sans-serif; }
         .cdx-page-link { margin: 0 0 7pt; padding: 4pt 7pt; border: 0.5pt solid #ddd; background: #fafafa; }
         .embed-link { font-size: 8pt; word-wrap: break-word; }
+        .pdf-gallery { width: 100%; border-collapse: separate; border-spacing: 4pt; margin: 0 0 9pt; }
+        .pdf-gallery td { vertical-align: top; text-align: center; border: none; padding: 0; }
+        .pdf-gallery img { max-width: 100%; }
+        .pdf-gallery-cap { font-size: 7.5pt; color: #888; margin-top: 2pt; }
         .note-footer { margin-top: 18pt; padding-top: 5pt; border-top: 0.5pt solid #ddd; font-size: 7.5pt; color: #999; }
     CSS;
 

@@ -578,6 +578,11 @@ function extract_image_urls(array $blocks): array {
         if(($block['type'] ?? '') === 'image' && !empty($block['data']['file']['url'])) {
             $urls[] = $block['data']['file']['url'];
         }
+        if(($block['type'] ?? '') === 'gallery' && !empty($block['data']['items'])) {
+            foreach($block['data']['items'] as $item) {
+                if(!empty($item['url'])) $urls[] = $item['url'];
+            }
+        }
     }
     return $urls;
 }
@@ -605,6 +610,18 @@ function collect_media_from_notes(array $notes): array {
                     'preview' => $preview,
                     'url'     => HOME_URL . 'note/' . $note['_url'] . '/',
                 ];
+            }
+            if(($block['type'] ?? '') === 'gallery' && !empty($block['data']['items'])) {
+                foreach($block['data']['items'] as $item) {
+                    if(empty($item['url'])) continue;
+                    $media[] = [
+                        'image'   => $item['url'],
+                        'title'   => $note['_title'],
+                        'date'    => $note['meta']['updated_at'] ?? '',
+                        'preview' => ($item['caption'] ?? '') !== '' ? $item['caption'] : $preview,
+                        'url'     => HOME_URL . 'note/' . $note['_url'] . '/',
+                    ];
+                }
             }
         }
     }
@@ -753,6 +770,24 @@ function render_blocks_to_html($blocks): string {
                         $html .= "<figcaption>{$caption}</figcaption>";
                     }
                     $html .= "</figure>\n";
+                }
+                break;
+
+            case 'gallery':
+                $items = array_filter($data['items'] ?? [], fn($i) => !empty($i['url']));
+                if($items) {
+                    $cols = (int)($data['columns'] ?? 3);
+                    $cols = ($cols >= 2 && $cols <= 4) ? $cols : 3;
+                    $html .= "<div class=\"gallery gallery-cols-{$cols}\">\n";
+                    foreach($items as $item) {
+                        $url = htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8');
+                        $cap = (string)($item['caption'] ?? '');
+                        $alt = htmlspecialchars(strip_tags($cap), ENT_QUOTES, 'UTF-8');
+                        $html .= "  <figure class=\"gallery-item\"><a href=\"{$url}\" class=\"gallery-link\"><img src=\"{$url}\" alt=\"{$alt}\" loading=\"lazy\"></a>";
+                        if($cap !== '') $html .= "<figcaption>" . htmlspecialchars($cap, ENT_QUOTES, 'UTF-8') . "</figcaption>";
+                        $html .= "</figure>\n";
+                    }
+                    $html .= "</div>\n";
                 }
                 break;
 

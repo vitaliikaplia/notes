@@ -10,7 +10,8 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 
 ### Editor
 
-- Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, embeds, and page links
+- Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, galleries, embeds, and page links
+- Gallery block: a grid of thumbnails (2–4 per row) with captions, drag-and-drop upload, and a lightbox; rendered in the public view and laid out as a table in PDF export
 - Syntax-highlighted code blocks with a searchable language dropdown
 - Inline tools: bold, italic, underline, strikethrough, marker, inline code, and links
 - Cover images with vertical repositioning
@@ -60,7 +61,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 ### Public View
 
 - Read-only rendering for unlisted and public notes
-- Rendered blocks include headings, lists, checklists, code, quotes, tables, delimiters, images, alerts, embeds, and page links
+- Rendered blocks include headings, lists, checklists, code, quotes, tables, delimiters, images, galleries (with lightbox), alerts, embeds, and page links
 - Cover images and note colors are preserved
 - Schema.org Article metadata
 
@@ -141,6 +142,8 @@ views/overall/options.twig   Options popup template
 views/overall/popup.twig     Shared popup shell
 assets/js/app.js             Editor and dashboard client logic
 assets/js/page-tool.js       Editor.js page-link tool
+assets/js/gallery-tool.js     Editor.js gallery tool (thumbnail grid)
+assets/js/lightbox.js         Lightbox for gallery thumbnails (editor + public view)
 assets/js/options.js         Options popup behavior
 assets/js/popup.js           Shared popup engine
 assets/js/sidebar.js         Sidebar interactions and theme switching
@@ -216,7 +219,7 @@ A Model Context Protocol server is available at `/mcp` (stateless Streamable HTT
 Authorization: Bearer <token>
 ```
 
-The token is generated from Options -> System (shown once, stored as a SHA-256 hash). Markdown is converted to Editor.js blocks automatically on write.
+The token is generated from Options -> System (shown once, stored as a SHA-256 hash). Markdown is converted to Editor.js blocks automatically on write; a gallery is written as a `::: gallery cols=3` … `:::` block with one `![caption](url)` per line (see [MCP.md](MCP.md)).
 
 > In production behind Cloudflare, non-browser MCP clients may be blocked with `HTTP 403, Cloudflare error 1010` before reaching the app. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/mcp` (see [MCP.md](MCP.md)).
 

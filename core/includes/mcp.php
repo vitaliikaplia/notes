@@ -263,7 +263,8 @@ function mcp_method_initialize(array $params): array {
         ],
         'instructions' => 'Self-hosted notes. Note paths never include .json and can be nested, e.g. "projects/my-note". '
             . 'Content is exchanged as Markdown. Use notes_search or notes_list to find a path before reading or updating a note. '
-            . 'Default visibility is private; options are private, unlisted, public.',
+            . 'Default visibility is private; options are private, unlisted, public. '
+            . 'Images: ![caption](/file/...) — upload with notes_upload_image first. Gallery (grid of thumbnails): a line "::: gallery cols=3" (cols 2-4), one ![caption](url) per line, closed with ":::".',
     ];
 }
 
@@ -312,7 +313,6 @@ function mcp_tool_upload_image(array $args): array {
     try {
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime = finfo_file($finfo, $tmp);
-        finfo_close($finfo);
 
         $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
         if(!in_array($mime, $allowed, true)) {

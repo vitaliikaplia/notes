@@ -74,6 +74,23 @@ To connect from MCP clients, either send a browser-like `User-Agent` header, or 
 
 Read-only tools carry `readOnlyHint: true` annotations; `notes_update` and `notes_delete` are marked destructive. `notes_upload_image` is MCP-only (the built-in AI assistant does not expose it); keep uploads under a few megabytes — the base64 payload must fit PHP's `post_max_size`.
 
+### Markdown conventions
+
+Note content is exchanged as Markdown and converted to Editor.js blocks on write. Besides standard Markdown (headings, lists, checklists, code, quotes, tables), two forms matter for images:
+
+- **Single image:** `![caption](/file/2026/09/abc.webp)` — one full-width image block. Get the URL from `notes_upload_image` first.
+- **Gallery (grid of thumbnails):**
+
+```markdown
+::: gallery cols=3
+![First caption](/file/2026/09/a.webp)
+![Second caption](/file/2026/09/b.webp)
+![](/file/2026/09/c.webp)
+:::
+```
+
+`cols` is 2–4 (default 3). Each `![caption](url)` line becomes a thumbnail with an optional caption; clicking a thumbnail opens the full image in a lightbox. `notes_get` returns galleries in the same syntax, so a read-modify-write round-trip preserves them.
+
 ### Paths
 
 Paths never include `.json` and can be nested:

@@ -415,6 +415,41 @@ function initEditor(config) {
 
     const editorData = noteData && noteData.blocks ? autoLinkUrls(noteData) : { blocks: [] };
 
+    // Shared uploader for the image and gallery tools
+    const imageUploader = {
+        uploadByFile: function(file) {
+            window.showToast('Uploading image...');
+            var formData = new FormData();
+            formData.append('image', file);
+            return fetch(homeUrl + 'api/upload-image/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) window.showToast('Image added');
+                else window.showToast('Upload error');
+                return data;
+            })
+            .catch(function() { window.showToast('Upload error'); });
+        },
+        uploadByUrl: function(url) {
+            window.showToast('Uploading image...');
+            return fetch(homeUrl + 'api/fetch-image/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) window.showToast('Image added');
+                else window.showToast('Upload error');
+                return data;
+            })
+            .catch(function() { window.showToast('Upload error'); });
+        }
+    };
+
     const editor = window.noteEditor = new EditorJS({
         holder: 'editorjs',
         placeholder: 'Start writing...',
@@ -475,42 +510,14 @@ function initEditor(config) {
                     endpoint: homeUrl + 'api/fetch-url/'
                 }
             },
+            gallery: {
+                class: GalleryTool,
+                config: { uploader: imageUploader }
+            },
             image: {
                 class: ImageTool,
                 config: {
-                    uploader: {
-                        uploadByFile: function(file) {
-                            window.showToast('Uploading image...');
-                            var formData = new FormData();
-                            formData.append('image', file);
-                            return fetch(homeUrl + 'api/upload-image/', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(function(r) { return r.json(); })
-                            .then(function(data) {
-                                if (data.success) window.showToast('Image added');
-                                else window.showToast('Upload error');
-                                return data;
-                            })
-                            .catch(function() { window.showToast('Upload error'); });
-                        },
-                        uploadByUrl: function(url) {
-                            window.showToast('Uploading image...');
-                            return fetch(homeUrl + 'api/fetch-image/', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ url: url })
-                            })
-                            .then(function(r) { return r.json(); })
-                            .then(function(data) {
-                                if (data.success) window.showToast('Image added');
-                                else window.showToast('Upload error');
-                                return data;
-                            })
-                            .catch(function() { window.showToast('Upload error'); });
-                        }
-                    },
+                    uploader: imageUploader,
                     types: 'image/jpeg,image/png,image/gif,image/webp',
                     buttonContent: 'Choose image',
                     captionPlaceholder: ''
