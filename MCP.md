@@ -71,8 +71,9 @@ To connect from MCP clients, either send a browser-like `User-Agent` header, or 
 | `notes_update` | `path`, `title?`, `markdown?`, `icon?`, `visibility?`, `pinned?` | Update a note; omitted fields are preserved |
 | `notes_delete` | `path` | Delete a note (children are cascade-deleted) |
 | `notes_upload_image` | `data`, `caption?` | Upload a base64-encoded image (JPEG/PNG/GIF/WebP/SVG) to media storage; returns a host-relative `/file/...` URL and a ready Markdown image tag to paste into a note via `notes_update`. Raster images are converted to WebP. |
+| `notes_upload_video` | `data`, `upload_id?`, `final?`, `caption?` | Upload an MP4 (H.264) or WebM video in base64 chunks; the file is stored as-is. The first call returns `upload_id`, every following chunk passes it, and the call with `final: true` validates the file and returns the `/file/...` URL plus a ready `![caption](url)` tag that renders as a video player. |
 
-Read-only tools carry `readOnlyHint: true` annotations; `notes_update` and `notes_delete` are marked destructive. `notes_upload_image` is MCP-only (the built-in AI assistant does not expose it); keep uploads under a few megabytes — the base64 payload must fit PHP's `post_max_size`.
+Read-only tools carry `readOnlyHint: true` annotations; `notes_update` and `notes_delete` are marked destructive. The upload tools are MCP-only (the built-in AI assistant does not expose them). An image upload is a single call, so keep it under a few megabytes — the base64 payload must fit PHP's `post_max_size`. Videos avoid that limit by being chunked: send about 3 MB of raw bytes per call (≈4 MB base64), sequentially, with the same `upload_id`; abandoned uploads are discarded after 24 hours. `notes_update` deletes uploads that the new Markdown no longer references, exactly like the editor does.
 
 ### Markdown conventions
 
@@ -90,6 +91,8 @@ Note content is exchanged as Markdown and converted to Editor.js blocks on write
 ```
 
 `cols` is 2–4 (default 3). Each `![caption](url)` line becomes a thumbnail with an optional caption; clicking a thumbnail opens the full image in a lightbox. `notes_get` returns galleries in the same syntax, so a read-modify-write round-trip preserves them.
+
+- **Video:** `![caption](/file/2026/09/abc.mp4)` — the same tag with a video file URL (`.mp4` or `.webm`) becomes a video block with a native player. Get the URL from `notes_upload_video` (chunked upload; see the tools table). `notes_get` returns video blocks in this form, so they survive round-trips too.
 
 ### Paths
 
@@ -138,6 +141,17 @@ curl -X POST https://domain/mcp \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notes_create","arguments":{"title":"Classic Borsch","markdown":"## Ingredients\n\n- Beetroot\n- Potato","icon":"🍲","folder":"recipes"}}}'
+```
+
+Upload a video in chunks (bash + base64; each call sends ~3 MB of raw bytes):
+
+```bash
+split -b 3m video.mp4 chunk_            # chunk_aa, chunk_ab, ...
+# first chunk -> returns {"upload_id": "..."}; pass it with every next chunk; final=true on the last one
+curl -X POST https://domain/mcp -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"notes_upload_video\",\"arguments\":{\"data\":\"$(base64 -i chunk_aa)\"}}}"
+curl -X POST https://domain/mcp -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"notes_upload_video\",\"arguments\":{\"upload_id\":\"UPLOAD_ID\",\"data\":\"$(base64 -i chunk_ab)\",\"final\":true,\"caption\":\"Walkthrough\"}}}"
 ```
 
 Tool results come back as MCP content:

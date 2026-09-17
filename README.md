@@ -10,8 +10,9 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 
 ### Editor
 
-- Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, galleries, embeds, and page links
+- Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, galleries, videos, embeds, and page links
 - Gallery block: a grid of thumbnails (2–4 per row) with captions, drag-and-drop upload, and a lightbox; rendered in the public view and laid out as a table in PDF export
+- Video block: upload an MP4 (H.264) or WebM file and it plays inline in a native player (editor and public view); uploads are chunked so large files work regardless of PHP upload limits, and files are served with HTTP Range support for seeking
 - Syntax-highlighted code blocks with a searchable language dropdown
 - Inline tools: bold, italic, underline, strikethrough, marker, inline code, and links
 - Cover images with vertical repositioning
@@ -22,7 +23,8 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Undo/redo
 - Autosave
 - Child-note sync popup for adding missing page links and removing broken child links
-- Export via a format picker popup: Markdown or PDF (Dompdf, DejaVu fonts with full Cyrillic support)
+- Export via a format picker popup: Markdown or PDF (Dompdf, DejaVu fonts with full Cyrillic support); exports render the stored note, so edits made through MCP or the AI assistant are always included
+- Autosave with conflict protection: if the note was changed elsewhere (MCP, AI assistant, another tab) since this tab loaded it, the save is refused and the editor asks you to reload instead of overwriting the newer version
 - Drag-and-drop Markdown import
 
 ### Media
@@ -31,7 +33,8 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Raster images are converted to WebP with Imagick
 - Images are resized so the shorter side is at most 1024px
 - SVG note icons are sanitized, minified, and stored inline as Base64 data URIs
-- Image files are cleaned up when removed from notes or covers
+- Upload videos (MP4/H.264 or WebM) as-is — no transcoding — for the video block
+- Uploaded files are cleaned up when removed from notes or covers (from the editor, the AI assistant, or MCP)
 - Image references are stored as host-relative URLs (`/file/...`), so notes stay portable across hosts (local, production, backups) and never break when moved
 - YouTube and Vimeo embeds are detected from standalone URLs
 
@@ -61,7 +64,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 ### Public View
 
 - Read-only rendering for unlisted and public notes
-- Rendered blocks include headings, lists, checklists, code, quotes, tables, delimiters, images, galleries (with lightbox), alerts, embeds, and page links
+- Rendered blocks include headings, lists, checklists, code, quotes, tables, delimiters, images, galleries (with lightbox), videos (native player), alerts, embeds, and page links
 - Cover images and note colors are preserved
 - Schema.org Article metadata
 
@@ -143,6 +146,7 @@ views/overall/popup.twig     Shared popup shell
 assets/js/app.js             Editor and dashboard client logic
 assets/js/page-tool.js       Editor.js page-link tool
 assets/js/gallery-tool.js     Editor.js gallery tool (thumbnail grid)
+assets/js/video-tool.js       Editor.js video tool (chunked upload, native player)
 assets/js/lightbox.js         Lightbox for gallery thumbnails (editor + public view)
 assets/js/options.js         Options popup behavior
 assets/js/popup.js           Shared popup engine
@@ -219,7 +223,7 @@ A Model Context Protocol server is available at `/mcp` (stateless Streamable HTT
 Authorization: Bearer <token>
 ```
 
-The token is generated from Options -> System (shown once, stored as a SHA-256 hash). Markdown is converted to Editor.js blocks automatically on write; a gallery is written as a `::: gallery cols=3` … `:::` block with one `![caption](url)` per line (see [MCP.md](MCP.md)).
+The token is generated from Options -> System (shown once, stored as a SHA-256 hash). Markdown is converted to Editor.js blocks automatically on write; a gallery is written as a `::: gallery cols=3` … `:::` block with one `![caption](url)` per line, and an image tag whose URL is a video file (`![caption](/file/….mp4)`) becomes a video player (see [MCP.md](MCP.md)).
 
 > In production behind Cloudflare, non-browser MCP clients may be blocked with `HTTP 403, Cloudflare error 1010` before reaching the app. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/mcp` (see [MCP.md](MCP.md)).
 
@@ -234,6 +238,7 @@ Exposed tools:
 | `notes_update` | Update a note |
 | `notes_delete` | Delete a note |
 | `notes_upload_image` | Upload a base64 image to media storage (MCP-only) |
+| `notes_upload_video` | Upload an MP4/WebM video in base64 chunks (MCP-only) |
 
 Connect from Claude Code:
 
@@ -253,7 +258,7 @@ Authenticated browser sessions use `/api/*` routes from `core/includes/router.ph
 - `POST /api/graph/`, `DELETE /api/graph/`
 - `GET /api/fetch-url/`
 - `POST /api/export-md/`, `/api/export-pdf/`, `/api/import-md/`
-- `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`
+- `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`, `/api/upload-video/` (chunked)
 - `POST /api/chat/`
 - `GET /api/options/`, `POST /api/save-options/`, `POST /api/mcp-token/`
 - `POST /api/clear-cache/`

@@ -1,9 +1,11 @@
 function initEditor(config) {
-    const { noteData, oldPath, createdAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor, notePinned, children } = config;
+    const { noteData, oldPath, createdAt, updatedAt, homeUrl, isNew, noteFolder, noteIcon, noteCover, coverPosition, noteColor, notePinned, children } = config;
 
     let currentPath = oldPath;
     let saveTimeout = null;
     let isSaving = false;
+    let knownUpdatedAt = updatedAt || '';   // timestamp of the version this tab loaded/saved
+    let saveConflict = false;               // set when the server has a newer version than this tab
     let currentIcon = noteIcon || '';
     let currentCover = noteCover || '';
     let coverPosY = coverPosition ?? 50;
@@ -291,7 +293,7 @@ function initEditor(config) {
     }
 
     async function saveNote() {
-        if (isSaving) return;
+        if (isSaving || saveConflict) return;
         isSaving = true;
         setStatus('Saving...', 'saving');
 
@@ -327,7 +329,8 @@ function initEditor(config) {
                     cover_position: Math.round(coverPosY),
                     color: currentColor || '',
                     pinned: currentPinned,
-                    content: outputData
+                    content: outputData,
+                    expected_updated_at: knownUpdatedAt
                 })
             });
 
@@ -336,6 +339,7 @@ function initEditor(config) {
             if (result.success) {
                 const wasNew = !currentPath;
                 currentPath = result.path;
+                if (result.updated_at) knownUpdatedAt = result.updated_at;
 
                 // First save of a new note — full redirect to update sidebar
                 if (wasNew) {
@@ -382,6 +386,12 @@ function initEditor(config) {
 
                 setStatus('Saved', 'saved');
                 setTimeout(() => setStatus(''), 2000);
+            } else if (result.conflict) {
+                // Another client (MCP, AI assistant, second tab) saved a newer version:
+                // stop autosaving so this stale tab cannot overwrite it.
+                saveConflict = true;
+                setStatus('Changed elsewhere — reload', 'error');
+                if (window.showToast) window.showToast('This note was changed elsewhere. Reload the page to get the latest version — edits made here were not saved.');
             } else {
                 setStatus('Save error', 'error');
             }
@@ -395,8 +405,22 @@ function initEditor(config) {
     // Debounced autosave
     function scheduleSave() {
         if (saveTimeout) clearTimeout(saveTimeout);
+        if (saveConflict) {
+            setStatus('Changed elsewhere — reload', 'error');
+            return;
+        }
         setStatus('Editing...', '');
         saveTimeout = setTimeout(saveNote, 1500);
+    }
+
+    // Push a pending autosave now so an export reflects the latest edits
+    async function flushPendingSave() {
+        if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            saveTimeout = null;
+            await saveNote();
+        }
+        while (isSaving) await new Promise(r => setTimeout(r, 100));
     }
 
     // Auto-link bare URLs in paragraph blocks before loading
@@ -513,6 +537,10 @@ function initEditor(config) {
             gallery: {
                 class: GalleryTool,
                 config: { uploader: imageUploader }
+            },
+            video: {
+                class: VideoTool,
+                config: { endpoint: homeUrl + 'api/upload-video/' }
             },
             image: {
                 class: ImageTool,
@@ -1557,14 +1585,24 @@ function initEditor(config) {
             URL.revokeObjectURL(url);
         };
 
-        const exportMarkdown = async () => {
-            const data = await editor.save();
+        // Exports are rendered from the stored note (source of truth, includes MCP/AI edits);
+        // the editor's blocks are only sent for a note that has never been saved.
+        const exportPayload = async () => {
+            await flushPendingSave();
             const title = titleEl.textContent.trim() || 'untitled';
+            if (currentPath) return { title, path: currentPath };
+            const data = await editor.save();
+            return { title, blocks: data.blocks };
+        };
+
+        const exportMarkdown = async () => {
+            const payload = await exportPayload();
+            const title = payload.title;
 
             const resp = await fetch(homeUrl + 'api/export-md/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, blocks: data.blocks })
+                body: JSON.stringify(payload)
             });
             const result = await resp.json();
             if (!result.markdown) return;
@@ -1574,14 +1612,14 @@ function initEditor(config) {
         };
 
         const exportPdf = async () => {
-            const data = await editor.save();
-            const title = titleEl.textContent.trim() || 'untitled';
+            const payload = await exportPayload();
+            const title = payload.title;
             if (window.showToast) window.showToast('Generating PDF...');
 
             const resp = await fetch(homeUrl + 'api/export-pdf/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, blocks: data.blocks })
+                body: JSON.stringify(payload)
             });
             if (!resp.ok) {
                 if (window.showToast) window.showToast('PDF export failed');

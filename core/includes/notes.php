@@ -568,10 +568,172 @@ function save_uploaded_image(string $source_path, string $mime): ?string {
     return '/file/' . str_replace(DS, '/', $subdir) . '/' . $filename . '.webp';
 }
 
+// ---- Video uploads: stored as-is (no transcoding), assembled from chunks so large files
+// ---- work regardless of PHP's upload_max_filesize / post_max_size.
+
+if(!defined('VIDEO_MAX_BYTES')) define('VIDEO_MAX_BYTES', 512 * 1024 * 1024);
+
+/** MIME types the browser <video> element can play everywhere, mapped to the stored extension. */
+function video_allowed_mimes(): array {
+    return ['video/mp4' => 'mp4', 'video/x-m4v' => 'mp4', 'video/webm' => 'webm'];
+}
+
+function is_video_upload_url(string $url): bool {
+    return (bool)preg_match('/\.(mp4|webm)(?:[?#].*)?$/i', $url);
+}
+
+function video_upload_tmp_dir(): string {
+    $dir = sys_get_temp_dir() . DS . 'notes-video-upload';
+    if(!is_dir($dir)) mkdir($dir, 0700, true);
+    // Sweep abandoned uploads
+    foreach(glob($dir . DS . '*.part') ?: [] as $stale) {
+        if(filemtime($stale) < time() - 86400) @unlink($stale);
+    }
+    return $dir;
+}
+
+function video_upload_id_valid(string $id): bool {
+    return (bool)preg_match('/^[a-f0-9]{32}$/', $id);
+}
+
+/** Append one chunk to an in-progress upload; returns [upload_id, total_bytes_so_far]. */
+function video_upload_append(?string $upload_id, string $bytes): array {
+    $dir = video_upload_tmp_dir();
+    $is_new = ($upload_id === null || $upload_id === '');
+    if($is_new) {
+        $upload_id = bin2hex(random_bytes(16));
+    } elseif(!video_upload_id_valid($upload_id)) {
+        throw new RuntimeException('Invalid upload_id');
+    }
+    $part = $dir . DS . $upload_id . '.part';
+    if(!$is_new && !file_exists($part)) {
+        throw new RuntimeException('Unknown or expired upload_id — start the upload again');
+    }
+    $current = file_exists($part) ? filesize($part) : 0;
+    if($current + strlen($bytes) > VIDEO_MAX_BYTES) {
+        @unlink($part);
+        throw new RuntimeException('Video exceeds the size limit of ' . round(VIDEO_MAX_BYTES / 1048576) . ' MB');
+    }
+    if(file_put_contents($part, $bytes, FILE_APPEND | LOCK_EX) === false) {
+        throw new RuntimeException('Failed to write upload chunk');
+    }
+    clearstatcache(true, $part);
+    return [$upload_id, filesize($part)];
+}
+
+/** Validate the assembled upload and move it into uploads/; returns the /file/ URL. */
+function video_upload_finish(string $upload_id): string {
+    if(!video_upload_id_valid($upload_id)) throw new RuntimeException('Invalid upload_id');
+    $part = video_upload_tmp_dir() . DS . $upload_id . '.part';
+    if(!file_exists($part)) throw new RuntimeException('Unknown or expired upload_id — start the upload again');
+    try {
+        return save_uploaded_video($part);
+    } finally {
+        @unlink($part);
+    }
+}
+
+/** Move a complete video file into uploads/YYYY/MM (no conversion); returns the /file/ URL. */
+function save_uploaded_video(string $source_path): string {
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $source_path);
+    $ext = video_allowed_mimes()[$mime] ?? null;
+    if(!$ext) {
+        throw new RuntimeException('Unsupported video type: ' . $mime . ' (use MP4/H.264 or WebM)');
+    }
+
+    $subdir = date('Y') . DS . date('m');
+    $target_dir = ABSPATH . DS . 'uploads' . DS . $subdir;
+    if(!is_dir($target_dir)) {
+        mkdir($target_dir, 0755, true);
+    }
+    $filename = bin2hex(random_bytes(8)) . '.' . $ext;
+    $filepath = $target_dir . DS . $filename;
+
+    if(!@rename($source_path, $filepath) && !copy($source_path, $filepath)) {
+        throw new RuntimeException('Failed to store video');
+    }
+    @chmod($filepath, 0644);
+
+    return '/file/' . str_replace(DS, '/', $subdir) . '/' . $filename;
+}
+
+/**
+ * Stream an upload to the client with HTTP Range support (video seeking; Safari refuses
+ * to play a <video> at all without it). Also used for images. Never returns.
+ */
+function serve_upload_file(string $filepath): void {
+    $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+    $mime_map = [
+        'webp' => 'image/webp',
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png'  => 'image/png',
+        'gif'  => 'image/gif',
+        'svg'  => 'image/svg+xml',
+        'mp4'  => 'video/mp4',
+        'webm' => 'video/webm',
+    ];
+
+    $size = filesize($filepath);
+    $start = 0;
+    $end = $size - 1;
+    $partial = false;
+
+    if(isset($_SERVER['HTTP_RANGE'])
+        && preg_match('/^bytes=(\d*)-(\d*)$/', $_SERVER['HTTP_RANGE'], $m)
+        && ($m[1] !== '' || $m[2] !== '')) {
+        if($m[1] === '') {
+            $start = max(0, $size - (int)$m[2]); // suffix range: last N bytes
+        } else {
+            $start = (int)$m[1];
+            if($m[2] !== '') $end = min($end, (int)$m[2]);
+        }
+        if($size === 0 || $start > $end || $start >= $size) {
+            http_response_code(416);
+            header('Content-Range: bytes */' . $size);
+            exit;
+        }
+        $partial = true;
+    }
+
+    // Long transfers must not hold the session lock or go through output buffers
+    session_write_close();
+    while(ob_get_level() > 0) ob_end_clean();
+    @ini_set('zlib.output_compression', '0');
+    set_time_limit(0);
+
+    if($partial) {
+        http_response_code(206);
+        header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
+    }
+    header('Content-Type: ' . ($mime_map[$ext] ?? 'application/octet-stream'));
+    header('Content-Length: ' . ($end - $start + 1));
+    header('Accept-Ranges: bytes');
+    header('Cache-Control: private, max-age=31536000, immutable');
+
+    if(($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') exit;
+
+    $fp = fopen($filepath, 'rb');
+    if($fp === false) exit;
+    fseek($fp, $start);
+    $remaining = $end - $start + 1;
+    while($remaining > 0 && !feof($fp)) {
+        $chunk = fread($fp, min(512 * 1024, $remaining));
+        if($chunk === false || $chunk === '') break;
+        echo $chunk;
+        $remaining -= strlen($chunk);
+        flush();
+    }
+    fclose($fp);
+    exit;
+}
+
 function minify_svg(string $svg): ?string {
     return sanitize_svg_icon($svg);
 }
 
+/** All upload URLs a note's blocks reference (images, gallery items, videos) — drives orphan cleanup. */
 function extract_image_urls(array $blocks): array {
     $urls = [];
     foreach($blocks as $block) {
@@ -582,6 +744,9 @@ function extract_image_urls(array $blocks): array {
             foreach($block['data']['items'] as $item) {
                 if(!empty($item['url'])) $urls[] = $item['url'];
             }
+        }
+        if(($block['type'] ?? '') === 'video' && !empty($block['data']['url'])) {
+            $urls[] = $block['data']['url'];
         }
     }
     return $urls;
@@ -631,6 +796,22 @@ function collect_media_from_notes(array $notes): array {
     });
 
     return $media;
+}
+
+/**
+ * Delete upload files that were referenced before a note change but are not any more.
+ * Both lists are normalized to host-relative URLs first. Returns the number of files removed.
+ */
+function delete_orphaned_uploads(array $old_urls, array $new_urls): int {
+    $orphaned = array_diff(
+        array_unique(array_map('normalize_upload_url', $old_urls)),
+        array_map('normalize_upload_url', $new_urls)
+    );
+    $removed = 0;
+    foreach($orphaned as $url) {
+        if(delete_upload_by_url($url)) $removed++;
+    }
+    return $removed;
 }
 
 function delete_upload_by_url(string $url): bool {
@@ -788,6 +969,16 @@ function render_blocks_to_html($blocks): string {
                         $html .= "</figure>\n";
                     }
                     $html .= "</div>\n";
+                }
+                break;
+
+            case 'video':
+                $url = htmlspecialchars($data['url'] ?? '', ENT_QUOTES, 'UTF-8');
+                $caption = (string)($data['caption'] ?? '');
+                if($url) {
+                    $html .= "<figure class=\"video-block\"><video src=\"{$url}\" controls preload=\"metadata\" playsinline></video>";
+                    if($caption !== '') $html .= "<figcaption>" . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8') . "</figcaption>";
+                    $html .= "</figure>\n";
                 }
                 break;
 

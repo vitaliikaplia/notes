@@ -264,14 +264,15 @@ function mcp_method_initialize(array $params): array {
         'instructions' => 'Self-hosted notes. Note paths never include .json and can be nested, e.g. "projects/my-note". '
             . 'Content is exchanged as Markdown. Use notes_search or notes_list to find a path before reading or updating a note. '
             . 'Default visibility is private; options are private, unlisted, public. '
-            . 'Images: ![caption](/file/...) — upload with notes_upload_image first. Gallery (grid of thumbnails): a line "::: gallery cols=3" (cols 2-4), one ![caption](url) per line, closed with ":::".',
+            . 'Images: ![caption](/file/...) — upload with notes_upload_image first. Gallery (grid of thumbnails): a line "::: gallery cols=3" (cols 2-4), one ![caption](url) per line, closed with ":::". '
+            . 'Video: the same ![caption](/file/...mp4) tag with a video file URL renders as a player — upload with notes_upload_video (chunked base64).',
     ];
 }
 
 function mcp_tool_annotations(string $name): array {
     return match($name) {
         'notes_list', 'notes_search', 'notes_get' => ['readOnlyHint' => true],
-        'notes_create', 'notes_upload_image' => ['readOnlyHint' => false, 'destructiveHint' => false],
+        'notes_create', 'notes_upload_image', 'notes_upload_video' => ['readOnlyHint' => false, 'destructiveHint' => false],
         'notes_update' => ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         'notes_delete' => ['readOnlyHint' => false, 'destructiveHint' => true],
         default        => [],
@@ -293,6 +294,51 @@ function mcp_extra_tools(): array {
                 'required' => ['data'],
             ],
         ],
+        [
+            'name' => 'notes_upload_video',
+            'description' => 'Upload a video (MP4/H.264 or WebM) to the notes media storage as base64 chunks; the file is stored as-is (no transcoding) and renders as a video player in the note. Send the file in consecutive chunks of about 3 MB of raw bytes each: the first call returns an upload_id, pass it with every following chunk, and set final=true on the last one. The final call returns a host-relative /file/... URL and a ready Markdown tag ![caption](url) to paste into a note via notes_update. A small file can be sent in a single call with final=true.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'data'      => ['type' => 'string', 'description' => 'Base64-encoded bytes of this chunk, without a data: URI prefix'],
+                    'upload_id' => ['type' => 'string', 'description' => 'The upload_id returned by the first call (omit on the first chunk)'],
+                    'final'     => ['type' => 'boolean', 'description' => 'true on the last chunk — validates and stores the file'],
+                    'caption'   => ['type' => 'string', 'description' => 'Optional caption used in the returned Markdown tag (final call)'],
+                ],
+                'required' => ['data'],
+            ],
+        ],
+    ];
+}
+
+function mcp_tool_upload_video(array $args): array {
+    $data = (string)($args['data'] ?? '');
+    if(str_starts_with($data, 'data:') && ($comma = strpos($data, ',')) !== false) {
+        $data = substr($data, $comma + 1);
+    }
+    $bytes = base64_decode($data, true);
+    if($bytes === false || $bytes === '') {
+        throw new RuntimeException('Invalid base64 video data');
+    }
+
+    $upload_id = trim((string)($args['upload_id'] ?? ''));
+    [$upload_id, $received] = video_upload_append($upload_id !== '' ? $upload_id : null, $bytes);
+
+    $final = filter_var($args['final'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    if(!$final) {
+        return [
+            'upload_id'      => $upload_id,
+            'received_bytes' => $received,
+            'next'           => 'Send the next chunk with this upload_id; set final=true on the last one.',
+        ];
+    }
+
+    $url = video_upload_finish($upload_id);
+    $caption = trim((string)($args['caption'] ?? ''));
+    return [
+        'url'      => $url,
+        'bytes'    => $received,
+        'markdown' => '![' . str_replace(['[', ']'], '', $caption) . '](' . $url . ')',
     ];
 }
 
@@ -361,6 +407,7 @@ function mcp_method_tools_call(array $params): array {
         try {
             $execution = ['success' => true, 'result' => match($name) {
                 'notes_upload_image' => mcp_tool_upload_image($args),
+                'notes_upload_video' => mcp_tool_upload_video($args),
             }];
         } catch(\Throwable $e) {
             $execution = ['success' => false, 'result' => $e->getMessage()];

@@ -76,9 +76,15 @@ function get_twig(): \Twig\Environment {
     $twig->addFunction(new \Twig\TwigFunction('date_format_uk', 'date_format_uk'));
     $twig->addFunction(new \Twig\TwigFunction('contrast_color', 'contrast_color'));
 
-    // asset versioning (cache bust) — uses the assets_version option, bumped by the clear-cache button
+    // asset versioning (cache bust) — the assets_version option (bumped by the clear-cache button)
+    // plus the file's mtime, so a deploy that changes app.js/style.css busts the cache on its own
     $twig->addFunction(new \Twig\TwigFunction('asset_ver', function(string $path = ''): string {
-        return '?v=' . get_option('assets_version', '1');
+        $ver = get_option('assets_version', '1');
+        if($path !== '') {
+            $file = ABSPATH . DS . 'assets' . DS . str_replace('/', DS, ltrim($path, '/'));
+            if(is_file($file)) $ver .= '.' . filemtime($file);
+        }
+        return '?v=' . $ver;
     }));
 
     // filters

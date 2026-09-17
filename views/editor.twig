@@ -143,6 +143,7 @@
 <script src="{{ assets_url }}vendor/editorjs-drag-drop-1.1.16.js"></script>
 <script src="{{ assets_url }}vendor/editorjs-undo-2.0.28.js"></script>
 <script src="{{ assets_url }}js/gallery-tool.js{{ asset_ver('js/gallery-tool.js') }}"></script>
+<script src="{{ assets_url }}js/video-tool.js{{ asset_ver('js/video-tool.js') }}"></script>
 <script src="{{ assets_url }}js/page-tool.js{{ asset_ver('js/page-tool.js') }}"></script>
 <script src="{{ assets_url }}js/app.js{{ asset_ver('js/app.js') }}"></script>
 <script>
@@ -150,6 +151,7 @@
         noteData: {{ note ? note.content|json_encode|raw : '{}' }},
         oldPath: '{{ note ? note._file : '' }}',
         createdAt: '{{ note ? note.meta.created_at : '' }}',
+        updatedAt: '{{ note ? note.meta.updated_at : '' }}',
         homeUrl: '{{ home_url }}',
         isNew: {{ note ? 'false' : 'true' }},
         noteFolder: '{{ note_folder }}',

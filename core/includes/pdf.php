@@ -53,6 +53,13 @@ function pdf_adapt_html(string $html): string {
         return '<p class="embed-link"><a href="' . $m[1] . '">' . $m[1] . '</a></p>';
     }, $html);
 
+    // Videos: Dompdf has no player — show a link to the file instead
+    $html = preg_replace_callback('/<figure class="video-block"><video src="([^"]+)"[^>]*><\/video>(?:<figcaption>(.*?)<\/figcaption>)?<\/figure>/s', function($m) {
+        $href = str_starts_with($m[1], '/') ? rtrim(HOME_URL, '/') . $m[1] : $m[1];
+        $label = ($m[2] ?? '') !== '' ? $m[2] : basename($m[1]);
+        return '<p class="embed-link">&#9654; Video: <a href="' . $href . '">' . $label . '</a></p>';
+    }, $html);
+
     // Inline SVG icons (page links) are not worth the rendering trouble
     $html = preg_replace('/<svg\b[^>]*>.*?<\/svg>/s', '', $html);
 

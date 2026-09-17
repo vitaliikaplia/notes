@@ -2,6 +2,23 @@
 
 if(!defined('ABSPATH')){exit;}
 
+/**
+ * Title + blocks for an export request. With a note `path` the stored note is used
+ * (the source of truth, so MCP/AI edits are included even if this editor tab is stale);
+ * `blocks` in the payload are only a fallback for unsaved new notes.
+ */
+function export_source_from_input(array $input): array {
+    $path = trim((string)($input['path'] ?? ''));
+    if($path !== '') {
+        $note = get_note(note_path_from_relative($path));
+        if($note) {
+            return [$note['_title'], $note['content']['blocks'] ?? []];
+        }
+    }
+    $blocks = $input['blocks'] ?? [];
+    return [strip_tags(trim((string)($input['title'] ?? ''))), is_array($blocks) ? $blocks : []];
+}
+
 function get_url_segments(): ?array {
     if(!isset($_SERVER['REQUEST_URI']) || !$_SERVER['REQUEST_URI']){
         return null;
@@ -333,6 +350,22 @@ function router($url_segments = []): array {
                 }
             }
 
+            // Optimistic concurrency: refuse to overwrite a note that changed since this
+            // editor tab loaded it (e.g. an MCP/AI update) — the client asks the user to reload.
+            $expected_updated_at = (string)($input['expected_updated_at'] ?? '');
+            if($old_note && $expected_updated_at !== '') {
+                $current_updated_at = (string)($old_note['meta']['updated_at'] ?? '');
+                if($current_updated_at !== '' && strtotime($current_updated_at) !== strtotime($expected_updated_at)) {
+                    echo json_encode([
+                        'success'    => false,
+                        'conflict'   => true,
+                        'error'      => 'Note was changed elsewhere',
+                        'updated_at' => $current_updated_at,
+                    ], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+            }
+
             $slug = generate_slug($title);
             $new_path = ($folder ? $folder . '/' : '') . $slug;
             $relative_path = $new_path . '.json';
@@ -424,28 +457,24 @@ function router($url_segments = []): array {
                 }
             }
 
-            // Delete orphaned images (blocks + cover)
+            // Delete orphaned uploads (blocks + cover)
             if($success && !empty($old_image_urls)) {
                 $new_image_urls = extract_image_urls($content['blocks'] ?? []);
                 $new_cover = $note_data['meta']['cover'] ?? '';
                 if($new_cover) {
                     $new_image_urls[] = $new_cover;
                 }
-                // Normalize both sides (host-relative) so an absolute old URL is not
-                // treated as orphaned when the same image is now stored relative.
-                $orphaned = array_diff(
-                    array_map('normalize_upload_url', $old_image_urls),
-                    array_map('normalize_upload_url', $new_image_urls)
-                );
-                foreach($orphaned as $url) {
-                    delete_upload_by_url($url);
-                }
+                delete_orphaned_uploads($old_image_urls, $new_image_urls);
             }
 
+            // Return the stored timestamp so the editor can detect later external changes
+            $saved_note = $success ? get_note($new_path) : null;
+
             echo json_encode([
-                'success' => $success,
-                'path' => $relative_path,
-                'url' => 'note/' . preg_replace('/\.json$/', '', $relative_path),
+                'success'    => $success,
+                'path'       => $relative_path,
+                'url'        => 'note/' . preg_replace('/\.json$/', '', $relative_path),
+                'updated_at' => $saved_note['meta']['updated_at'] ?? $now,
             ], JSON_UNESCAPED_UNICODE);
             exit;
 
@@ -891,8 +920,7 @@ function router($url_segments = []): array {
 
         } elseif($action === 'export-md' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
-            $blocks = $input['blocks'] ?? [];
-            $title = strip_tags(trim($input['title'] ?? ''));
+            [$title, $blocks] = export_source_from_input(is_array($input) ? $input : []);
             $md = '';
             if ($title) {
                 $md .= '# ' . $title . "\n\n";
@@ -903,11 +931,11 @@ function router($url_segments = []): array {
 
         } elseif($action === 'export-pdf' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
-            $blocks = $input['blocks'] ?? [];
-            $title = strip_tags(trim($input['title'] ?? '')) ?: 'Untitled';
+            [$title, $blocks] = export_source_from_input(is_array($input) ? $input : []);
+            $title = $title !== '' ? $title : 'Untitled';
 
             try {
-                $pdf = note_export_pdf($title, is_array($blocks) ? $blocks : []);
+                $pdf = note_export_pdf($title, $blocks);
             } catch(\Throwable $e) {
                 write_log('PDF export failed: ' . $e->getMessage());
                 http_response_code(500);
@@ -1020,6 +1048,27 @@ function router($url_segments = []): array {
             }
 
             echo json_encode(['success' => 1, 'file' => ['url' => $result]]);
+            exit;
+
+        } elseif($action === 'upload-video' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Chunked upload: POST multipart {chunk, upload_id?, final?}. Each call appends one chunk;
+            // the first call returns upload_id, the call with final=1 validates and stores the file.
+            try {
+                if(empty($_FILES['chunk']) || ($_FILES['chunk']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('No data received (chunk too large for the server?)');
+                }
+                $bytes = file_get_contents($_FILES['chunk']['tmp_name']);
+                $upload_id = trim((string)($_POST['upload_id'] ?? ''));
+                [$upload_id, $received] = video_upload_append($upload_id !== '' ? $upload_id : null, (string)$bytes);
+                if(!empty($_POST['final'])) {
+                    $url = video_upload_finish($upload_id);
+                    echo json_encode(['success' => 1, 'file' => ['url' => $url]]);
+                } else {
+                    echo json_encode(['success' => 1, 'upload_id' => $upload_id, 'received' => $received]);
+                }
+            } catch(Throwable $e) {
+                echo json_encode(['success' => 0, 'error' => $e->getMessage()]);
+            }
             exit;
 
         } elseif($action === 'fetch-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1227,7 +1276,7 @@ function router($url_segments = []): array {
         }
 
     } elseif($url_segments[0] === 'file') {
-        // Serve uploaded images with auth check
+        // Serve uploaded files (images, videos) with auth check
         $relative = implode('/', array_slice($url_segments, 1));
         $serve = false;
 
@@ -1259,20 +1308,7 @@ function router($url_segments = []): array {
             exit;
         }
 
-        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        $mime_map = [
-            'webp' => 'image/webp',
-            'jpg' => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'gif' => 'image/gif',
-            'svg' => 'image/svg+xml',
-        ];
-        header('Content-Type: ' . ($mime_map[$ext] ?? 'application/octet-stream'));
-        header('Content-Length: ' . filesize($filepath));
-        header('Cache-Control: private, max-age=31536000, immutable');
-        readfile($filepath);
-        exit;
+        serve_upload_file($filepath); // streams with Range support, never returns
 
     } else {
         // 404

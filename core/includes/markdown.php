@@ -129,6 +129,14 @@ function blocks_to_markdown(array $blocks): string {
                 }
                 break;
 
+            case 'video':
+                $url = $data['url'] ?? '';
+                if ($url) {
+                    $lines[] = '![' . str_replace(['[', ']'], '', $data['caption'] ?? '') . '](' . $url . ')';
+                    $lines[] = '';
+                }
+                break;
+
             case 'embed':
                 $source = $data['source'] ?? '';
                 if ($source) {
@@ -268,8 +276,13 @@ function markdown_to_blocks(string $markdown): array {
             continue;
         }
 
-        // Image: ![caption](url)
+        // Image: ![caption](url) — a video file URL (.mp4/.webm) becomes a video block
         if (preg_match('/^!\[([^\]]*)\]\(([^)]+)\)$/', trim($line), $m)) {
+            if (is_video_upload_url($m[2])) {
+                $blocks[] = make_block('video', ['url' => $m[2], 'caption' => $m[1]]);
+                $i++;
+                continue;
+            }
             $blocks[] = make_block('image', [
                 'file'           => ['url' => $m[2]],
                 'caption'        => $m[1],
@@ -629,6 +642,7 @@ function extract_plain_text(array $blocks): string {
     foreach ($blocks as $block) {
         $d = $block['data'] ?? [];
         if (!empty($d['text']))    $text .= ' ' . strip_tags($d['text']);
+        if (!empty($d['caption']) && is_string($d['caption'])) $text .= ' ' . strip_tags($d['caption']);
         if (!empty($d['code']))    $text .= ' ' . $d['code'];
         if (!empty($d['message'])) $text .= ' ' . strip_tags($d['message']);
         if (!empty($d['title']))   $text .= ' ' . $d['title'];
