@@ -1032,5 +1032,20 @@ function render_blocks_to_html($blocks): string {
         }
     }
 
-    return $html;
+    return open_external_links_in_new_tab($html);
+}
+
+/**
+ * Add target="_blank" rel="noopener noreferrer" to links that leave this site, so the
+ * public/unlisted view behaves like the editor (which opens links in a new tab on click).
+ * Links to our own host (page links, /file/ URLs) are left alone.
+ */
+function open_external_links_in_new_tab(string $html): string {
+    $own_host = defined('HOME_URL') ? (string)parse_url(HOME_URL, PHP_URL_HOST) : '';
+    return preg_replace_callback('/<a\s([^>]*?)href="(https?:\/\/[^"]*)"([^>]*)>/i', function($m) use ($own_host) {
+        if(stripos($m[1] . ' ' . $m[3], 'target=') !== false) return $m[0];
+        $host = (string)parse_url(html_entity_decode($m[2], ENT_QUOTES, 'UTF-8'), PHP_URL_HOST);
+        if($host !== '' && $own_host !== '' && strcasecmp($host, $own_host) === 0) return $m[0];
+        return '<a ' . $m[1] . 'href="' . $m[2] . '"' . $m[3] . ' target="_blank" rel="noopener noreferrer">';
+    }, $html);
 }

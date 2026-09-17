@@ -21,6 +21,8 @@ html {
     --border: #ddd2bf;
     --primary: #2f9dc8;
     --primary-hover: #267f9f;
+    --link: #1a5fd0;
+    --link-hover: #0f47ad;
     --danger: #e03e3e;
     --danger-hover: #c53030;
     --card-shadow: rgba(67, 49, 24, 0.12);
@@ -57,6 +59,8 @@ html {
     --border: #363636;
     --primary: #54c0eb;
     --primary-hover: #6dcef0;
+    --link: #7fb3ff;
+    --link-hover: #a6caff;
     --danger: #e06c6c;
     --danger-hover: #c54040;
     --card-shadow: rgba(0, 0, 0, 0.3);
@@ -1946,18 +1950,18 @@ body.ai-chat-active .index-header {
 
 .public-note-content a,
 .ce-block a {
-    color: var(--text);
+    color: var(--link);
     text-decoration: underline dotted;
     text-decoration-thickness: 1px;
-    text-decoration-color: color-mix(in srgb, var(--primary) 75%, transparent);
+    text-decoration-color: color-mix(in srgb, var(--link) 70%, transparent);
     text-underline-offset: 3px;
     transition: color 0.15s, text-decoration-color 0.15s;
 }
 
 .public-note-content a:hover,
 .ce-block a:hover {
-    color: var(--primary);
-    text-decoration-color: var(--primary);
+    color: var(--link-hover);
+    text-decoration-color: var(--link-hover);
 }
 
 /* External links get a small ↗ arrow; drawn via mask so it inherits the link color in both themes */
