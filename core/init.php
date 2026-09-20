@@ -38,6 +38,7 @@ $includes = [
     'notes',
     'markdown',
     'pdf',
+    'docx',
     'ai',
     'mcp',
     'render',

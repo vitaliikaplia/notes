@@ -949,6 +949,26 @@ function router($url_segments = []): array {
             echo $pdf;
             exit;
 
+        } elseif($action === 'export-docx' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            [$title, $blocks] = export_source_from_input(is_array($input) ? $input : []);
+            $title = $title !== '' ? $title : 'Untitled';
+
+            try {
+                $docx = note_export_docx($title, $blocks);
+            } catch(\Throwable $e) {
+                write_log('DOCX export failed: ' . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'DOCX export failed']);
+                exit;
+            }
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            header('Content-Disposition: attachment; filename="note.docx"');
+            header('Content-Length: ' . strlen($docx));
+            echo $docx;
+            exit;
+
         } elseif($action === 'import-md' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
             $title = strip_tags(trim($input['title'] ?? ''));

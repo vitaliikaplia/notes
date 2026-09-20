@@ -4831,11 +4831,12 @@ body.popup-open {
 
 .export-options {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
 }
 
 .export-option {
-    flex: 1;
+    flex: 1 1 150px;
     display: flex;
     flex-direction: column;
     align-items: center;

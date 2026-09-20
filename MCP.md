@@ -185,4 +185,4 @@ Protocol errors are standard JSON-RPC: `-32700` (parse error), `-32600` (invalid
 
 The app also exposes session-authenticated `/api/*` routes from `core/includes/router.php` for the web UI. They require the regular logged-in browser session, not a bearer token, and are intentionally separate from `/mcp`.
 
-Important internal routes include note autosave/delete/move/reorder, image upload/fetch, graph positions, AI chat, Markdown import/export, Options load/save, MCP token generate/revoke, and cache clearing. External integrations should use `/mcp` unless they intentionally run inside an authenticated browser session.
+Important internal routes include note autosave/delete/move/reorder, image upload/fetch, graph positions, AI chat, Markdown import, Markdown/PDF/Word export, Options load/save, MCP token generate/revoke, and cache clearing. External integrations should use `/mcp` unless they intentionally run inside an authenticated browser session.

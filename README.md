@@ -11,7 +11,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 ### Editor
 
 - Block editor powered by Editor.js: headings, paragraphs, lists, checklists, code, quotes, tables, delimiters, links, alerts, toggles, images, galleries, videos, embeds, and page links
-- Gallery block: a grid of thumbnails (2–4 per row) with captions, drag-and-drop upload, and a lightbox; rendered in the public view and laid out as a table in PDF export
+- Gallery block: a grid of thumbnails (2–4 per row) with captions, drag-and-drop upload, and a lightbox; rendered in the public view and laid out as a table in PDF and Word export
 - Video block: upload an MP4 (H.264) or WebM file and it plays inline in a native player (editor and public view); uploads are chunked so large files work regardless of PHP upload limits, and files are served with HTTP Range support for seeking
 - Syntax-highlighted code blocks with a searchable language dropdown
 - Inline tools: bold, italic, underline, strikethrough, marker, inline code, and links
@@ -23,7 +23,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 - Undo/redo
 - Autosave
 - Child-note sync popup for adding missing page links and removing broken child links
-- Export via a format picker popup: Markdown or PDF (Dompdf, DejaVu fonts with full Cyrillic support); exports render the stored note, so edits made through MCP or the AI assistant are always included
+- Export via a format picker popup: Markdown, PDF (Dompdf, DejaVu fonts with full Cyrillic support) or Word (.docx, written by a built-in dependency-free writer: headings, lists, checklists, tables, code, quotes, images, galleries, links; videos and embeds become links); exports render the stored note, so edits made through MCP or the AI assistant are always included
 - Autosave with conflict protection: if the note was changed elsewhere (MCP, AI assistant, another tab) since this tab loaded it, the save is refused and the editor asks you to reload instead of overwriting the newer version
 - Drag-and-drop Markdown import
 
@@ -109,6 +109,7 @@ The tool loop supports up to 5 tool iterations per request. The assistant is ins
 - Optional cache: Redis through a Unix socket
 - Image processing: Imagick
 - PDF export: Dompdf (bundled DejaVu fonts)
+- Word export: built-in DOCX writer (`core/includes/docx.php`, no library; needs zlib, converts WebP uploads with Imagick or GD)
 
 ## Project Structure
 
@@ -137,6 +138,7 @@ core/includes/mcp.php        MCP server (Streamable HTTP) and token management
 core/includes/render.php     Twig setup and global template context
 core/includes/markdown.php   Markdown <-> Editor.js conversion
 core/includes/pdf.php        PDF export via Dompdf
+core/includes/docx.php       Word (.docx) export, dependency-free OOXML writer
 core/includes/cache.php      Redis cache and Twig cache adapter
 views/index.twig             Dashboard
 views/editor.twig            Editor
@@ -257,7 +259,7 @@ Authenticated browser sessions use `/api/*` routes from `core/includes/router.ph
 - `GET /api/search/`, `/api/graph/`, `/api/notes-page/`
 - `POST /api/graph/`, `DELETE /api/graph/`
 - `GET /api/fetch-url/`
-- `POST /api/export-md/`, `/api/export-pdf/`, `/api/import-md/`
+- `POST /api/export-md/`, `/api/export-pdf/`, `/api/export-docx/`, `/api/import-md/`
 - `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`, `/api/upload-video/` (chunked)
 - `POST /api/chat/`
 - `GET /api/options/`, `POST /api/save-options/`, `POST /api/mcp-token/`

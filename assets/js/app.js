@@ -1571,7 +1571,7 @@ function initEditor(config) {
         });
     }
 
-    // Export note — format picker popup (Markdown / PDF)
+    // Export note — format picker popup (Markdown / PDF / Word)
     const exportBtn = document.getElementById('export-note');
     if (exportBtn) {
         const exportFilename = (title, ext) => title.replace(/[\/\\:*?"<>|]/g, '-') + ext;
@@ -1630,6 +1630,25 @@ function initEditor(config) {
             downloadBlob(blob, exportFilename(title, '.pdf'));
         };
 
+        const exportDocx = async () => {
+            const payload = await exportPayload();
+            const title = payload.title;
+            if (window.showToast) window.showToast('Generating Word document...');
+
+            const resp = await fetch(homeUrl + 'api/export-docx/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) {
+                if (window.showToast) window.showToast('Word export failed');
+                return;
+            }
+
+            const blob = await resp.blob();
+            downloadBlob(blob, exportFilename(title, '.docx'));
+        };
+
         exportBtn.addEventListener('click', () => {
             if (!window.Popup) {
                 exportMarkdown();
@@ -1638,7 +1657,7 @@ function initEditor(config) {
             window.Popup.open({
                 title: 'Download note',
                 content: '#exportTemplate',
-                size: 'narrow',
+                size: 'medium',
                 showClose: true,
                 buttons: []
             });
@@ -1653,6 +1672,9 @@ function initEditor(config) {
             } else if (e.target.closest('.js-export-pdf')) {
                 window.Popup.close(true);
                 exportPdf();
+            } else if (e.target.closest('.js-export-docx')) {
+                window.Popup.close(true);
+                exportDocx();
             }
         });
     }
