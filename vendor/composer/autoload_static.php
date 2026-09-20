@@ -99,6 +99,10 @@ class ComposerStaticInit87aca2034d91894b39cabe57f28b3197
     );
 
     public static $prefixLengthsPsr4 = array (
+        'l' =>
+        array (
+            'lbuchs\\WebAuthn\\' => 16,
+        ),
         'T' =>
         array (
             'Twig\\' => 5,
@@ -125,6 +129,10 @@ class ComposerStaticInit87aca2034d91894b39cabe57f28b3197
     );
 
     public static $prefixDirsPsr4 = array (
+        'lbuchs\\WebAuthn\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/lbuchs/webauthn/src',
+        ),
         'Twig\\' =>
         array (
             0 => __DIR__ . '/..' . '/twig/twig/src',

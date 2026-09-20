@@ -87,6 +87,17 @@
                     <span>Confirm new password</span>
                     <input type="password" name="confirm_password" autocomplete="new-password">
                 </label>
+                <div class="options-divider"></div>
+                <div class="options-field">
+                    <span>Passkeys</span>
+                    <div class="options-passkeys">
+                        <div class="passkey-list js-passkeys-list"><div class="passkey-empty">Loading…</div></div>
+                        <div class="options-mcp-actions">
+                            <button type="button" class="btn js-passkey-add">Add passkey</button>
+                        </div>
+                    </div>
+                    <small>Sign in with Touch ID, Face ID, Windows Hello or a hardware security key instead of the password. Each device (or iCloud Keychain / Google Password Manager) registers its own passkey; the password keeps working as a fallback.</small>
+                </div>
             </div>
         </div>
 

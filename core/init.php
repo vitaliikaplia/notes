@@ -32,6 +32,7 @@ define("ASSETS_URL", HOME_URL . 'assets/');
 $includes = [
     'auth',
     'db',
+    'passkeys',
     'cache',
     'emoji',
     'favicon',

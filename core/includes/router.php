@@ -94,6 +94,7 @@ function router($url_segments = []): array {
         $captcha_site_key = get_option('CAPTCHA_SITE_KEY', '');
         $captcha_secret_key = get_option('CAPTCHA_SECRET_KEY', '');
         $context['captcha_site_key'] = $captcha_site_key;
+        $context['passkeys_enabled'] = passkey_count() > 0;
         $context['error'] = '';
 
         if($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -316,11 +317,39 @@ function router($url_segments = []): array {
 
     } elseif($url_segments[0] === 'api') {
 
+        $action = $url_segments[1] ?? '';
+
+        // Passkey sign-in runs before the session check — it is how the session gets created.
+        // The challenge is issued and consumed server-side, so no CAPTCHA is involved here.
+        if($action === 'passkey-login-options' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            header('Content-Type: application/json; charset=UTF-8');
+            $options = auth_check() ? null : passkey_login_options();
+            if($options === null) {
+                echo json_encode(['success' => false, 'error' => 'Passkey sign-in is not available']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'options' => $options]);
+            exit;
+
+        } elseif($action === 'passkey-login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            header('Content-Type: application/json; charset=UTF-8');
+            if(auth_check()) {
+                echo json_encode(['success' => true]);
+                exit;
+            }
+            $input = json_decode(file_get_contents('php://input'), true);
+            $input = is_array($input) ? $input : [];
+            if(passkey_login_finish($input, !empty($input['remember']))) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Passkey sign-in failed']);
+            }
+            exit;
+        }
+
         // Internal API — session auth
         auth_require();
         header('Content-Type: application/json; charset=UTF-8');
-
-        $action = $url_segments[1] ?? '';
 
         if($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
@@ -1229,6 +1258,33 @@ function router($url_segments = []): array {
             echo json_encode(['success' => true, 'assets_version' => $version, 'result' => $result]);
             exit;
 
+        } elseif($action === 'passkey-register-options' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $options = passkey_register_options();
+            } catch(\Throwable $e) {
+                write_log('Passkey registration options failed: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'error' => 'Could not start passkey registration']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'options' => $options]);
+            exit;
+
+        } elseif($action === 'passkey-register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            echo json_encode(passkey_register_finish(is_array($input) ? $input : []), JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } elseif($action === 'passkey-delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = (int)(is_array($input) ? ($input['id'] ?? 0) : 0);
+            $deleted = $id > 0 && passkey_delete($id);
+            echo json_encode([
+                'success'  => $deleted,
+                'error'    => $deleted ? null : 'Passkey not found',
+                'passkeys' => passkeys_list(),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
         } elseif($action === 'options' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode([
                 'REDIS_SOCKET'       => get_option('REDIS_SOCKET', ''),
@@ -1240,6 +1296,7 @@ function router($url_segments = []): array {
                 'AI_MODEL'           => get_option('AI_MODEL', ''),
                 'AI_HISTORY_LIMIT'   => get_option('AI_HISTORY_LIMIT', '20'),
                 'login'              => get_option('AUTH_USER', ''),
+                'passkeys'           => passkeys_list(),
             ], JSON_UNESCAPED_UNICODE);
             exit;
 

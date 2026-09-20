@@ -79,6 +79,19 @@ function db_init_schema(): void {
         PRIMARY KEY (token_hash),
         KEY idx_expires (expires)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // WebAuthn credentials (Touch ID / Face ID / security keys) of the single admin user
+    $db->exec("CREATE TABLE IF NOT EXISTS passkeys (
+        id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name          VARCHAR(255) NOT NULL,
+        credential_id VARBINARY(1023) NOT NULL,
+        public_key    TEXT NOT NULL,
+        sign_count    INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at    DATETIME NOT NULL,
+        last_used_at  DATETIME NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uniq_credential (credential_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 // ============================================================

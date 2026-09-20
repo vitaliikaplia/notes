@@ -1718,6 +1718,46 @@ body.ai-chat-active .index-header {
     border: 1px solid var(--alert-error-border);
 }
 
+/* Passkey sign-in (login page) */
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.login-box .btn-passkey {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 0;
+    padding: 11px 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.btn-passkey svg {
+    flex-shrink: 0;
+}
+
+.login-box .passkey-error {
+    margin: 12px 0 0;
+}
+
 /* Note view */
 .note-view {
     max-width: 720px;
@@ -4827,6 +4867,64 @@ body.popup-open {
     height: 1px;
     background: var(--border);
     margin: 2px 0;
+}
+
+/* Passkeys (Options → Account) */
+.options-passkeys {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.passkey-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.passkey-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+}
+
+.passkey-item-icon {
+    color: var(--text-secondary);
+    line-height: 0;
+    flex-shrink: 0;
+}
+
+.passkey-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.passkey-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.passkey-item-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.passkey-item .btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.passkey-empty {
+    font-size: 13px;
+    color: var(--text-secondary);
 }
 
 .export-options {

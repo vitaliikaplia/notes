@@ -23,6 +23,7 @@ core/includes/router.php   Routing and all internal routes
 core/includes/db.php       PDO connection, schema (db_init_schema), options + remember-me tokens
 core/includes/notes.php    Note CRUD (MySQL), tree build, slug generation, image uploads
 core/includes/auth.php     Sessions, login, remember-me tokens, config loader (get_env)
+core/includes/passkeys.php Passkeys (WebAuthn via lbuchs/webauthn): registration, sign-in, challenges
 core/includes/ai.php       AI module for Claude/OpenAI/Gemini tool calling
 core/includes/mcp.php      MCP server (Streamable HTTP, /mcp) + hashed token management
 core/includes/render.php   Twig rendering and shared context
@@ -39,6 +40,7 @@ assets/css/style.css       Styles
 assets/js/app.js           Editor and dashboard client logic
 assets/js/sidebar.js       Sidebar interactions
 assets/js/options.js       Options popup behavior
+assets/js/passkey.js       Passkey registration (Options → Account) and passkey sign-in (login page)
 assets/js/popup.js         Shared popup engine
 assets/js/page-tool.js     Editor.js page-link tool
 assets/js/gallery-tool.js  Editor.js gallery tool (thumbnail grid, 2–4 per row)
@@ -60,6 +62,7 @@ assets/js/lightbox.js      Global lightbox for gallery thumbnails (loaded from b
 - Notes live in the `notes` table as an adjacency list (`parent_id` + a unique `path`); `path` (e.g. `parent/child`, no `.json`) is the URL identifier and the stable key used across the app
 - The Editor.js document is stored in the `content` column (JSON); meta fields (title, icon, cover, color, pinned, visibility, graph_x/y) are columns; SVG/emoji icons are stored inline in `icon`
 - Settings live in the `options` table (key/value); remember-me tokens live in `remember_tokens` (sha256 token hash + user + expiry)
+- Passkeys live in the `passkeys` table (name, raw `credential_id`, PEM `public_key`, `sign_count`, timestamps) and belong to the single admin: a successful assertion authenticates the session as `AUTH_USER`. `passkey_register_options()` / `passkey_register_finish()` (session auth, Options → Account) and `passkey_login_options()` / `passkey_login_finish()` (public `/api/passkey-login-options/` + `/api/passkey-login/`, handled before `auth_require()` in the `api` branch) wrap `lbuchs\WebAuthn` with `none` attestation, resident key + user verification required, RP id = host of `HOME_URL` (so local and prod passkeys are separate). Challenges are stored in `$_SESSION['passkey_challenge']` with a purpose and a 5-minute TTL and are consumed on first use. The stable WebAuthn user handle is the `PASSKEY_USER_HANDLE` option. The login page shows the passkey button only when at least one passkey exists (`passkeys_enabled`); the CAPTCHA applies to the password form only
 - The schema self-creates on the first DB connect (`db_init_schema()` is called from `get_db()`)
 - The setup/database fatal page is self-contained, returns `503`, and is marked `noindex`
 - Slugs use Ukrainian transliteration through `ukr_to_lat()`
@@ -94,5 +97,5 @@ assets/js/lightbox.js      Global lightbox for gallery thumbnails (loaded from b
 - Do not remove the Ukrainian transliteration table in `core/includes/notes.php`; it is part of slug compatibility.
 - Store upload/image URLs host-relative (`/file/...`); `get_note()` normalizes any absolute host on read. Do not reintroduce `HOME_URL`-prefixed image URLs.
 - `.htaccess` is honored on Apache but ignored on nginx/Herd; never rely on it to protect `config.php`, `.notes/`, or `uploads/`. The durable protection is moving the docroot to a `public/` dir.
-- The external integration surface is the MCP server at `/mcp` (`core/includes/mcp.php`, stateless Streamable HTTP, JSON-RPC 2.0); its tools are shared with the AI assistant (`ai_get_tools()` / `ai_execute_tool()`). REST API v1 was removed. A legacy plaintext `API_TOKEN` option is auto-migrated to `MCP_TOKEN_HASH` on first use.
+- The external integration surface is the MCP server at `/mcp` (`core/includes/mcp.php`, stateless Streamable HTTP, JSON-RPC 2.0); its tools are shared with the AI assistant (`ai_get_tools()` / `ai_execute_tool()`). REST API v1 was removed. A legacy plaintext `API_TOKEN` option is auto-migrated to `MCP_TOKEN_HASH` on first use. MCP-only tools (uploads, `notes_clear_cache`) are declared in `mcp_extra_tools()` and dispatched in `mcp_method_tools_call()`; the AI chat never sees them.
 - Production sits behind Cloudflare with bot protection on: MCP requests from non-browser clients can be blocked with `HTTP 403, Cloudflare error 1010` ("banned based on browser signature") before reaching the app — this is a Cloudflare block, not an MCP error. Send a browser-like `User-Agent`, or add a Cloudflare WAF skip rule for `/mcp`. See `MCP.md`.

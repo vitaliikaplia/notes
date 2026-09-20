@@ -71,6 +71,7 @@ The interface is in English. Notes can still use any language, and slugs keep Uk
 ### Security
 
 - Login/password authentication; the admin password is stored as a bcrypt hash
+- Passkeys (WebAuthn): register Touch ID, Face ID, Windows Hello or a hardware security key from Options → Account, then sign in with it from the login page (button or the username field's autofill). Only the public key and credential id are stored; the password keeps working as a fallback
 - Remember-me tokens stored hashed in the database
 - Optional Cloudflare Turnstile CAPTCHA
 - Uploaded files are served through `/file/` and are only available to authenticated users or when referenced from a public/unlisted note
@@ -110,6 +111,7 @@ The tool loop supports up to 5 tool iterations per request. The assistant is ins
 - Image processing: Imagick
 - PDF export: Dompdf (bundled DejaVu fonts)
 - Word export: built-in DOCX writer (`core/includes/docx.php`, no library; needs zlib, converts WebP uploads with Imagick or GD)
+- Passkeys: lbuchs/webauthn (server-side WebAuthn verification, `none` attestation)
 
 ## Project Structure
 
@@ -133,6 +135,7 @@ core/includes/router.php     Routes and internal session API
 core/includes/db.php         PDO connection, schema, options + remember-me tokens
 core/includes/notes.php      Note CRUD (MySQL), tree, uploads, block rendering
 core/includes/auth.php       Sessions, login, remember-me tokens
+core/includes/passkeys.php   Passkeys (WebAuthn) registration and sign-in
 core/includes/ai.php         AI provider integrations and tool calling
 core/includes/mcp.php        MCP server (Streamable HTTP) and token management
 core/includes/render.php     Twig setup and global template context
@@ -241,6 +244,7 @@ Exposed tools:
 | `notes_delete` | Delete a note |
 | `notes_upload_image` | Upload a base64 image to media storage (MCP-only) |
 | `notes_upload_video` | Upload an MP4/WebM video in base64 chunks (MCP-only) |
+| `notes_clear_cache` | Flush app caches and bump the assets version after a deploy (MCP-only) |
 
 Connect from Claude Code:
 
@@ -260,6 +264,7 @@ Authenticated browser sessions use `/api/*` routes from `core/includes/router.ph
 - `POST /api/graph/`, `DELETE /api/graph/`
 - `GET /api/fetch-url/`
 - `POST /api/export-md/`, `/api/export-pdf/`, `/api/export-docx/`, `/api/import-md/`
+- `POST /api/passkey-login-options/`, `/api/passkey-login/` (public: they create the session), `/api/passkey-register-options/`, `/api/passkey-register/`, `/api/passkey-delete/`
 - `POST /api/process-svg/`, `/api/fetch-favicon/`, `/api/upload-image/`, `/api/fetch-image/`, `/api/upload-video/` (chunked)
 - `POST /api/chat/`
 - `GET /api/options/`, `POST /api/save-options/`, `POST /api/mcp-token/`

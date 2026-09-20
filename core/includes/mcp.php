@@ -275,6 +275,7 @@ function mcp_tool_annotations(string $name): array {
         'notes_create', 'notes_upload_image', 'notes_upload_video' => ['readOnlyHint' => false, 'destructiveHint' => false],
         'notes_update' => ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         'notes_delete' => ['readOnlyHint' => false, 'destructiveHint' => true],
+        'notes_clear_cache' => ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
         default        => [],
     };
 }
@@ -308,6 +309,21 @@ function mcp_extra_tools(): array {
                 'required' => ['data'],
             ],
         ],
+        [
+            'name' => 'notes_clear_cache',
+            'description' => 'Flush the app caches (Redis note/tree cache, Twig template cache, OPcache) and bump the assets version so browsers reload JS/CSS. Use after a deploy. Returns the new assets version and what was cleared.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => (object)[],
+            ],
+        ],
+    ];
+}
+
+function mcp_tool_clear_cache(): array {
+    return [
+        'assets_version' => bump_assets_version(),
+        'cleared'        => clear_app_cache(),
     ];
 }
 
@@ -408,6 +424,7 @@ function mcp_method_tools_call(array $params): array {
             $execution = ['success' => true, 'result' => match($name) {
                 'notes_upload_image' => mcp_tool_upload_image($args),
                 'notes_upload_video' => mcp_tool_upload_video($args),
+                'notes_clear_cache'  => mcp_tool_clear_cache(),
             }];
         } catch(\Throwable $e) {
             $execution = ['success' => false, 'result' => $e->getMessage()];

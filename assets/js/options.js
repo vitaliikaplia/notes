@@ -185,6 +185,7 @@
                     if (field) field.value = data[name];
                 });
                 renderMcpStatus(data.mcp_token || null, null);
+                if (window.Passkeys) window.Passkeys.render(data.passkeys || []);
                 applyAiVisibility();
             })
             .catch(function () {});
